@@ -1,0 +1,102 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { FlagTriangleRight, Menu, Upload } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+
+const navLinks = [
+  { href: "/", label: "Home" },
+  { href: "/setups", label: "Browse Setups" },
+  { href: "/upload", label: "Upload" },
+];
+
+export function SiteHeader() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-border/80 bg-background/85 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+          <span className="flex size-8 items-center justify-center rounded-md bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30">
+            <FlagTriangleRight className="size-4" />
+          </span>
+          <span className="text-lg">
+            Sim<span className="text-racing-green">Setups</span>
+          </span>
+        </Link>
+
+        <nav className="hidden items-center gap-6 md:flex">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="hidden items-center gap-2 md:flex">
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/setups">Browse Setups</Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/upload">
+              <Upload />
+              Upload Setup
+            </Link>
+          </Button>
+        </div>
+
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="md:hidden" aria-label="Open menu">
+              <Menu />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-4/5">
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2">
+                <FlagTriangleRight className="size-4 text-racing-green" />
+                Sim<span className="text-racing-green">Setups</span>
+              </SheetTitle>
+            </SheetHeader>
+            <nav className="flex flex-col gap-1 px-4">
+              {navLinks.map((link) => (
+                <SheetClose asChild key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="rounded-md px-3 py-3 text-base font-medium text-foreground transition-colors hover:bg-accent"
+                  >
+                    {link.label}
+                  </Link>
+                </SheetClose>
+              ))}
+            </nav>
+            <div className="mt-auto flex flex-col gap-2 px-4 pb-6">
+              <SheetClose asChild>
+                <Button asChild size="lg" className="w-full">
+                  <Link href="/upload">
+                    <Upload />
+                    Upload Setup
+                  </Link>
+                </Button>
+              </SheetClose>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+    </header>
+  );
+}
