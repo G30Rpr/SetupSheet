@@ -125,6 +125,53 @@ Click **Login with Discord** in the header → approve on Discord → you're
 redirected back to SimSetups signed in, with your Discord avatar in the
 header. Click the avatar → **Log out** to sign out.
 
+## Deploying to Vercel
+
+This is a stock Next.js App Router project — Vercel detects the framework
+automatically, so no `vercel.json` or custom build settings are needed.
+
+1. **Push this branch to GitHub** (or your git provider) if it isn't already,
+   then go to [vercel.com/new](https://vercel.com/new) and import the repo.
+   Framework Preset should auto-detect as **Next.js**; leave the build
+   command (`next build`) and output settings as default.
+
+2. **Add environment variables** in the Vercel project → **Settings →
+   Environment Variables** (add them for Production, Preview, *and*
+   Development environments so preview deploys work too):
+
+   | Key | Value |
+   |---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | `https://your-project-ref.supabase.co` |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | your anon/publishable key |
+
+   The build itself succeeds even without these set (verified — every route
+   that touches auth is dynamically rendered, so nothing reads them at build
+   time), but the app will silently behave as logged-out until they're set,
+   so add them before your first real test.
+
+3. **Deploy.** Vercel gives you a URL like `https://<project>.vercel.app`
+   (production) and a unique `https://<project>-git-<branch>-<team>.vercel.app`
+   URL for this branch's preview deploys.
+
+4. **Update Supabase's allow-list with that URL** — this is the step people
+   most often forget, and it's why login works locally but not on the
+   deployed link:
+   - Supabase dashboard → **Authentication → URL Configuration**.
+   - Set **Site URL** to your main Vercel URL (or custom domain).
+   - Add both `https://<your-vercel-url>/auth/callback` **and**
+     `http://localhost:3000/auth/callback` to **Redirect URLs** — Supabase
+     rejects redirects to anything not on this list. If you'll also test
+     from branch preview URLs, add each of those too (or a wildcard pattern
+     if your Supabase plan supports it).
+   - You do **not** need to touch Discord's OAuth2 settings again — Discord
+     only ever redirects back to Supabase's fixed
+     `https://<project-ref>.supabase.co/auth/v1/callback`, never directly to
+     Vercel.
+
+5. **Test it** by opening the deployed URL and clicking **Login with
+   Discord**. If Supabase rejects the redirect, its error message will name
+   the exact URL it received — compare that against the allow-list in step 4.
+
 ## Notes
 
 - The upload form and setup data are mocked client-side — there's no backend
@@ -135,3 +182,8 @@ header. Click the avatar → **Log out** to sign out.
   style (Radix primitives + `class-variance-authority` + Tailwind), so
   `npx shadcn@latest add <component>` continues to work against
   `components.json` if you want to add more.
+- The Next.js build logs a harmless warning about a Node.js API
+  (`process.version`) in `@supabase/supabase-js` not being supported in the
+  Edge Runtime. This comes from a version check inside the library that
+  never actually executes on Edge — it does not affect Vercel's Edge
+  Middleware at runtime, and is a widely reported, benign warning.
