@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { FlagTriangleRight, Menu, Upload } from "lucide-react";
 
+import { AuthNav, DiscordLoginButton, UserMenu } from "@/components/auth-nav";
+import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -57,46 +59,74 @@ export function SiteHeader() {
               Upload Setup
             </Link>
           </Button>
+          <div className="ml-1 border-l border-border/80 pl-3">
+            <AuthNav />
+          </div>
         </div>
 
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="md:hidden" aria-label="Open menu">
-              <Menu />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-4/5">
-            <SheetHeader>
-              <SheetTitle className="flex items-center gap-2">
-                <FlagTriangleRight className="size-4 text-racing-green" />
-                Sim<span className="text-racing-green">Setups</span>
-              </SheetTitle>
-            </SheetHeader>
-            <nav className="flex flex-col gap-1 px-4">
-              {navLinks.map((link) => (
-                <SheetClose asChild key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="rounded-md px-3 py-3 text-base font-medium text-foreground transition-colors hover:bg-accent"
-                  >
-                    {link.label}
-                  </Link>
+        <div className="flex items-center gap-2 md:hidden">
+          <AuthNav />
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon" aria-label="Open menu">
+                <Menu />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-4/5">
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  <FlagTriangleRight className="size-4 text-racing-green" />
+                  Sim<span className="text-racing-green">Setups</span>
+                </SheetTitle>
+              </SheetHeader>
+              <nav className="flex flex-col gap-1 px-4">
+                {navLinks.map((link) => (
+                  <SheetClose asChild key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="rounded-md px-3 py-3 text-base font-medium text-foreground transition-colors hover:bg-accent"
+                    >
+                      {link.label}
+                    </Link>
+                  </SheetClose>
+                ))}
+              </nav>
+              <div className="mt-auto flex flex-col gap-2 px-4 pb-6">
+                <MobileAuthRow />
+                <SheetClose asChild>
+                  <Button asChild size="lg" className="w-full">
+                    <Link href="/upload">
+                      <Upload />
+                      Upload Setup
+                    </Link>
+                  </Button>
                 </SheetClose>
-              ))}
-            </nav>
-            <div className="mt-auto flex flex-col gap-2 px-4 pb-6">
-              <SheetClose asChild>
-                <Button asChild size="lg" className="w-full">
-                  <Link href="/upload">
-                    <Upload />
-                    Upload Setup
-                  </Link>
-                </Button>
-              </SheetClose>
-            </div>
-          </SheetContent>
-        </Sheet>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </header>
   );
+}
+
+function MobileAuthRow() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="h-10 w-full animate-pulse rounded-md bg-secondary" />;
+  }
+
+  if (user) {
+    return (
+      <div className="flex items-center gap-3 rounded-md border border-border/80 px-3 py-2.5">
+        <UserMenu />
+        <span className="truncate text-sm font-medium">
+          {user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email}
+        </span>
+      </div>
+    );
+  }
+
+  return <DiscordLoginButton className="w-full" />;
 }
