@@ -3,6 +3,7 @@ import type { Condition, Game, RigProfile, Setup, SetupTag, SetupValues } from "
 
 interface SetupRow {
   id: string;
+  user_id: string;
   game: string;
   car: string;
   track: string;
@@ -17,12 +18,13 @@ interface SetupRow {
   upvotes: number;
   downloads: number;
   created_at: string;
-  profiles: { username: string } | { username: string }[] | null;
 }
 
-function mapRow(row: SetupRow, upvotedSetupIds: Set<string>): Setup {
-  const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-
+function mapRow(
+  row: SetupRow,
+  upvotedSetupIds: Set<string>,
+  usernames: Map<string, string>
+): Setup {
   return {
     id: row.id,
     game: row.game as Game,
@@ -33,7 +35,7 @@ function mapRow(row: SetupRow, upvotedSetupIds: Set<string>): Setup {
     description: row.description,
     tags: row.tags as SetupTag[],
     rigProfile: row.rig_profile as RigProfile,
-    author: profile?.username ?? "Racer",
+    author: usernames.get(row.user_id) ?? "Racer",
     uploadedAt: row.created_at,
     upvotes: row.upvotes,
     hasUpvoted: upvotedSetupIds.has(row.id),
@@ -49,6 +51,13 @@ function mapRow(row: SetupRow, upvotedSetupIds: Set<string>): Setup {
  * attached. Returns an empty list (rather than throwing) if Supabase is
  * unreachable or the query fails, so a backend hiccup degrades to an empty
  * browse page instead of a 500.
+ *
+ * Deliberately avoids PostgREST's embedded-resource join syntax
+ * (`.select("...,profiles(username)")`) — that requires the API's schema
+ * cache to have picked up the setups→profiles foreign key, which doesn't
+ * happen automatically for tables created via the SQL Editor rather than
+ * Supabase's own migration tooling. Two flat queries side-steps that
+ * failure mode entirely.
  */
 export async function getSetups(): Promise<Setup[]> {
   const supabase = await createClient();
@@ -57,7 +66,7 @@ export async function getSetups(): Promise<Setup[]> {
     supabase
       .from("setups")
       .select(
-        "id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, pace, predictability, upvotes, downloads, created_at, profiles(username)"
+        "id, user_id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, pace, predictability, upvotes, downloads, created_at"
       )
       .order("created_at", { ascending: false }),
     supabase.auth.getUser(),
@@ -66,6 +75,20 @@ export async function getSetups(): Promise<Setup[]> {
   if (error || !rows) {
     console.error("getSetups: failed to load setups", error);
     return [];
+  }
+
+  const usernames = new Map<string, string>();
+  const userIds = Array.from(new Set(rows.map((row) => row.user_id)));
+  if (userIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, username")
+      .in("id", userIds);
+    if (profilesError) {
+      console.error("getSetups: failed to load profiles", profilesError);
+    } else {
+      for (const profile of profiles ?? []) usernames.set(profile.id, profile.username);
+    }
   }
 
   const upvotedSetupIds = new Set<string>();
@@ -78,5 +101,5 @@ export async function getSetups(): Promise<Setup[]> {
     for (const row of upvotes ?? []) upvotedSetupIds.add(row.setup_id);
   }
 
-  return (rows as unknown as SetupRow[]).map((row) => mapRow(row, upvotedSetupIds));
+  return (rows as unknown as SetupRow[]).map((row) => mapRow(row, upvotedSetupIds, usernames));
 }
