@@ -18,17 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  emptySetupValues,
-  SetupValuesFields,
-  type SetupValues,
-} from "@/components/setup-values-fields";
+import { SetupValuesFields, type SetupValues } from "@/components/setup-values-fields";
 import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
 import { createSetup } from "@/lib/actions/setups";
+import { getEmptySetupValues } from "@/lib/setup-schemas";
 import { cn } from "@/lib/utils";
 import { conditions, games } from "@/lib/data";
-import type { SetupTag } from "@/lib/types";
+import type { Game, SetupTag } from "@/lib/types";
 
 type EntryMode = "file" | "manual";
 
@@ -51,8 +48,9 @@ const availableTags: SetupTag[] = [
 export function UploadForm() {
   const { user, isLoading } = useAuth();
   const [entryMode, setEntryMode] = useState<EntryMode>("file");
+  const [game, setGame] = useState<Game | "">("");
   const [files, setFiles] = useState<File[]>([]);
-  const [setupValues, setSetupValues] = useState<SetupValues>(emptySetupValues);
+  const [setupValues, setSetupValues] = useState<SetupValues>({});
   const [tags, setTags] = useState<SetupTag[]>([]);
   const [pace, setPace] = useState(3);
   const [predictability, setPredictability] = useState(3);
@@ -66,7 +64,12 @@ export function UploadForm() {
     );
   }
 
-  function updateSetupValue(key: keyof SetupValues, value: string) {
+  function handleGameChange(value: string) {
+    setGame(value as Game);
+    setSetupValues(getEmptySetupValues(value as Game));
+  }
+
+  function updateSetupValue(key: string, value: string) {
     setSetupValues((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -75,7 +78,6 @@ export function UploadForm() {
     setError(null);
 
     const formData = new FormData(e.currentTarget);
-    const game = String(formData.get("game") ?? "");
     const condition = String(formData.get("condition") ?? "");
     const car = String(formData.get("car") ?? "");
     const track = String(formData.get("track") ?? "");
@@ -108,8 +110,9 @@ export function UploadForm() {
 
   function resetForm() {
     setEntryMode("file");
+    setGame("");
     setFiles([]);
-    setSetupValues(emptySetupValues);
+    setSetupValues({});
     setTags([]);
     setPace(3);
     setPredictability(3);
@@ -165,6 +168,40 @@ export function UploadForm() {
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <Card className="px-5 py-6 sm:px-8 sm:py-8">
         <div className="flex flex-col gap-6">
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="game">Game</Label>
+              <Select name="game" required value={game} onValueChange={handleGameChange}>
+                <SelectTrigger id="game" className="w-full">
+                  <SelectValue placeholder="Select a game" />
+                </SelectTrigger>
+                <SelectContent>
+                  {games.map((g) => (
+                    <SelectItem key={g} value={g}>
+                      {g}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="condition">Condition</Label>
+              <Select name="condition" required>
+                <SelectTrigger id="condition" className="w-full">
+                  <SelectValue placeholder="Select condition" />
+                </SelectTrigger>
+                <SelectContent>
+                  {conditions.map((condition) => (
+                    <SelectItem key={condition} value={condition}>
+                      {condition}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </section>
+
           <section className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -208,44 +245,16 @@ export function UploadForm() {
                   below, not the file itself.
                 </p>
               </div>
+            ) : game ? (
+              <SetupValuesFields game={game} values={setupValues} onChange={updateSetupValue} />
             ) : (
-              <SetupValuesFields values={setupValues} onChange={updateSetupValue} />
+              <p className="rounded-md border border-dashed border-border/80 px-4 py-6 text-center text-sm text-muted-foreground">
+                Select a game above first — the fields here match that game&apos;s own setup screen.
+              </p>
             )}
           </section>
 
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="game">Game</Label>
-              <Select name="game" required>
-                <SelectTrigger id="game" className="w-full">
-                  <SelectValue placeholder="Select a game" />
-                </SelectTrigger>
-                <SelectContent>
-                  {games.map((game) => (
-                    <SelectItem key={game} value={game}>
-                      {game}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="condition">Condition</Label>
-              <Select name="condition" required>
-                <SelectTrigger id="condition" className="w-full">
-                  <SelectValue placeholder="Select condition" />
-                </SelectTrigger>
-                <SelectContent>
-                  {conditions.map((condition) => (
-                    <SelectItem key={condition} value={condition}>
-                      {condition}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="car">Car</Label>
               <Input id="car" name="car" placeholder="e.g. Porsche 992 GT3 Cup" required />

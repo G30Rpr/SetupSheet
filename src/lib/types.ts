@@ -5,12 +5,9 @@ export type Game =
   | "Assetto Corsa"
   | "Le Mans Ultimate"
   | "Automobilista 2"
-  | "F1 24"
-  | "F1 23"
-  | "F1 22"
-  | "F1 21"
-  | "F1 2020"
-  | "F1 2019";
+  | "Gran Turismo 7"
+  | "F1 25"
+  | "F1 24";
 
 export type Condition = "Dry" | "Wet" | "Mixed";
 
@@ -22,22 +19,14 @@ export type RigProfile =
   | "Direct Drive + Load Cell"
   | "Gamepad";
 
-export interface SetupValues {
-  frontTirePressure: string;
-  rearTirePressure: string;
-  frontCamber: string;
-  rearCamber: string;
-  frontArb: string;
-  rearArb: string;
-  frontRideHeight: string;
-  rearRideHeight: string;
-  frontAero: string;
-  rearAero: string;
-  diffPreload: string;
-  diffPower: string;
-  brakeBias: string;
-  finalDrive: string;
-}
+/**
+ * Free-form field-key -> value map. Deliberately not a fixed interface:
+ * every game has a genuinely different setup screen (a Gran Turismo 7
+ * tuning sheet has nothing in common with F1 25's Suspension Geometry
+ * tab), so the actual field set for a given setup is driven by
+ * setupSchemas[game] in lib/setup-schemas.ts, not by this type.
+ */
+export type SetupValues = Record<string, string>;
 
 export interface Setup {
   id: string;

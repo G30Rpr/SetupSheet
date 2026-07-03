@@ -7,12 +7,9 @@ export const games: Game[] = [
   "Assetto Corsa",
   "Le Mans Ultimate",
   "Automobilista 2",
+  "Gran Turismo 7",
+  "F1 25",
   "F1 24",
-  "F1 23",
-  "F1 22",
-  "F1 21",
-  "F1 2020",
-  "F1 2019",
 ];
 
 export const conditions: Condition[] = ["Dry", "Wet", "Mixed"];

@@ -35,6 +35,7 @@ src/
   lib/
     types.ts             Setup / Game / Condition / SetupTag types
     data.ts               Static filter option lists (games, conditions) + helpers
+    setup-schemas.ts       Per-game setup-screen field definitions (see below)
     utils.ts              `cn()` class-merging helper
     supabase/
       client.ts           Browser Supabase client (Client Components)
@@ -51,9 +52,10 @@ src/
     auth-provider.tsx      Client context: user/session state + sign in/out
     auth-nav.tsx            DiscordLoginButton, UserMenu (avatar dropdown), AuthNav
 supabase/
-  migrations/0001_init_setups_schema.sql   profiles, setups, setup_upvotes + RLS
-  seed.sql                                  optional sample data for a fresh project
-  seed_more_games.sql                       adds coverage for the games seed.sql didn't touch
+  migrations/
+    0001_init_setups_schema.sql   profiles, setups, setup_upvotes + RLS
+    0002_update_games_list.sql     drops F1 19-23, adds F1 25 + Gran Turismo 7
+  seed.sql                          sample setups across all 9 supported games
 ```
 
 ## Getting started
@@ -149,9 +151,13 @@ don't change per-row.
 ### 1. Apply the schema
 
 In the [Supabase dashboard](https://supabase.com/dashboard) → your project →
-**SQL Editor**, paste and run `supabase/migrations/0001_init_setups_schema.sql`.
-(If you use the Supabase CLI locally instead, `supabase db push` picks up
-everything under `supabase/migrations/`.) It creates:
+**SQL Editor**, paste and run the migrations **in order**:
+`supabase/migrations/0001_init_setups_schema.sql`, then
+`0002_update_games_list.sql`. (If you use the Supabase CLI locally instead,
+`supabase db push` picks up everything under `supabase/migrations/` in
+order.)
+
+`0001` creates:
 
 - **`profiles`** — one row per user, auto-populated from Discord's OAuth
   metadata (username, avatar) by a trigger on `auth.users` insert. Needed
@@ -160,13 +166,17 @@ everything under `supabase/migrations/`.) It creates:
   `tags` all have `check` constraints matching the TS unions in
   `src/lib/types.ts`, so bad data can't get in at the DB layer even if a
   client bug slips past validation. `setup_values` is a single `jsonb`
-  column (tire pressure, camber, ARB, etc.) rather than 14 separate columns,
-  since those fields are always read/written together. `upvotes` is a
-  denormalized counter, not a live count.
+  column since every game has a different set of setup-screen fields (see
+  "Per-game setup fields" below) — a fixed set of columns can't represent
+  that. `upvotes` is a denormalized counter, not a live count.
 - **`setup_upvotes`** — one row per `(user_id, setup_id)`; its existence
   *is* the upvote. Two `security definer` triggers keep `setups.upvotes` in
   sync on insert/delete, so reading the browse page never needs a join +
   count over every setup's upvotes.
+
+`0002` drops F1 2019–23 from the supported games list, adds F1 25 and Gran
+Turismo 7, and deletes any existing setups for the removed F1 years so the
+new `check` constraint doesn't reject on old data.
 
 **RLS policies**, scoped with `auth.uid()`:
 
@@ -182,22 +192,48 @@ yourself.
 
 ### 2. (Optional) Seed sample data
 
-`supabase/seed.sql` has the same 12 sample setups that used to be hardcoded
-in `src/lib/data.ts`, informed by public setup-guide consensus rather than
-copied from any single source (see git history for the research sources).
-Log in with Discord on the site once first — so a row exists in
-`public.profiles` to attribute the seed rows to — then run `seed.sql` in the
-SQL Editor.
+`supabase/seed.sql` has sample setups across all 9 supported games,
+informed by public setup-guide consensus (Coach Dave Academy, F1Laps, GT
+Planet, simracingsetup.com, etc.) rather than copied from any single
+source — see git history for the research trail. Log in with Discord on
+the site once first — so a row exists in `public.profiles` to attribute
+the seed rows to — then run `seed.sql` in the SQL Editor.
 
-`seed.sql`'s 12 rows only covered 6 of the 12 supported games (several F1
-years and Assetto Corsa EVO had zero setups). `supabase/seed_more_games.sql`
-adds one setup for each previously-uncovered game plus a few more combos for
-variety — same research-grounded approach, safe to run alongside or instead
-of `seed.sql` since it only inserts new rows. Both are meant to run once
-each; running either twice duplicates rows (no dedupe logic, since real
-uploads are expected to have duplicate car/track combos legitimately).
+It's meant to run once; running it twice duplicates rows (no dedupe logic,
+since real uploads are expected to have duplicate car/track combos
+legitimately). If you need to start over — e.g. an earlier version of this
+file used a different `setup_values` shape that no longer matches
+`src/lib/setup-schemas.ts` — wipe the table first:
 
-### 3. How the app talks to it
+```sql
+truncate public.setups cascade;
+```
+
+### 3. Per-game setup fields
+
+Every game has a genuinely different setup screen — a Gran Turismo 7 tuning
+sheet (LSD initial/accel/braking torque, ballast, no tire pressure at all)
+has nothing in common with F1 25's Suspension Geometry tab (camber, toe,
+0-11 sliders), which in turn differs from a GT3 sim's mechanical grip tab
+(tire pressure, ARB clicks, brake ducts). `src/lib/setup-schemas.ts` defines
+one field-group schema per `Game`, grounded in each title's actual setup
+UI, and `SetupValues` (in `src/lib/types.ts`) is a plain
+`Record<string, string>` rather than a fixed interface — there's no single
+shape that could represent all nine.
+
+Two places consume this:
+
+- `SetupValuesFields` (the upload form's manual-entry mode) renders
+  whichever fields belong to the selected game, and resets to that game's
+  empty field set when you change games.
+- `SetupCard`'s "Setup values" panel groups and labels whatever keys are
+  present in a setup's `setup_values` using that same schema, skipping any
+  field with no value.
+
+Since `setup_values` is unstructured `jsonb`, no migration is needed when
+the schema changes — only `src/lib/setup-schemas.ts` and the seed data.
+
+### 4. How the app talks to it
 
 - `src/lib/supabase/setups.ts` — `getSetups()` fetches all setups plus the
   current viewer's upvote state in one server-side call, mapping DB rows to

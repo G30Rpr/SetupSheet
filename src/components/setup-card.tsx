@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/card";
 import { StarRating } from "@/components/star-rating";
 import { TagBadge } from "@/components/tag-badge";
 import { toggleUpvote } from "@/lib/actions/setups";
+import { setupSchemas } from "@/lib/setup-schemas";
 import { cn } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
@@ -115,29 +116,27 @@ export function SetupCard({ setup }: { setup: Setup }) {
             </button>
 
             {showValues && (
-              <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-md border border-border/60 px-3 py-2.5 text-xs">
-                <ValueRow label="Tire pressure" front={v.frontTirePressure} rear={v.rearTirePressure} />
-                <ValueRow label="Camber" front={v.frontCamber} rear={v.rearCamber} />
-                <ValueRow label="Anti-roll bar" front={v.frontArb} rear={v.rearArb} />
-                <ValueRow label="Ride height" front={v.frontRideHeight} rear={v.rearRideHeight} />
-                <ValueRow label="Aero" front={v.frontAero} rear={v.rearAero} />
-                <div className="col-span-2 flex items-center justify-between border-t border-border/60 pt-1.5">
-                  <dt className="text-muted-foreground">Diff preload</dt>
-                  <dd className="font-medium text-foreground">{v.diffPreload}</dd>
-                </div>
-                <div className="col-span-2 flex items-center justify-between">
-                  <dt className="text-muted-foreground">Diff power/coast</dt>
-                  <dd className="font-medium text-foreground">{v.diffPower}</dd>
-                </div>
-                <div className="col-span-2 flex items-center justify-between">
-                  <dt className="text-muted-foreground">Brake bias</dt>
-                  <dd className="font-medium text-foreground">{v.brakeBias}</dd>
-                </div>
-                <div className="col-span-2 flex items-center justify-between">
-                  <dt className="text-muted-foreground">Final drive</dt>
-                  <dd className="font-medium text-foreground">{v.finalDrive}</dd>
-                </div>
-              </dl>
+              <div className="mt-2 flex flex-col gap-3 rounded-md border border-border/60 px-3 py-2.5 text-xs">
+                {setupSchemas[setup.game].map((group) => {
+                  const rows = group.fields.filter((field) => v[field.key]);
+                  if (rows.length === 0) return null;
+                  return (
+                    <div key={group.title} className="flex flex-col gap-1.5">
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+                        {group.title}
+                      </p>
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        {rows.map((field) => (
+                          <div key={field.key} className="col-span-2 flex items-center justify-between gap-2 sm:col-span-1">
+                            <dt className="text-muted-foreground">{field.label}</dt>
+                            <dd className="font-medium text-foreground">{v[field.key]}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
@@ -190,17 +189,5 @@ export function SetupCard({ setup }: { setup: Setup }) {
         </div>
       </div>
     </Card>
-  );
-}
-
-function ValueRow({ label, front, rear }: { label: string; front: string; rear: string }) {
-  return (
-    <>
-      <dt className="col-span-2 -mb-1 text-[10px] uppercase tracking-wide text-muted-foreground/70">
-        {label}
-      </dt>
-      <dd className="text-foreground">F: {front}</dd>
-      <dd className="text-foreground">R: {rear}</dd>
-    </>
   );
 }
