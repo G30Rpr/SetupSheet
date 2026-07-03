@@ -22,6 +22,23 @@ export type RigProfile =
   | "Direct Drive + Load Cell"
   | "Gamepad";
 
+export interface SetupValues {
+  frontTirePressure: string;
+  rearTirePressure: string;
+  frontCamber: string;
+  rearCamber: string;
+  frontArb: string;
+  rearArb: string;
+  frontRideHeight: string;
+  rearRideHeight: string;
+  frontAero: string;
+  rearAero: string;
+  diffPreload: string;
+  diffPower: string;
+  brakeBias: string;
+  finalDrive: string;
+}
+
 export interface Setup {
   id: string;
   game: Game;
@@ -38,4 +55,5 @@ export interface Setup {
   pace: number;
   predictability: number;
   downloads: number;
+  setupValues?: SetupValues;
 }

@@ -1,22 +1,8 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { SetupValues } from "@/lib/types";
 
-export interface SetupValues {
-  frontTirePressure: string;
-  rearTirePressure: string;
-  frontCamber: string;
-  rearCamber: string;
-  frontArb: string;
-  rearArb: string;
-  frontRideHeight: string;
-  rearRideHeight: string;
-  frontAero: string;
-  rearAero: string;
-  diffPreload: string;
-  diffPower: string;
-  brakeBias: string;
-  finalDrive: string;
-}
+export type { SetupValues };
 
 export const emptySetupValues: SetupValues = {
   frontTirePressure: "",
