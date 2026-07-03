@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { SETUP_FILES_BUCKET } from "@/lib/storage";
 import type { Condition, Game, RigProfile, Setup, SetupTag, SetupValues } from "@/lib/types";
 
 interface SetupRow {
@@ -13,6 +14,8 @@ interface SetupRow {
   tags: string[];
   rig_profile: string;
   setup_values: SetupValues | null;
+  file_path: string | null;
+  file_name: string | null;
   pace: number;
   predictability: number;
   rating_count: number;
@@ -22,7 +25,7 @@ interface SetupRow {
 }
 
 const SETUP_COLUMNS =
-  "id, user_id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, pace, predictability, rating_count, upvotes, downloads, created_at";
+  "id, user_id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, file_path, file_name, pace, predictability, rating_count, upvotes, downloads, created_at";
 
 interface Viewer {
   userId: string | null;
@@ -59,7 +62,12 @@ async function getViewer(
   return { userId: user.id, upvotedSetupIds, myRatings };
 }
 
-function mapRow(row: SetupRow, viewer: Viewer, usernames: Map<string, string>): Setup {
+function mapRow(
+  row: SetupRow,
+  viewer: Viewer,
+  usernames: Map<string, string>,
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Setup {
   return {
     id: row.id,
     game: row.game as Game,
@@ -81,6 +89,10 @@ function mapRow(row: SetupRow, viewer: Viewer, usernames: Map<string, string>): 
     isOwner: viewer.userId === row.user_id,
     downloads: row.downloads,
     setupValues: row.setup_values ?? undefined,
+    fileName: row.file_name,
+    fileUrl: row.file_path
+      ? supabase.storage.from(SETUP_FILES_BUCKET).getPublicUrl(row.file_path).data.publicUrl
+      : null,
   };
 }
 
@@ -142,7 +154,7 @@ export async function getSetups(): Promise<Setup[]> {
     ),
   ]);
 
-  return typedRows.map((row) => mapRow(row, viewer, usernames));
+  return typedRows.map((row) => mapRow(row, viewer, usernames, supabase));
 }
 
 /** Fetches every setup uploaded by a given user, newest first. */
@@ -169,7 +181,7 @@ export async function getSetupsByUser(userId: string): Promise<Setup[]> {
     getUsernames(supabase, [userId]),
   ]);
 
-  return typedRows.map((row) => mapRow(row, viewer, usernames));
+  return typedRows.map((row) => mapRow(row, viewer, usernames, supabase));
 }
 
 /** Fetches a single setup by id, or null if it doesn't exist / the query fails. */
@@ -193,5 +205,5 @@ export async function getSetupById(id: string): Promise<Setup | null> {
     getUsernames(supabase, [typedRow.user_id]),
   ]);
 
-  return mapRow(typedRow, viewer, usernames);
+  return mapRow(typedRow, viewer, usernames, supabase);
 }

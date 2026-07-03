@@ -2,7 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
-import { AlertCircle, CheckCircle2, FileUp, Loader2, PenLine, Send } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  File as FileIcon,
+  FileUp,
+  Loader2,
+  PenLine,
+  Send,
+  X,
+} from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
 import { DiscordLoginButton } from "@/components/auth-nav";
@@ -22,7 +31,7 @@ import {
 import { SetupValuesFields, type SetupValues } from "@/components/setup-values-fields";
 import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
-import { createSetup, updateSetup } from "@/lib/actions/setups";
+import { createSetup, updateSetup, uploadSetupFile } from "@/lib/actions/setups";
 import { getEmptySetupValues } from "@/lib/setup-schemas";
 import { cn } from "@/lib/utils";
 import { conditions, games } from "@/lib/data";
@@ -54,7 +63,8 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     existingSetup?.setupValues ? "manual" : "file"
   );
   const [game, setGame] = useState<Game | "">(existingSetup?.game ?? "");
-  const [files, setFiles] = useState<File[]>([]);
+  const [file, setFile] = useState<File | null>(null);
+  const [keepExistingFile, setKeepExistingFile] = useState(Boolean(existingSetup?.fileName));
   const [setupValues, setSetupValues] = useState<SetupValues>(existingSetup?.setupValues ?? {});
   const [tags, setTags] = useState<SetupTag[]>(existingSetup?.tags ?? []);
   const [pace, setPace] = useState(3);
@@ -78,6 +88,40 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     setSetupValues((prev) => ({ ...prev, [key]: value }));
   }
 
+  /**
+   * Resolves what filePath/fileName to send to createSetup/updateSetup.
+   * Manual mode always clears the file (the two are alternate ways of
+   * representing the same setup data, not additive). File mode either
+   * uploads a newly-picked file, keeps the existing one untouched (leaving
+   * both fields undefined), or clears it if the user removed it without
+   * picking a replacement.
+   */
+  async function resolveFileFields(): Promise<{
+    filePath?: string | null;
+    fileName?: string | null;
+    error?: string;
+  }> {
+    if (entryMode === "manual") {
+      return { filePath: null, fileName: null };
+    }
+
+    if (file) {
+      const fileFormData = new FormData();
+      fileFormData.append("file", file);
+      const result = await uploadSetupFile(fileFormData);
+      if (result.error || !result.path) {
+        return { error: result.error ?? "Failed to upload file." };
+      }
+      return { filePath: result.path, fileName: result.fileName };
+    }
+
+    if (isEditing && keepExistingFile) {
+      return {};
+    }
+
+    return { filePath: null, fileName: null };
+  }
+
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -91,6 +135,12 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     const description = String(formData.get("description") ?? "");
 
     startTransition(async () => {
+      const fileFields = await resolveFileFields();
+      if (fileFields.error) {
+        setError(fileFields.error);
+        return;
+      }
+
       if (existingSetup) {
         const result = await updateSetup(existingSetup.id, {
           game,
@@ -102,6 +152,8 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           tags,
           rigProfile,
           setupValues: entryMode === "manual" ? setupValues : undefined,
+          filePath: fileFields.filePath,
+          fileName: fileFields.fileName,
         });
 
         if (result.error) {
@@ -124,6 +176,8 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
         pace,
         predictability,
         setupValues: entryMode === "manual" ? setupValues : undefined,
+        filePath: fileFields.filePath,
+        fileName: fileFields.fileName,
       });
 
       if (result.error) {
@@ -137,7 +191,8 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   function resetForm() {
     setEntryMode("file");
     setGame("");
-    setFiles([]);
+    setFile(null);
+    setKeepExistingFile(false);
     setSetupValues({});
     setTags([]);
     setPace(3);
@@ -267,10 +322,30 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
 
             {entryMode === "file" ? (
               <div className="flex flex-col gap-2">
-                <FileDropzone files={files} onFilesChange={setFiles} />
+                {isEditing && keepExistingFile && !file ? (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/40 px-3 py-2 text-sm">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <FileIcon className="size-4 shrink-0 text-racing-green" />
+                      <span className="truncate">{existingSetup?.fileName}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        current file
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setKeepExistingFile(false)}
+                      className="shrink-0 rounded-full p-1 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
+                      aria-label="Remove current file"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <FileDropzone file={file} onFileChange={setFile} />
+                )}
                 <p className="text-xs text-muted-foreground">
-                  File storage is coming soon — for now we save the details
-                  below, not the file itself.
+                  Anyone will be able to download this file straight from the
+                  setup card.
                 </p>
               </div>
             ) : game ? (

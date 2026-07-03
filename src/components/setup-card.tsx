@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import {
   Calendar,
   ChevronDown,
+  FileDown,
   Gamepad2,
   Gauge,
   Pencil,
@@ -20,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { StarRating } from "@/components/star-rating";
 import { TagBadge } from "@/components/tag-badge";
-import { deleteSetup, rateSetup, toggleUpvote } from "@/lib/actions/setups";
+import { deleteSetup, downloadSetup, rateSetup, toggleUpvote } from "@/lib/actions/setups";
 import { setupSchemas } from "@/lib/setup-schemas";
 import { cn } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
@@ -47,6 +48,8 @@ export function SetupCard({ setup }: { setup: Setup }) {
   const [myRating, setMyRating] = useState(setup.myRating);
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
+  const [isDownloading, startDownloadTransition] = useTransition();
+  const [downloads, setDownloads] = useState(setup.downloads);
   const { user, signInWithDiscord } = useAuth();
   const v = setup.setupValues;
 
@@ -94,6 +97,30 @@ export function SetupCard({ setup }: { setup: Setup }) {
     startDeleteTransition(async () => {
       await deleteSetup(setup.id);
       router.refresh();
+    });
+  }
+
+  function handleDownload() {
+    startDownloadTransition(async () => {
+      const result = await downloadSetup(setup.id);
+      if (result.error || !result.url) return;
+
+      setDownloads((n) => n + 1);
+
+      try {
+        const response = await fetch(result.url);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = result.fileName ?? "setup-file";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(blobUrl);
+      } catch {
+        window.open(result.url, "_blank");
+      }
     });
   }
 
@@ -198,6 +225,24 @@ export function SetupCard({ setup }: { setup: Setup }) {
               </div>
             )}
           </div>
+        )}
+
+        {/* Setup file download */}
+        {setup.fileUrl && (
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="flex w-full items-center justify-between gap-2 rounded-md border border-border/80 bg-secondary/30 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-60"
+          >
+            <span className="flex min-w-0 items-center gap-1.5">
+              <FileDown className="size-3.5 shrink-0" />
+              <span className="truncate">{setup.fileName ?? "Download setup file"}</span>
+            </span>
+            <span className="shrink-0 text-[10px] text-muted-foreground/70">
+              {downloads} {downloads === 1 ? "download" : "downloads"}
+            </span>
+          </button>
         )}
       </div>
 

@@ -1,8 +1,14 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  ALLOWED_SETUP_FILE_EXTENSIONS,
+  MAX_SETUP_FILE_BYTES,
+  SETUP_FILES_BUCKET,
+} from "@/lib/storage";
 import type { SetupValues } from "@/lib/types";
 
 export interface CreateSetupInput {
@@ -17,9 +23,78 @@ export interface CreateSetupInput {
   pace: number;
   predictability: number;
   setupValues?: SetupValues;
+  filePath?: string | null;
+  fileName?: string | null;
 }
 
-export type UpdateSetupInput = Omit<CreateSetupInput, "pace" | "predictability">;
+export interface UpdateSetupInput {
+  game: string;
+  car: string;
+  track: string;
+  condition: string;
+  lapTime: string;
+  description: string;
+  tags: string[];
+  rigProfile: string;
+  setupValues?: SetupValues;
+  /**
+   * Undefined = leave the attached file as-is. A string = replace it with
+   * this newly-uploaded path. Null = remove the file entirely. Either of
+   * the latter two triggers cleanup of the previous Storage object.
+   */
+  filePath?: string | null;
+  fileName?: string | null;
+}
+
+function sanitizeFileName(name: string) {
+  return name.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+/** Uploads a setup file to Storage under the current user's own folder. */
+export async function uploadSetupFile(
+  formData: FormData
+): Promise<{ path: string | null; fileName: string | null; error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      path: null,
+      fileName: null,
+      error: "You need to be logged in with Discord to upload a file.",
+    };
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { path: null, fileName: null, error: "No file selected." };
+  }
+
+  if (file.size > MAX_SETUP_FILE_BYTES) {
+    return { path: null, fileName: null, error: "File is too large — max 5 MB." };
+  }
+
+  const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+  if (!ALLOWED_SETUP_FILE_EXTENSIONS.includes(extension)) {
+    return {
+      path: null,
+      fileName: null,
+      error: `Unsupported file type. Allowed: ${ALLOWED_SETUP_FILE_EXTENSIONS.join(", ")}`,
+    };
+  }
+
+  const path = `${user.id}/${randomUUID()}-${sanitizeFileName(file.name)}`;
+  const { error } = await supabase.storage.from(SETUP_FILES_BUCKET).upload(path, file);
+
+  if (error) {
+    console.error("uploadSetupFile: upload failed", error);
+    return { path: null, fileName: null, error: error.message };
+  }
+
+  return { path, fileName: file.name, error: null };
+}
 
 /**
  * Inserts the setup row, then seeds the community rating with the
@@ -55,6 +130,8 @@ export async function createSetup(
       tags: input.tags,
       rig_profile: input.rigProfile,
       setup_values: input.setupValues ?? null,
+      file_path: input.filePath ?? null,
+      file_name: input.fileName ?? null,
     })
     .select("id")
     .single();
@@ -93,19 +170,37 @@ export async function updateSetup(
     return { error: "You need to be logged in with Discord to edit a setup." };
   }
 
+  const updates: Record<string, unknown> = {
+    game: input.game,
+    car: input.car,
+    track: input.track,
+    condition: input.condition,
+    lap_time: input.lapTime || null,
+    description: input.description,
+    tags: input.tags,
+    rig_profile: input.rigProfile,
+    setup_values: input.setupValues ?? null,
+  };
+
+  if (input.filePath !== undefined) {
+    const { data: existing } = await supabase
+      .from("setups")
+      .select("file_path")
+      .eq("id", setupId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (existing?.file_path && existing.file_path !== input.filePath) {
+      await supabase.storage.from(SETUP_FILES_BUCKET).remove([existing.file_path]);
+    }
+
+    updates.file_path = input.filePath;
+    updates.file_name = input.fileName ?? null;
+  }
+
   const { error } = await supabase
     .from("setups")
-    .update({
-      game: input.game,
-      car: input.car,
-      track: input.track,
-      condition: input.condition,
-      lap_time: input.lapTime || null,
-      description: input.description,
-      tags: input.tags,
-      rig_profile: input.rigProfile,
-      setup_values: input.setupValues ?? null,
-    })
+    .update(updates)
     .eq("id", setupId)
     .eq("user_id", user.id);
 
@@ -127,6 +222,17 @@ export async function deleteSetup(setupId: string): Promise<{ error: string | nu
 
   if (!user) {
     return { error: "You need to be logged in with Discord to delete a setup." };
+  }
+
+  const { data: existing } = await supabase
+    .from("setups")
+    .select("file_path")
+    .eq("id", setupId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existing?.file_path) {
+    await supabase.storage.from(SETUP_FILES_BUCKET).remove([existing.file_path]);
   }
 
   const { error } = await supabase
@@ -206,4 +312,41 @@ export async function rateSetup(
   revalidatePath("/setups");
   revalidatePath("/");
   return { error: null };
+}
+
+/**
+ * Bumps the download counter and returns a public URL for the attached
+ * file. Deliberately doesn't require login -- setups are free downloads for
+ * anyone, the same as browsing itself.
+ */
+export async function downloadSetup(
+  setupId: string
+): Promise<{ url: string | null; fileName: string | null; error: string | null }> {
+  const supabase = await createClient();
+
+  const { data: setup, error } = await supabase
+    .from("setups")
+    .select("file_path, file_name")
+    .eq("id", setupId)
+    .maybeSingle();
+
+  if (error || !setup?.file_path) {
+    return { url: null, fileName: null, error: "No file attached to this setup." };
+  }
+
+  const { error: rpcError } = await supabase.rpc("increment_downloads", {
+    setup_id: setupId,
+  });
+
+  if (rpcError) {
+    console.error("downloadSetup: increment_downloads failed", rpcError);
+  }
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from(SETUP_FILES_BUCKET).getPublicUrl(setup.file_path);
+
+  revalidatePath("/setups");
+  revalidatePath("/");
+  return { url: publicUrl, fileName: setup.file_name, error: null };
 }

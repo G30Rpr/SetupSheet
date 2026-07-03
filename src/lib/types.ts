@@ -57,4 +57,8 @@ export interface Setup {
   isOwner: boolean;
   downloads: number;
   setupValues?: SetupValues;
+  /** Original filename of the uploaded setup file, if any. */
+  fileName: string | null;
+  /** Public download URL for the uploaded setup file, if any. */
+  fileUrl: string | null;
 }
