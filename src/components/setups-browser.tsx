@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
 
@@ -24,12 +25,12 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
   const [condition, setCondition] = useState<string>(ALL);
 
   const carOptions = useMemo(
-    () => getCarsForGame(game === ALL ? undefined : game),
-    [game]
+    () => getCarsForGame(setups, game === ALL ? undefined : game),
+    [setups, game]
   );
   const trackOptions = useMemo(
-    () => getTracksForGame(game === ALL ? undefined : game),
-    [game]
+    () => getTracksForGame(setups, game === ALL ? undefined : game),
+    [setups, game]
   );
 
   const filtered = useMemo(() => {
@@ -118,6 +119,16 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
           {filtered.map((setup) => (
             <SetupCard key={setup.id} setup={setup} />
           ))}
+        </div>
+      ) : setups.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/80 py-16 text-center">
+          <p className="font-medium">No setups yet</p>
+          <p className="text-sm text-muted-foreground">
+            Be the first to share one with the community.
+          </p>
+          <Button asChild size="sm">
+            <Link href="/upload">Upload Your Setup</Link>
+          </Button>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/80 py-16 text-center">

@@ -11,15 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SetupCard } from "@/components/setup-card";
-import { setups } from "@/lib/data";
-
-const featured = [...setups].sort((a, b) => b.upvotes - a.upvotes).slice(0, 6);
-
-const stats = [
-  { label: "Free setups", value: `${setups.length * 40}+` },
-  { label: "Sim titles supported", value: "6" },
-  { label: "Community uploads / week", value: "120+" },
-];
+import { games } from "@/lib/data";
+import { getSetups } from "@/lib/supabase/setups";
 
 const highlights = [
   {
@@ -42,7 +35,16 @@ const highlights = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const setups = await getSetups();
+  const featured = [...setups].sort((a, b) => b.upvotes - a.upvotes).slice(0, 6);
+
+  const stats = [
+    { label: "Free setups", value: `${setups.length}` },
+    { label: "Sim titles supported", value: `${games.length}` },
+    { label: "Cost to browse or upload", value: "$0" },
+  ];
+
   return (
     <div className="flex flex-col">
       {/* Hero */}
@@ -133,11 +135,26 @@ export default function Home() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((setup) => (
-              <SetupCard key={setup.id} setup={setup} />
-            ))}
-          </div>
+          {featured.length > 0 ? (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {featured.map((setup) => (
+                <SetupCard key={setup.id} setup={setup} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/80 py-16 text-center">
+              <p className="font-medium">No setups yet</p>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                Be the first to share one — it&apos;ll show up here once it&apos;s uploaded.
+              </p>
+              <Button asChild size="sm">
+                <Link href="/upload">
+                  <Upload />
+                  Upload Your Setup
+                </Link>
+              </Button>
+            </div>
+          )}
         </div>
       </section>
 

@@ -52,6 +52,7 @@ export interface Setup {
   author: string;
   uploadedAt: string;
   upvotes: number;
+  hasUpvoted: boolean;
   pace: number;
   predictability: number;
   downloads: number;

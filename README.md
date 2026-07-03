@@ -34,12 +34,15 @@ src/
     tag-badge.tsx         Setup tag → Badge color mapping
   lib/
     types.ts             Setup / Game / Condition / SetupTag types
-    data.ts               Mock setup data + filter helpers
+    data.ts               Static filter option lists (games, conditions) + helpers
     utils.ts              `cn()` class-merging helper
     supabase/
       client.ts           Browser Supabase client (Client Components)
       server.ts            Server Supabase client (Server Components/Actions/Route Handlers)
       middleware.ts         Session-refresh helper used by src/middleware.ts
+      setups.ts             getSetups() — real data fetch + row-to-Setup mapping
+    actions/
+      setups.ts             Server actions: createSetup, toggleUpvote
   middleware.ts            Runs on every request, keeps the auth cookie fresh
   app/
     auth/callback/route.ts       Exchanges the OAuth ?code= for a session
@@ -47,6 +50,9 @@ src/
   components/
     auth-provider.tsx      Client context: user/session state + sign in/out
     auth-nav.tsx            DiscordLoginButton, UserMenu (avatar dropdown), AuthNav
+supabase/
+  migrations/0001_init_setups_schema.sql   profiles, setups, setup_upvotes + RLS
+  seed.sql                                  optional sample data for a fresh project
 ```
 
 ## Getting started
@@ -125,6 +131,73 @@ Click **Login with Discord** in the header → approve on Discord → you're
 redirected back to SimSetups signed in, with your Discord avatar in the
 header. Click the avatar → **Log out** to sign out.
 
+## Database: setups, upvotes, and RLS
+
+Setup data lives in Supabase Postgres — `src/lib/data.ts` no longer holds
+mock rows, only the static filter option lists (`games`, `conditions`) that
+don't change per-row.
+
+### 1. Apply the schema
+
+In the [Supabase dashboard](https://supabase.com/dashboard) → your project →
+**SQL Editor**, paste and run `supabase/migrations/0001_init_setups_schema.sql`.
+(If you use the Supabase CLI locally instead, `supabase db push` picks up
+everything under `supabase/migrations/`.) It creates:
+
+- **`profiles`** — one row per user, auto-populated from Discord's OAuth
+  metadata (username, avatar) by a trigger on `auth.users` insert. Needed
+  because the client API can't query `auth.users` directly.
+- **`setups`** — the core table. `game`, `condition`, `rig_profile`, and
+  `tags` all have `check` constraints matching the TS unions in
+  `src/lib/types.ts`, so bad data can't get in at the DB layer even if a
+  client bug slips past validation. `setup_values` is a single `jsonb`
+  column (tire pressure, camber, ARB, etc.) rather than 14 separate columns,
+  since those fields are always read/written together. `upvotes` is a
+  denormalized counter, not a live count.
+- **`setup_upvotes`** — one row per `(user_id, setup_id)`; its existence
+  *is* the upvote. Two `security definer` triggers keep `setups.upvotes` in
+  sync on insert/delete, so reading the browse page never needs a join +
+  count over every setup's upvotes.
+
+**RLS policies**, scoped with `auth.uid()`:
+
+| Table | select | insert | update | delete |
+|---|---|---|---|---|
+| `setups` | anyone | owner only (`auth.uid() = user_id`) | owner only | owner only |
+| `setup_upvotes` | owner only (each user sees only their own upvotes) | as self only | — | as self only |
+| `profiles` | anyone | (via trigger only) | owner only | — |
+
+Anonymous visitors can always browse (`setups` select is public) — only
+uploading, editing, and upvoting require being logged in and acting as
+yourself.
+
+### 2. (Optional) Seed sample data
+
+`supabase/seed.sql` has the same 12 sample setups that used to be hardcoded
+in `src/lib/data.ts`, informed by public setup-guide consensus rather than
+copied from any single source (see git history for the research sources).
+Log in with Discord on the site once first — so a row exists in
+`public.profiles` to attribute the seed rows to — then run `seed.sql` in the
+SQL Editor.
+
+### 3. How the app talks to it
+
+- `src/lib/supabase/setups.ts` — `getSetups()` fetches all setups plus the
+  current viewer's upvote state in one server-side call, mapping DB rows to
+  the `Setup` type the UI already expects. If Supabase is unreachable or the
+  query errors, it logs and returns `[]` instead of throwing, so a backend
+  hiccup degrades to an empty browse page rather than a 500 — verified by
+  running with the Supabase host deliberately unreachable.
+- `src/lib/actions/setups.ts` — `createSetup` and `toggleUpvote` are Server
+  Actions; both check for a logged-in user before touching the database
+  (defense in depth on top of RLS, so the error message is friendly instead
+  of a raw Postgres permission error).
+- `SetupCard`'s upvote pill is now a real toggle button: optimistic
+  update on click, reverted if the server action errors. Clicking it while
+  logged out triggers Discord login instead of failing silently.
+- `UploadForm` is gated behind auth — logged-out visitors see a "Log in to
+  upload" prompt instead of the form.
+
 ## Deploying to Vercel
 
 This is a stock Next.js App Router project — Vercel detects the framework
@@ -174,10 +247,15 @@ automatically, so no `vercel.json` or custom build settings are needed.
 
 ## Notes
 
-- The upload form and setup data are mocked client-side — there's no backend
-  yet. `upload-form.tsx` simulates a network request and shows a success
-  state; wiring it to a real API/database (e.g. Supabase Postgres, scoped to
-  the logged-in user via RLS) is the natural next step.
+- Uploading a setup via the **file dropzone** only saves the form's metadata
+  right now — the actual file isn't persisted anywhere yet (no Supabase
+  Storage bucket wired up). The form says this explicitly under the
+  dropzone. The **manual entry** path (structured tire pressure/camber/ARB/
+  etc. fields) is fully real end-to-end since it's just data, not a file.
+- Pace and Predictability are currently self-rated by the uploader at
+  submission time (two star-pickers in the form) rather than aggregated from
+  other users who've tried the setup — a real community rating system would
+  be a good follow-up.
 - UI primitives in `src/components/ui` are hand-written in the shadcn/ui
   style (Radix primitives + `class-variance-authority` + Tailwind), so
   `npx shadcn@latest add <component>` continues to work against

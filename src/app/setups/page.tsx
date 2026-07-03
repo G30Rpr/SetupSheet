@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 
 import { SetupsBrowser } from "@/components/setups-browser";
-import { setups } from "@/lib/data";
+import { getSetups } from "@/lib/supabase/setups";
 
 export const metadata: Metadata = {
   title: "Browse Setups — SimSetups",
   description: "Browse free community sim racing setups by game, car, track and condition.",
 };
 
-export default function SetupsPage() {
+export default async function SetupsPage() {
+  const setups = await getSetups();
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
       <div className="mb-8">

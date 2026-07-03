@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { CheckCircle2, FileUp, Loader2, PenLine, Send } from "lucide-react";
+import { useState, useTransition, type FormEvent } from "react";
+import { AlertCircle, CheckCircle2, FileUp, Loader2, PenLine, Send } from "lucide-react";
 
+import { useAuth } from "@/components/auth-provider";
+import { DiscordLoginButton } from "@/components/auth-nav";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,7 +23,9 @@ import {
   SetupValuesFields,
   type SetupValues,
 } from "@/components/setup-values-fields";
+import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
+import { createSetup } from "@/lib/actions/setups";
 import { cn } from "@/lib/utils";
 import { conditions, games } from "@/lib/data";
 import type { SetupTag } from "@/lib/types";
@@ -45,11 +49,16 @@ const availableTags: SetupTag[] = [
 ];
 
 export function UploadForm() {
+  const { user, isLoading } = useAuth();
   const [entryMode, setEntryMode] = useState<EntryMode>("file");
   const [files, setFiles] = useState<File[]>([]);
   const [setupValues, setSetupValues] = useState<SetupValues>(emptySetupValues);
   const [tags, setTags] = useState<SetupTag[]>([]);
-  const [status, setStatus] = useState<"idle" | "submitting" | "success">("idle");
+  const [pace, setPace] = useState(3);
+  const [predictability, setPredictability] = useState(3);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<"idle" | "success">("idle");
+  const [isPending, startTransition] = useTransition();
 
   function toggleTag(tag: SetupTag) {
     setTags((prev) =>
@@ -63,8 +72,38 @@ export function UploadForm() {
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setStatus("submitting");
-    window.setTimeout(() => setStatus("success"), 900);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const game = String(formData.get("game") ?? "");
+    const condition = String(formData.get("condition") ?? "");
+    const car = String(formData.get("car") ?? "");
+    const track = String(formData.get("track") ?? "");
+    const lapTime = String(formData.get("lapTime") ?? "");
+    const rigProfile = String(formData.get("rig") ?? "");
+    const description = String(formData.get("description") ?? "");
+
+    startTransition(async () => {
+      const result = await createSetup({
+        game,
+        car,
+        track,
+        condition,
+        lapTime,
+        description,
+        tags,
+        rigProfile,
+        pace,
+        predictability,
+        setupValues: entryMode === "manual" ? setupValues : undefined,
+      });
+
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setStatus("success");
+      }
+    });
   }
 
   function resetForm() {
@@ -72,7 +111,34 @@ export function UploadForm() {
     setFiles([]);
     setSetupValues(emptySetupValues);
     setTags([]);
+    setPace(3);
+    setPredictability(3);
+    setError(null);
     setStatus("idle");
+  }
+
+  if (isLoading) {
+    return (
+      <Card className="h-64 animate-pulse border-border/60 bg-secondary/20" />
+    );
+  }
+
+  if (!user) {
+    return (
+      <Card className="items-center gap-4 border-racing-green/30 px-6 py-14 text-center">
+        <span className="flex size-14 items-center justify-center rounded-full bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30">
+          <PenLine className="size-7" />
+        </span>
+        <div>
+          <h2 className="text-xl font-semibold">Log in to upload a setup</h2>
+          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+            We use Discord to keep track of who uploaded what, so upvotes and
+            future edits are scoped to your own setups.
+          </p>
+        </div>
+        <DiscordLoginButton />
+      </Card>
+    );
   }
 
   if (status === "success") {
@@ -135,7 +201,13 @@ export function UploadForm() {
             </div>
 
             {entryMode === "file" ? (
-              <FileDropzone files={files} onFilesChange={setFiles} />
+              <div className="flex flex-col gap-2">
+                <FileDropzone files={files} onFilesChange={setFiles} />
+                <p className="text-xs text-muted-foreground">
+                  File storage is coming soon — for now we save the details
+                  below, not the file itself.
+                </p>
+              </div>
             ) : (
               <SetupValuesFields values={setupValues} onChange={updateSetupValue} />
             )}
@@ -144,7 +216,7 @@ export function UploadForm() {
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="game">Game</Label>
-              <Select required>
+              <Select name="game" required>
                 <SelectTrigger id="game" className="w-full">
                   <SelectValue placeholder="Select a game" />
                 </SelectTrigger>
@@ -160,7 +232,7 @@ export function UploadForm() {
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="condition">Condition</Label>
-              <Select required>
+              <Select name="condition" required>
                 <SelectTrigger id="condition" className="w-full">
                   <SelectValue placeholder="Select condition" />
                 </SelectTrigger>
@@ -176,22 +248,22 @@ export function UploadForm() {
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="car">Car</Label>
-              <Input id="car" placeholder="e.g. Porsche 992 GT3 Cup" required />
+              <Input id="car" name="car" placeholder="e.g. Porsche 992 GT3 Cup" required />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="track">Track</Label>
-              <Input id="track" placeholder="e.g. Spa-Francorchamps" required />
+              <Input id="track" name="track" placeholder="e.g. Spa-Francorchamps" required />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="lapTime">Lap time</Label>
-              <Input id="lapTime" placeholder="e.g. 2:16.482" />
+              <Input id="lapTime" name="lapTime" placeholder="e.g. 2:16.482" />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="rig">Rig profile</Label>
-              <Select required>
+              <Select name="rig" required>
                 <SelectTrigger id="rig" className="w-full">
                   <SelectValue placeholder="Select your rig" />
                 </SelectTrigger>
@@ -203,6 +275,17 @@ export function UploadForm() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label>Pace</Label>
+              <StarRating value={pace} onChange={setPace} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Predictability</Label>
+              <StarRating value={predictability} onChange={setPredictability} />
             </div>
           </section>
 
@@ -228,6 +311,7 @@ export function UploadForm() {
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
+              name="description"
               placeholder="What makes this setup fast or safe? Any tips for using it?"
               rows={4}
             />
@@ -235,8 +319,15 @@ export function UploadForm() {
         </div>
       </Card>
 
-      <Button type="submit" size="lg" disabled={status === "submitting"}>
-        {status === "submitting" ? (
+      {error && (
+        <div className="flex items-center gap-2 rounded-md border border-racing-red/30 bg-racing-red/10 px-4 py-3 text-sm text-red-400">
+          <AlertCircle className="size-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      <Button type="submit" size="lg" disabled={isPending}>
+        {isPending ? (
           <>
             <Loader2 className="animate-spin" />
             Submitting...

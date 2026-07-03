@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import {
   Calendar,
   ChevronDown,
@@ -10,10 +10,12 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+import { useAuth } from "@/components/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { StarRating } from "@/components/star-rating";
 import { TagBadge } from "@/components/tag-badge";
+import { toggleUpvote } from "@/lib/actions/setups";
 import { cn } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
@@ -32,7 +34,30 @@ const conditionVariant = {
 
 export function SetupCard({ setup }: { setup: Setup }) {
   const [showValues, setShowValues] = useState(false);
+  const [upvotes, setUpvotes] = useState(setup.upvotes);
+  const [hasUpvoted, setHasUpvoted] = useState(setup.hasUpvoted);
+  const [isPending, startTransition] = useTransition();
+  const { user, signInWithDiscord } = useAuth();
   const v = setup.setupValues;
+
+  function handleUpvoteClick() {
+    if (!user) {
+      void signInWithDiscord();
+      return;
+    }
+
+    const wasUpvoted = hasUpvoted;
+    setHasUpvoted(!wasUpvoted);
+    setUpvotes((n) => n + (wasUpvoted ? -1 : 1));
+
+    startTransition(async () => {
+      const result = await toggleUpvote(setup.id, wasUpvoted);
+      if (result.error) {
+        setHasUpvoted(wasUpvoted);
+        setUpvotes((n) => n + (wasUpvoted ? 1 : -1));
+      }
+    });
+  }
 
   return (
     <Card className="group relative overflow-hidden border-border/80 py-0 transition-all duration-200 hover:-translate-y-1 hover:border-racing-green/40 hover:shadow-[0_8px_30px_-8px_oklch(0.72_0.19_149/25%)]">
@@ -147,10 +172,21 @@ export function SetupCard({ setup }: { setup: Setup }) {
               <StarRating value={setup.predictability} />
             </div>
           </div>
-          <div className="flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-sm font-medium text-foreground">
-            <TrendingUp className="size-3.5 text-racing-green" />
-            {setup.upvotes}
-          </div>
+          <button
+            type="button"
+            onClick={handleUpvoteClick}
+            disabled={isPending}
+            aria-pressed={hasUpvoted}
+            className={cn(
+              "flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium transition-colors disabled:opacity-60",
+              hasUpvoted
+                ? "bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/40"
+                : "bg-secondary text-foreground hover:bg-racing-green/10 hover:text-racing-green"
+            )}
+          >
+            <TrendingUp className="size-3.5" />
+            {upvotes}
+          </button>
         </div>
       </div>
     </Card>
