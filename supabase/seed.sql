@@ -18,7 +18,7 @@ from (values
   ('iRacing', 'Porsche 992 GT3 Cup', 'Spa-Francorchamps', 'Dry', '2:16.482',
    'Stable rear end through Eau Rouge with a touch more front splitter for confidence on entry. Great for long stints.',
    array['Safe', 'Race'], 'Direct Drive + Load Cell',
-   '{"frontTirePressure":"23.5 psi","rearTirePressure":"24.0 psi","frontCamber":"-3.2°","rearCamber":"-2.7°","frontArb":"3 clicks","rearArb":"4 clicks","frontRideHeight":"65 mm","rearRideHeight":"72 mm","frontAero":"3","rearAero":"5","diffPreload":"65 Nm","diffPower":"Fixed (GT3 homologated)","brakeBias":"56% front","finalDrive":"Long — Spa'\''s straights"}'::jsonb,
+   '{"frontTirePressure":"23.5 psi","rearTirePressure":"24.0 psi","frontCamber":"-3.2°","rearCamber":"-2.7°","frontArb":"3 clicks","rearArb":"4 clicks","frontRideHeight":"65 mm","rearRideHeight":"72 mm","frontAero":"3","rearAero":"5","diffPreload":"65 Nm","diffPower":"Fixed (GT3 homologated)","brakeBias":"56% front","finalDrive":"Long — Spa''s straights"}'::jsonb,
    4, 5, 214, 1820, '2026-06-28'::timestamptz),
 
   ('Assetto Corsa Competizione', 'Ferrari 296 GT3', 'Monza', 'Dry', '1:47.312',
@@ -36,7 +36,7 @@ from (values
   ('Le Mans Ultimate', 'BMW M4 GT3', 'Fuji Speedway', 'Dry', '1:52.771',
    'Beginner friendly setup with softer springs and extra ride height for the kerbs. Forgiving under braking.',
    array['Beginner', 'Safe'], 'Gamepad',
-   '{"frontTirePressure":"25.0 psi","rearTirePressure":"25.5 psi","frontCamber":"-3.0°","rearCamber":"-2.5°","frontArb":"1 click","rearArb":"2 clicks","frontRideHeight":"70 mm","rearRideHeight":"76 mm","frontAero":"3","rearAero":"4","diffPreload":"35 Nm","diffPower":"Fixed (GT3 homologated)","brakeBias":"53% front","finalDrive":"Medium — Fuji'\''s back straight"}'::jsonb,
+   '{"frontTirePressure":"25.0 psi","rearTirePressure":"25.5 psi","frontCamber":"-3.0°","rearCamber":"-2.5°","frontArb":"1 click","rearArb":"2 clicks","frontRideHeight":"70 mm","rearRideHeight":"76 mm","frontAero":"3","rearAero":"4","diffPreload":"35 Nm","diffPower":"Fixed (GT3 homologated)","brakeBias":"53% front","finalDrive":"Medium — Fuji''s back straight"}'::jsonb,
    3, 5, 89, 610, '2026-06-20'::timestamptz),
 
   ('iRacing', 'Dallara IR-18', 'Road America', 'Dry', '2:04.998',
