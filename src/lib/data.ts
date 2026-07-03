@@ -21,7 +21,7 @@ export const setups: Setup[] = [
   },
   {
     id: "2",
-    game: "ACC",
+    game: "Assetto Corsa Competizione",
     car: "Ferrari 296 GT3",
     track: "Monza",
     condition: "Dry",
@@ -57,7 +57,7 @@ export const setups: Setup[] = [
   },
   {
     id: "4",
-    game: "rFactor 2",
+    game: "Le Mans Ultimate",
     car: "BMW M4 GT3",
     track: "Nürburgring GP",
     condition: "Dry",
@@ -93,7 +93,7 @@ export const setups: Setup[] = [
   },
   {
     id: "6",
-    game: "ACC",
+    game: "Assetto Corsa Competizione",
     car: "Audi R8 LMS Evo II",
     track: "Spa-Francorchamps",
     condition: "Wet",
@@ -129,7 +129,7 @@ export const setups: Setup[] = [
   },
   {
     id: "8",
-    game: "Gran Turismo 7",
+    game: "Assetto Corsa",
     car: "Mazda MX-5 Cup",
     track: "Suzuka",
     condition: "Dry",
@@ -183,7 +183,7 @@ export const setups: Setup[] = [
   },
   {
     id: "11",
-    game: "ACC",
+    game: "Assetto Corsa Competizione",
     car: "Lamborghini Huracán GT3 Evo2",
     track: "Zandvoort",
     condition: "Dry",
@@ -201,7 +201,7 @@ export const setups: Setup[] = [
   },
   {
     id: "12",
-    game: "rFactor 2",
+    game: "Le Mans Ultimate",
     car: "Porsche 992 GT3 Cup",
     track: "Sebring",
     condition: "Dry",
@@ -221,11 +221,17 @@ export const setups: Setup[] = [
 
 export const games: Game[] = [
   "iRacing",
-  "ACC",
-  "F1 24",
-  "rFactor 2",
+  "Assetto Corsa EVO",
+  "Assetto Corsa Competizione",
+  "Assetto Corsa",
+  "Le Mans Ultimate",
   "Automobilista 2",
-  "Gran Turismo 7",
+  "F1 24",
+  "F1 23",
+  "F1 22",
+  "F1 21",
+  "F1 2020",
+  "F1 2019",
 ];
 
 export const conditions: Condition[] = ["Dry", "Wet", "Mixed"];

@@ -60,8 +60,8 @@ export default function Home() {
 
           <p className="max-w-xl text-balance text-base text-muted-foreground sm:text-lg">
             SimSetups is a free community hub for sim racing setups — iRacing,
-            ACC, F1 24, rFactor 2 and more. Find a setup that matches your rig,
-            your skill level, and the conditions on track.
+            Assetto Corsa, Le Mans Ultimate, F1 24 and more. Find a setup that
+            matches your rig, your skill level, and the conditions on track.
           </p>
 
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">

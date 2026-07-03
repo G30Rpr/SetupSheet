@@ -1,4 +1,16 @@
-export type Game = "iRacing" | "ACC" | "F1 24" | "rFactor 2" | "Automobilista 2" | "Gran Turismo 7";
+export type Game =
+  | "iRacing"
+  | "Assetto Corsa EVO"
+  | "Assetto Corsa Competizione"
+  | "Assetto Corsa"
+  | "Le Mans Ultimate"
+  | "Automobilista 2"
+  | "F1 24"
+  | "F1 23"
+  | "F1 22"
+  | "F1 21"
+  | "F1 2020"
+  | "F1 2019";
 
 export type Condition = "Dry" | "Wet" | "Mixed";
 
