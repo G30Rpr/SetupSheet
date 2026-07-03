@@ -121,6 +121,14 @@ permit).
      production equivalent, e.g. `https://simsetups.app/auth/callback`).
      Supabase only allows redirecting to URLs on this allow-list.
 
+   **If you land back on `/?code=...` instead of being logged in:** that
+   means the `redirectTo` your app asked for wasn't on the allow-list above,
+   so Supabase silently fell back to the bare Site URL instead of
+   `/auth/callback` — check the exact entry exists (not just the bare
+   origin). `src/middleware.ts` will forward a stray `?code=` on any page to
+   `/auth/callback` as a safety net, but that only papers over the symptom;
+   the actual fix is fixing the allow-list entry.
+
 ### 4. Test it
 
 ```bash
