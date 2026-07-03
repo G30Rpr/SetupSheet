@@ -145,6 +145,33 @@ export async function getSetups(): Promise<Setup[]> {
   return typedRows.map((row) => mapRow(row, viewer, usernames));
 }
 
+/** Fetches every setup uploaded by a given user, newest first. */
+export async function getSetupsByUser(userId: string): Promise<Setup[]> {
+  const supabase = await createClient();
+
+  const { data: rows, error } = await supabase
+    .from("setups")
+    .select(SETUP_COLUMNS)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error || !rows) {
+    console.error("getSetupsByUser: failed to load setups", error);
+    return [];
+  }
+
+  const typedRows = rows as unknown as SetupRow[];
+  const [viewer, usernames] = await Promise.all([
+    getViewer(
+      supabase,
+      typedRows.map((r) => r.id)
+    ),
+    getUsernames(supabase, [userId]),
+  ]);
+
+  return typedRows.map((row) => mapRow(row, viewer, usernames));
+}
+
 /** Fetches a single setup by id, or null if it doesn't exist / the query fails. */
 export async function getSetupById(id: string): Promise<Setup | null> {
   const supabase = await createClient();
