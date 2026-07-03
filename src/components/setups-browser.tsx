@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -19,6 +20,7 @@ import type { Setup } from "@/lib/types";
 const ALL = "all";
 
 export function SetupsBrowser({ setups }: { setups: Setup[] }) {
+  const [search, setSearch] = useState("");
   const [game, setGame] = useState<string>(ALL);
   const [car, setCar] = useState<string>(ALL);
   const [track, setTrack] = useState<string>(ALL);
@@ -34,19 +36,27 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
   );
 
   const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
     return setups.filter((s) => {
       if (game !== ALL && s.game !== game) return false;
       if (car !== ALL && s.car !== car) return false;
       if (track !== ALL && s.track !== track) return false;
       if (condition !== ALL && s.condition !== condition) return false;
+      if (query) {
+        const haystack = [s.game, s.car, s.track, s.author, s.description, ...s.tags]
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
       return true;
     });
-  }, [setups, game, car, track, condition]);
+  }, [setups, search, game, car, track, condition]);
 
   const hasActiveFilters =
-    game !== ALL || car !== ALL || track !== ALL || condition !== ALL;
+    search !== "" || game !== ALL || car !== ALL || track !== ALL || condition !== ALL;
 
   function resetFilters() {
+    setSearch("");
     setGame(ALL);
     setCar(ALL);
     setTrack(ALL);
@@ -62,6 +72,17 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-xl border border-border/80 bg-card p-4 sm:p-5">
+        <div className="relative mb-4">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by car, track, game, or tag..."
+            className="pl-9"
+            aria-label="Search setups"
+          />
+        </div>
+
         <div className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <SlidersHorizontal className="size-4" />
           Filter setups
