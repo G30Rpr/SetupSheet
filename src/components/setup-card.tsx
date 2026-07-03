@@ -1,12 +1,17 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   Calendar,
   ChevronDown,
   Gamepad2,
   Gauge,
+  Pencil,
+  Star,
   Timer,
+  Trash2,
   TrendingUp,
 } from "lucide-react";
 
@@ -15,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { StarRating } from "@/components/star-rating";
 import { TagBadge } from "@/components/tag-badge";
-import { toggleUpvote } from "@/lib/actions/setups";
+import { deleteSetup, rateSetup, toggleUpvote } from "@/lib/actions/setups";
 import { setupSchemas } from "@/lib/setup-schemas";
 import { cn } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
@@ -34,10 +39,14 @@ const conditionVariant = {
 } as const;
 
 export function SetupCard({ setup }: { setup: Setup }) {
+  const router = useRouter();
   const [showValues, setShowValues] = useState(false);
+  const [showRateWidget, setShowRateWidget] = useState(false);
   const [upvotes, setUpvotes] = useState(setup.upvotes);
   const [hasUpvoted, setHasUpvoted] = useState(setup.hasUpvoted);
+  const [myRating, setMyRating] = useState(setup.myRating);
   const [isPending, startTransition] = useTransition();
+  const [isDeleting, startDeleteTransition] = useTransition();
   const { user, signInWithDiscord } = useAuth();
   const v = setup.setupValues;
 
@@ -60,16 +69,66 @@ export function SetupCard({ setup }: { setup: Setup }) {
     });
   }
 
+  function handleRate(field: "pace" | "predictability", value: number) {
+    if (!user) {
+      void signInWithDiscord();
+      return;
+    }
+
+    const next = {
+      pace: field === "pace" ? value : myRating?.pace ?? 0,
+      predictability: field === "predictability" ? value : myRating?.predictability ?? 0,
+    };
+    setMyRating(next);
+
+    startTransition(async () => {
+      await rateSetup(setup.id, next.pace, next.predictability);
+      router.refresh();
+    });
+  }
+
+  function handleDelete() {
+    if (!window.confirm(`Delete your setup "${setup.car} @ ${setup.track}"? This can't be undone.`)) {
+      return;
+    }
+    startDeleteTransition(async () => {
+      await deleteSetup(setup.id);
+      router.refresh();
+    });
+  }
+
   return (
     <Card className="group relative overflow-hidden border-border/80 py-0 transition-all duration-200 hover:-translate-y-1 hover:border-racing-green/40 hover:shadow-[0_8px_30px_-8px_oklch(0.72_0.19_149/25%)]">
       <div className="flex flex-col gap-3 p-5">
-        {/* Top row: game + condition */}
+        {/* Top row: game + condition + owner controls */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Gamepad2 className="size-3.5" />
             {setup.game}
           </div>
-          <Badge variant={conditionVariant[setup.condition]}>{setup.condition}</Badge>
+          <div className="flex items-center gap-2">
+            {setup.isOwner && (
+              <div className="flex items-center gap-1">
+                <Link
+                  href={`/setups/${setup.id}/edit`}
+                  aria-label="Edit setup"
+                  className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  <Pencil className="size-3.5" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  aria-label="Delete setup"
+                  className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-red-400 disabled:opacity-60"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+            )}
+            <Badge variant={conditionVariant[setup.condition]}>{setup.condition}</Badge>
+          </div>
         </div>
 
         {/* Car + Track */}
@@ -155,21 +214,26 @@ export function SetupCard({ setup }: { setup: Setup }) {
           </div>
         </div>
 
-        {/* Pace & Predictability + upvotes */}
+        {/* Pace & Predictability (community average) + upvotes */}
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <span className="w-24 text-[11px] uppercase tracking-wide text-muted-foreground">
                 Pace
               </span>
-              <StarRating value={setup.pace} />
+              <StarRating value={Math.round(setup.pace)} />
             </div>
             <div className="flex items-center gap-2">
               <span className="w-24 text-[11px] uppercase tracking-wide text-muted-foreground">
                 Predictability
               </span>
-              <StarRating value={setup.predictability} />
+              <StarRating value={Math.round(setup.predictability)} />
             </div>
+            <p className="pl-[102px] text-[11px] text-muted-foreground/70">
+              {setup.ratingCount === 0
+                ? "Not yet rated"
+                : `${setup.ratingCount} ${setup.ratingCount === 1 ? "rating" : "ratings"}`}
+            </p>
           </div>
           <button
             type="button"
@@ -186,6 +250,42 @@ export function SetupCard({ setup }: { setup: Setup }) {
             <TrendingUp className="size-3.5" />
             {upvotes}
           </button>
+        </div>
+
+        {/* Rate this setup (expandable) */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowRateWidget((s) => !s)}
+            className="flex w-full items-center justify-between rounded-md border border-border/60 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <span className="flex items-center gap-1.5">
+              <Star className="size-3.5" />
+              {myRating ? "Update your rating" : "Rate this setup"}
+            </span>
+            <ChevronDown
+              className={cn("size-3.5 transition-transform", showRateWidget && "rotate-180")}
+            />
+          </button>
+
+          {showRateWidget && (
+            <div className="mt-2 flex flex-col gap-2 rounded-md border border-border/60 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">Pace</span>
+                <StarRating
+                  value={myRating?.pace ?? 0}
+                  onChange={(value) => handleRate("pace", value)}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">Predictability</span>
+                <StarRating
+                  value={myRating?.predictability ?? 0}
+                  onChange={(value) => handleRate("predictability", value)}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Card>

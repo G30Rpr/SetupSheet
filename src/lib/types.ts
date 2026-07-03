@@ -28,6 +28,11 @@ export type RigProfile =
  */
 export type SetupValues = Record<string, string>;
 
+export interface Rating {
+  pace: number;
+  predictability: number;
+}
+
 export interface Setup {
   id: string;
   game: Game;
@@ -42,8 +47,14 @@ export interface Setup {
   uploadedAt: string;
   upvotes: number;
   hasUpvoted: boolean;
+  /** Community average (1-5, one decimal), not a fixed uploader rating. */
   pace: number;
   predictability: number;
+  ratingCount: number;
+  /** The current viewer's own rating, if they've rated this setup. */
+  myRating: Rating | null;
+  /** Whether the current viewer uploaded this setup (can edit/delete it). */
+  isOwner: boolean;
   downloads: number;
   setupValues?: SetupValues;
 }

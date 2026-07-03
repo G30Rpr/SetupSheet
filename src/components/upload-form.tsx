@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { AlertCircle, CheckCircle2, FileUp, Loader2, PenLine, Send } from "lucide-react";
 
@@ -21,11 +22,11 @@ import {
 import { SetupValuesFields, type SetupValues } from "@/components/setup-values-fields";
 import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
-import { createSetup } from "@/lib/actions/setups";
+import { createSetup, updateSetup } from "@/lib/actions/setups";
 import { getEmptySetupValues } from "@/lib/setup-schemas";
 import { cn } from "@/lib/utils";
 import { conditions, games } from "@/lib/data";
-import type { Game, SetupTag } from "@/lib/types";
+import type { Game, Setup, SetupTag } from "@/lib/types";
 
 type EntryMode = "file" | "manual";
 
@@ -45,13 +46,17 @@ const availableTags: SetupTag[] = [
   "Wet Weather",
 ];
 
-export function UploadForm() {
+export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
+  const router = useRouter();
   const { user, isLoading } = useAuth();
-  const [entryMode, setEntryMode] = useState<EntryMode>("file");
-  const [game, setGame] = useState<Game | "">("");
+  const isEditing = Boolean(existingSetup);
+  const [entryMode, setEntryMode] = useState<EntryMode>(
+    existingSetup?.setupValues ? "manual" : "file"
+  );
+  const [game, setGame] = useState<Game | "">(existingSetup?.game ?? "");
   const [files, setFiles] = useState<File[]>([]);
-  const [setupValues, setSetupValues] = useState<SetupValues>({});
-  const [tags, setTags] = useState<SetupTag[]>([]);
+  const [setupValues, setSetupValues] = useState<SetupValues>(existingSetup?.setupValues ?? {});
+  const [tags, setTags] = useState<SetupTag[]>(existingSetup?.tags ?? []);
   const [pace, setPace] = useState(3);
   const [predictability, setPredictability] = useState(3);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +91,27 @@ export function UploadForm() {
     const description = String(formData.get("description") ?? "");
 
     startTransition(async () => {
+      if (existingSetup) {
+        const result = await updateSetup(existingSetup.id, {
+          game,
+          car,
+          track,
+          condition,
+          lapTime,
+          description,
+          tags,
+          rigProfile,
+          setupValues: entryMode === "manual" ? setupValues : undefined,
+        });
+
+        if (result.error) {
+          setError(result.error);
+        } else {
+          router.push("/setups");
+        }
+        return;
+      }
+
       const result = await createSetup({
         game,
         car,
@@ -133,10 +159,12 @@ export function UploadForm() {
           <PenLine className="size-7" />
         </span>
         <div>
-          <h2 className="text-xl font-semibold">Log in to upload a setup</h2>
+          <h2 className="text-xl font-semibold">
+            Log in to {isEditing ? "edit this setup" : "upload a setup"}
+          </h2>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
             We use Discord to keep track of who uploaded what, so upvotes and
-            future edits are scoped to your own setups.
+            edits are scoped to your own setups.
           </p>
         </div>
         <DiscordLoginButton />
@@ -144,7 +172,7 @@ export function UploadForm() {
     );
   }
 
-  if (status === "success") {
+  if (!isEditing && status === "success") {
     return (
       <Card className="items-center gap-4 border-racing-green/40 px-6 py-14 text-center">
         <span className="flex size-14 items-center justify-center rounded-full bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30">
@@ -187,7 +215,7 @@ export function UploadForm() {
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="condition">Condition</Label>
-              <Select name="condition" required>
+              <Select name="condition" required defaultValue={existingSetup?.condition}>
                 <SelectTrigger id="condition" className="w-full">
                   <SelectValue placeholder="Select condition" />
                 </SelectTrigger>
@@ -257,22 +285,39 @@ export function UploadForm() {
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="car">Car</Label>
-              <Input id="car" name="car" placeholder="e.g. Porsche 992 GT3 Cup" required />
+              <Input
+                id="car"
+                name="car"
+                placeholder="e.g. Porsche 992 GT3 Cup"
+                defaultValue={existingSetup?.car}
+                required
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="track">Track</Label>
-              <Input id="track" name="track" placeholder="e.g. Spa-Francorchamps" required />
+              <Input
+                id="track"
+                name="track"
+                placeholder="e.g. Spa-Francorchamps"
+                defaultValue={existingSetup?.track}
+                required
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="lapTime">Lap time</Label>
-              <Input id="lapTime" name="lapTime" placeholder="e.g. 2:16.482" />
+              <Input
+                id="lapTime"
+                name="lapTime"
+                placeholder="e.g. 2:16.482"
+                defaultValue={existingSetup?.lapTime}
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="rig">Rig profile</Label>
-              <Select name="rig" required>
+              <Select name="rig" required defaultValue={existingSetup?.rigProfile}>
                 <SelectTrigger id="rig" className="w-full">
                   <SelectValue placeholder="Select your rig" />
                 </SelectTrigger>
@@ -287,16 +332,22 @@ export function UploadForm() {
             </div>
           </section>
 
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label>Pace</Label>
-              <StarRating value={pace} onChange={setPace} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>Predictability</Label>
-              <StarRating value={predictability} onChange={setPredictability} />
-            </div>
-          </section>
+          {!isEditing && (
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label>Pace</Label>
+                <StarRating value={pace} onChange={setPace} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Predictability</Label>
+                <StarRating value={predictability} onChange={setPredictability} />
+              </div>
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                Your own starting rating — the community (including you) can
+                update it any time from the setup card afterward.
+              </p>
+            </section>
+          )}
 
           <section className="flex flex-col gap-3">
             <Label>Tags</Label>
@@ -322,6 +373,7 @@ export function UploadForm() {
               id="description"
               name="description"
               placeholder="What makes this setup fast or safe? Any tips for using it?"
+              defaultValue={existingSetup?.description}
               rows={4}
             />
           </section>
@@ -339,7 +391,12 @@ export function UploadForm() {
         {isPending ? (
           <>
             <Loader2 className="animate-spin" />
-            Submitting...
+            {isEditing ? "Saving..." : "Submitting..."}
+          </>
+        ) : isEditing ? (
+          <>
+            <Send />
+            Save Changes
           </>
         ) : (
           <>

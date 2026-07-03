@@ -15,16 +15,51 @@ interface SetupRow {
   setup_values: SetupValues | null;
   pace: number;
   predictability: number;
+  rating_count: number;
   upvotes: number;
   downloads: number;
   created_at: string;
 }
 
-function mapRow(
-  row: SetupRow,
-  upvotedSetupIds: Set<string>,
-  usernames: Map<string, string>
-): Setup {
+const SETUP_COLUMNS =
+  "id, user_id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, pace, predictability, rating_count, upvotes, downloads, created_at";
+
+interface Viewer {
+  userId: string | null;
+  upvotedSetupIds: Set<string>;
+  myRatings: Map<string, { pace: number; predictability: number }>;
+}
+
+async function getViewer(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  setupIds: string[]
+): Promise<Viewer> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user || setupIds.length === 0) {
+    return { userId: user?.id ?? null, upvotedSetupIds: new Set(), myRatings: new Map() };
+  }
+
+  const [{ data: upvotes }, { data: ratings }] = await Promise.all([
+    supabase.from("setup_upvotes").select("setup_id").eq("user_id", user.id).in("setup_id", setupIds),
+    supabase
+      .from("setup_ratings")
+      .select("setup_id, pace, predictability")
+      .eq("user_id", user.id)
+      .in("setup_id", setupIds),
+  ]);
+
+  const upvotedSetupIds = new Set((upvotes ?? []).map((row) => row.setup_id));
+  const myRatings = new Map(
+    (ratings ?? []).map((row) => [row.setup_id, { pace: row.pace, predictability: row.predictability }])
+  );
+
+  return { userId: user.id, upvotedSetupIds, myRatings };
+}
+
+function mapRow(row: SetupRow, viewer: Viewer, usernames: Map<string, string>): Setup {
   return {
     id: row.id,
     game: row.game as Game,
@@ -38,68 +73,98 @@ function mapRow(
     author: usernames.get(row.user_id) ?? "Racer",
     uploadedAt: row.created_at,
     upvotes: row.upvotes,
-    hasUpvoted: upvotedSetupIds.has(row.id),
+    hasUpvoted: viewer.upvotedSetupIds.has(row.id),
     pace: row.pace,
     predictability: row.predictability,
+    ratingCount: row.rating_count,
+    myRating: viewer.myRatings.get(row.id) ?? null,
+    isOwner: viewer.userId === row.user_id,
     downloads: row.downloads,
     setupValues: row.setup_values ?? undefined,
   };
 }
 
+async function getUsernames(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userIds: string[]
+): Promise<Map<string, string>> {
+  const usernames = new Map<string, string>();
+  if (userIds.length === 0) return usernames;
+
+  const { data: profiles, error } = await supabase
+    .from("profiles")
+    .select("id, username")
+    .in("id", Array.from(new Set(userIds)));
+
+  if (error) {
+    console.error("getUsernames: failed to load profiles", error);
+    return usernames;
+  }
+  for (const profile of profiles ?? []) usernames.set(profile.id, profile.username);
+  return usernames;
+}
+
 /**
- * Fetches every setup, newest first, with the current viewer's upvote state
- * attached. Returns an empty list (rather than throwing) if Supabase is
- * unreachable or the query fails, so a backend hiccup degrades to an empty
- * browse page instead of a 500.
+ * Fetches every setup, newest first, with the current viewer's upvote and
+ * rating state attached. Returns an empty list (rather than throwing) if
+ * Supabase is unreachable or the query fails, so a backend hiccup degrades
+ * to an empty browse page instead of a 500.
  *
  * Deliberately avoids PostgREST's embedded-resource join syntax
  * (`.select("...,profiles(username)")`) — that requires the API's schema
  * cache to have picked up the setups→profiles foreign key, which doesn't
  * happen automatically for tables created via the SQL Editor rather than
- * Supabase's own migration tooling. Two flat queries side-steps that
- * failure mode entirely.
+ * Supabase's own migration tooling. Flat queries + in-memory joins side-step
+ * that failure mode entirely.
  */
 export async function getSetups(): Promise<Setup[]> {
   const supabase = await createClient();
 
-  const [{ data: rows, error }, { data: userData }] = await Promise.all([
-    supabase
-      .from("setups")
-      .select(
-        "id, user_id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, pace, predictability, upvotes, downloads, created_at"
-      )
-      .order("created_at", { ascending: false }),
-    supabase.auth.getUser(),
-  ]);
+  const { data: rows, error } = await supabase
+    .from("setups")
+    .select(SETUP_COLUMNS)
+    .order("created_at", { ascending: false });
 
   if (error || !rows) {
     console.error("getSetups: failed to load setups", error);
     return [];
   }
 
-  const usernames = new Map<string, string>();
-  const userIds = Array.from(new Set(rows.map((row) => row.user_id)));
-  if (userIds.length > 0) {
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id, username")
-      .in("id", userIds);
-    if (profilesError) {
-      console.error("getSetups: failed to load profiles", profilesError);
-    } else {
-      for (const profile of profiles ?? []) usernames.set(profile.id, profile.username);
-    }
+  const typedRows = rows as unknown as SetupRow[];
+  const [viewer, usernames] = await Promise.all([
+    getViewer(
+      supabase,
+      typedRows.map((r) => r.id)
+    ),
+    getUsernames(
+      supabase,
+      typedRows.map((r) => r.user_id)
+    ),
+  ]);
+
+  return typedRows.map((row) => mapRow(row, viewer, usernames));
+}
+
+/** Fetches a single setup by id, or null if it doesn't exist / the query fails. */
+export async function getSetupById(id: string): Promise<Setup | null> {
+  const supabase = await createClient();
+
+  const { data: row, error } = await supabase
+    .from("setups")
+    .select(SETUP_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !row) {
+    if (error) console.error("getSetupById: failed to load setup", error);
+    return null;
   }
 
-  const upvotedSetupIds = new Set<string>();
-  const user = userData?.user;
-  if (user) {
-    const { data: upvotes } = await supabase
-      .from("setup_upvotes")
-      .select("setup_id")
-      .eq("user_id", user.id);
-    for (const row of upvotes ?? []) upvotedSetupIds.add(row.setup_id);
-  }
+  const typedRow = row as unknown as SetupRow;
+  const [viewer, usernames] = await Promise.all([
+    getViewer(supabase, [typedRow.id]),
+    getUsernames(supabase, [typedRow.user_id]),
+  ]);
 
-  return (rows as unknown as SetupRow[]).map((row) => mapRow(row, upvotedSetupIds, usernames));
+  return mapRow(typedRow, viewer, usernames);
 }
