@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { CheckCircle2, Loader2, Send } from "lucide-react";
+import { CheckCircle2, FileUp, Loader2, PenLine, Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,9 +16,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  emptySetupValues,
+  SetupValuesFields,
+  type SetupValues,
+} from "@/components/setup-values-fields";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { conditions, games } from "@/lib/data";
 import type { SetupTag } from "@/lib/types";
+
+type EntryMode = "file" | "manual";
 
 const rigProfiles = [
   "Gamepad",
@@ -37,7 +45,9 @@ const availableTags: SetupTag[] = [
 ];
 
 export function UploadForm() {
+  const [entryMode, setEntryMode] = useState<EntryMode>("file");
   const [files, setFiles] = useState<File[]>([]);
+  const [setupValues, setSetupValues] = useState<SetupValues>(emptySetupValues);
   const [tags, setTags] = useState<SetupTag[]>([]);
   const [status, setStatus] = useState<"idle" | "submitting" | "success">("idle");
 
@@ -47,6 +57,10 @@ export function UploadForm() {
     );
   }
 
+  function updateSetupValue(key: keyof SetupValues, value: string) {
+    setSetupValues((prev) => ({ ...prev, [key]: value }));
+  }
+
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("submitting");
@@ -54,7 +68,9 @@ export function UploadForm() {
   }
 
   function resetForm() {
+    setEntryMode("file");
     setFiles([]);
+    setSetupValues(emptySetupValues);
     setTags([]);
     setStatus("idle");
   }
@@ -84,10 +100,45 @@ export function UploadForm() {
       <Card className="px-5 py-6 sm:px-8 sm:py-8">
         <div className="flex flex-col gap-6">
           <section className="flex flex-col gap-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Setup files
-            </h2>
-            <FileDropzone files={files} onFilesChange={setFiles} />
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Setup data
+              </h2>
+              <div className="flex items-center gap-1 rounded-lg border border-border/80 bg-secondary/40 p-1">
+                <button
+                  type="button"
+                  onClick={() => setEntryMode("file")}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    entryMode === "file"
+                      ? "bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <FileUp className="size-3.5" />
+                  Upload file
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEntryMode("manual")}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    entryMode === "manual"
+                      ? "bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <PenLine className="size-3.5" />
+                  Enter manually
+                </button>
+              </div>
+            </div>
+
+            {entryMode === "file" ? (
+              <FileDropzone files={files} onFilesChange={setFiles} />
+            ) : (
+              <SetupValuesFields values={setupValues} onChange={updateSetupValue} />
+            )}
           </section>
 
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
