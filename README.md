@@ -53,6 +53,7 @@ src/
 supabase/
   migrations/0001_init_setups_schema.sql   profiles, setups, setup_upvotes + RLS
   seed.sql                                  optional sample data for a fresh project
+  seed_more_games.sql                       adds coverage for the games seed.sql didn't touch
 ```
 
 ## Getting started
@@ -187,6 +188,14 @@ copied from any single source (see git history for the research sources).
 Log in with Discord on the site once first — so a row exists in
 `public.profiles` to attribute the seed rows to — then run `seed.sql` in the
 SQL Editor.
+
+`seed.sql`'s 12 rows only covered 6 of the 12 supported games (several F1
+years and Assetto Corsa EVO had zero setups). `supabase/seed_more_games.sql`
+adds one setup for each previously-uncovered game plus a few more combos for
+variety — same research-grounded approach, safe to run alongside or instead
+of `seed.sql` since it only inserts new rows. Both are meant to run once
+each; running either twice duplicates rows (no dedupe logic, since real
+uploads are expected to have duplicate car/track combos legitimately).
 
 ### 3. How the app talks to it
 
