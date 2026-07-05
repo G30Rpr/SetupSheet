@@ -12,7 +12,7 @@ import { getProfile } from "@/lib/supabase/profiles";
 import { getSetupsByUser } from "@/lib/supabase/setups";
 
 export const metadata: Metadata = {
-  title: "My Profile — SimSetups",
+  title: "My Profile — SetupSheet",
 };
 
 function getInitials(name: string) {

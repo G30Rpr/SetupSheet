@@ -1,4 +1,4 @@
--- SimSetups: profiles, setups, and upvotes schema with RLS.
+-- SetupSheet: profiles, setups, and upvotes schema with RLS.
 -- Apply via the Supabase SQL Editor (Dashboard -> SQL Editor -> paste -> Run)
 -- or `supabase db push` if you use the Supabase CLI locally.
 

@@ -1,4 +1,4 @@
-# SimSetups
+# SetupSheet
 
 A free, community-driven sim racing setups site. Built with Next.js 15 (App
 Router), TypeScript, Tailwind CSS v4, and shadcn/ui-style components on a
@@ -121,7 +121,7 @@ permit).
    - **Site URL**: `http://localhost:3000` for local dev (your production
      domain once deployed).
    - **Redirect URLs**: add `http://localhost:3000/auth/callback` (and your
-     production equivalent, e.g. `https://simsetups.app/auth/callback`).
+     production equivalent, e.g. `https://setupsheet.app/auth/callback`).
      Supabase only allows redirecting to URLs on this allow-list.
 
    **If you land back on `/?code=...` instead of being logged in:** that
@@ -139,7 +139,7 @@ npm run dev
 ```
 
 Click **Login with Discord** in the header → approve on Discord → you're
-redirected back to SimSetups signed in, with your Discord avatar in the
+redirected back to SetupSheet signed in, with your Discord avatar in the
 header. Click the avatar → **Log out** to sign out.
 
 ## Database: setups, upvotes, and RLS

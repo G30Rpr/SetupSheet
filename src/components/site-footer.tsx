@@ -10,7 +10,7 @@ export function SiteFooter() {
             <FlagTriangleRight className="size-3.5" />
           </span>
           <span className="font-semibold tracking-tight">
-            Sim<span className="text-racing-green">Setups</span>
+            Setup<span className="text-racing-green">Sheet</span>
           </span>
           <span className="ml-2 text-sm text-muted-foreground">
             Free setups, by the community.
@@ -30,7 +30,7 @@ export function SiteFooter() {
         </nav>
 
         <p className="text-xs text-muted-foreground">
-          © {new Date().getFullYear()} SimSetups. Not affiliated with any sim title publisher.
+          © {new Date().getFullYear()} SetupSheet. Not affiliated with any sim title publisher.
         </p>
       </div>
     </footer>

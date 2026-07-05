@@ -8,7 +8,7 @@ import { UploadForm } from "@/components/upload-form";
 import { getSetupById } from "@/lib/supabase/setups";
 
 export const metadata: Metadata = {
-  title: "Edit Setup — SimSetups",
+  title: "Edit Setup — SetupSheet",
 };
 
 export default async function EditSetupPage({

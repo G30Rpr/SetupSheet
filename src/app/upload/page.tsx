@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { UploadForm } from "@/components/upload-form";
 
 export const metadata: Metadata = {
-  title: "Upload a Setup — SimSetups",
+  title: "Upload a Setup — SetupSheet",
   description: "Share your sim racing setup with the community in under a minute.",
 };
 

@@ -61,7 +61,7 @@ export default async function Home() {
           </h1>
 
           <p className="max-w-xl text-balance text-base text-muted-foreground sm:text-lg">
-            SimSetups is a free community hub for sim racing setups — iRacing,
+            SetupSheet is a free community hub for sim racing setups — iRacing,
             Assetto Corsa, Le Mans Ultimate, F1 24 and more. Find a setup that
             matches your rig, your skill level, and the conditions on track.
           </p>

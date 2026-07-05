@@ -33,7 +33,7 @@ export function SiteHeader() {
             <FlagTriangleRight className="size-4" />
           </span>
           <span className="text-lg">
-            Sim<span className="text-racing-green">Setups</span>
+            Setup<span className="text-racing-green">Sheet</span>
           </span>
         </Link>
 
@@ -76,7 +76,7 @@ export function SiteHeader() {
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
                   <FlagTriangleRight className="size-4 text-racing-green" />
-                  Sim<span className="text-racing-green">Setups</span>
+                  Setup<span className="text-racing-green">Sheet</span>
                 </SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-1 px-4">

@@ -4,7 +4,7 @@ import { SetupsBrowser } from "@/components/setups-browser";
 import { getSetups } from "@/lib/supabase/setups";
 
 export const metadata: Metadata = {
-  title: "Browse Setups — SimSetups",
+  title: "Browse Setups — SetupSheet",
   description: "Browse free community sim racing setups by game, car, track and condition.",
 };
 
