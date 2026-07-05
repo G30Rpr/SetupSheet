@@ -233,6 +233,32 @@ from (values
    ),
    5, 3, 289, 2010, '2026-06-24'::timestamptz),
 
+  ('F1 24', 'F1 2024 Car', 'Zandvoort', 'Mixed', '1:11.826',
+   'Zandvoort''s banked corners reward a car that rotates freely — a touch more rear anti-roll bar and rear wing help find rotation through Turn 3 and the final banked corner without unsettling the rear on turn-in.',
+   array['Race', 'Safe'], 'Wheel + 3 Pedals',
+   jsonb_build_object(
+     'frontWing', '28', 'rearWing', '18',
+     'diffOnThrottle', '62%', 'diffOffThrottle', '52%', 'engineBraking', '45%',
+     'frontCamber', '-2.85°', 'rearCamber', '-1.45°', 'frontToe', '0.05°', 'rearToe', '0.09°',
+     'frontArb', '5/11', 'rearArb', '6/11', 'frontRideHeight', '3/11', 'rearRideHeight', '4/11',
+     'brakePressure', '94%', 'brakeBias', '54%',
+     'frontTirePressure', '22.5 psi', 'rearTirePressure', '20.5 psi'
+   ),
+   4, 5, 26, 110, '2026-06-30'::timestamptz),
+
+  ('F1 24', 'F1 2024 Car', 'Marina Bay', 'Wet', '1:47.933',
+   'High-downforce wet setup for Marina Bay''s bumpy, low-grip street surface — softer suspension and a rearward brake bias keep the car predictable under braking into Turn 7 and Turn 14 when the track is greasy.',
+   array['Wet Weather', 'Safe'], 'Wheel + Handbrake',
+   jsonb_build_object(
+     'frontWing', '42', 'rearWing', '32',
+     'diffOnThrottle', '58%', 'diffOffThrottle', '62%', 'engineBraking', '35%',
+     'frontCamber', '-2.50°', 'rearCamber', '-1.20°', 'frontToe', '0.06°', 'rearToe', '0.11°',
+     'frontArb', '3/11', 'rearArb', '4/11', 'frontRideHeight', '4/11', 'rearRideHeight', '5/11',
+     'brakePressure', '88%', 'brakeBias', '51%',
+     'frontTirePressure', '21.0 psi', 'rearTirePressure', '19.5 psi'
+   ),
+   3, 5, 33, 150, '2026-07-04'::timestamptz),
+
   -- F1 25 -----------------------------------------------------------------
   ('F1 25', 'F1 2025 Car', 'Suzuka', 'Dry', '1:28.947',
    'Medium-high downforce for the Esses, precise steering response through 130R without giving up too much on the back straight.',
@@ -259,6 +285,45 @@ from (values
      'frontTirePressure', '21.5 psi', 'rearTirePressure', '19.5 psi'
    ),
    4, 3, 29, 140, '2026-06-29'::timestamptz),
+
+  ('F1 25', 'F1 2025 Car', 'Bahrain (Sakhir)', 'Dry', '1:31.245',
+   'Tuned for Sakhir''s heavy braking zones and tire degradation — softer rear anti-roll bar and conservative camber keep the tires alive across a full race stint, while solid brake bias gets you stopped for Turn 1 and Turn 4.',
+   array['Race', 'Safe'], 'Wheel + 3 Pedals',
+   jsonb_build_object(
+     'frontWing', '32', 'rearWing', '24',
+     'diffOnThrottle', '60%', 'diffOffThrottle', '58%',
+     'frontCamber', '-2.70°', 'rearCamber', '-1.30°', 'frontToe', '0.05°', 'rearToe', '0.09°',
+     'frontArb', '4/11', 'rearArb', '5/11', 'frontRideHeight', '4/11', 'rearRideHeight', '5/11',
+     'brakePressure', '97%', 'brakeBias', '53%',
+     'frontTirePressure', '24.0 psi', 'rearTirePressure', '22.0 psi'
+   ),
+   4, 4, 22, 95, '2026-07-01'::timestamptz),
+
+  ('F1 25', 'F1 2025 Car', 'Baku', 'Dry', '1:42.588',
+   'Minimum downforce to maximize speed on the back straight, with a stable diff setting to keep the rear planted under the brutal braking zones into Turn 1 and Turn 3.',
+   array['Quali', 'Aggressive'], 'Direct Drive + Load Cell',
+   jsonb_build_object(
+     'frontWing', '20', 'rearWing', '10',
+     'diffOnThrottle', '55%', 'diffOffThrottle', '65%',
+     'frontCamber', '-2.50°', 'rearCamber', '-1.10°', 'frontToe', '0.03°', 'rearToe', '0.07°',
+     'frontArb', '3/11', 'rearArb', '4/11', 'frontRideHeight', '2/11', 'rearRideHeight', '3/11',
+     'brakePressure', '100%', 'brakeBias', '56%',
+     'frontTirePressure', '23.0 psi', 'rearTirePressure', '21.0 psi'
+   ),
+   5, 3, 41, 180, '2026-07-02'::timestamptz),
+
+  ('F1 25', 'F1 2025 Car', 'Las Vegas', 'Dry', '1:33.702',
+   'Vegas'' cold track temps make tire warm-up the main challenge — low downforce for the long straights paired with conservative camber to help the tires reach operating temperature without overheating late in a stint.',
+   array['Race', 'Safe'], 'Wheel + Handbrake',
+   jsonb_build_object(
+     'frontWing', '18', 'rearWing', '8',
+     'diffOnThrottle', '50%', 'diffOffThrottle', '60%',
+     'frontCamber', '-2.40°', 'rearCamber', '-1.00°', 'frontToe', '0.03°', 'rearToe', '0.06°',
+     'frontArb', '3/11', 'rearArb', '3/11', 'frontRideHeight', '2/11', 'rearRideHeight', '3/11',
+     'brakePressure', '98%', 'brakeBias', '54%',
+     'frontTirePressure', '22.5 psi', 'rearTirePressure', '20.5 psi'
+   ),
+   4, 4, 18, 77, '2026-07-03'::timestamptz),
 
   -- Gran Turismo 7 -----------------------------------------------------------
   ('Gran Turismo 7', 'Toyota GR Supra Race Car ''19', 'Fuji Speedway', 'Dry', '1:42.775',
