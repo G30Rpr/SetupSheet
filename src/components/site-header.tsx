@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { FlagTriangleRight, Menu, Upload } from "lucide-react";
+import { Menu, Upload } from "lucide-react";
 
 import { AuthNav, DiscordLoginButton, UserMenu } from "@/components/auth-nav";
 import { useAuth } from "@/components/auth-provider";
+import { LogoMark } from "@/components/icons/logo-mark";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -30,7 +31,7 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
           <span className="flex size-8 items-center justify-center rounded-md bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30">
-            <FlagTriangleRight className="size-4" />
+            <LogoMark className="size-4" />
           </span>
           <span className="text-lg">
             Setup<span className="text-racing-green">Sheet</span>
@@ -75,7 +76,7 @@ export function SiteHeader() {
             <SheetContent side="right" className="w-4/5">
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
-                  <FlagTriangleRight className="size-4 text-racing-green" />
+                  <LogoMark className="size-4 text-racing-green" />
                   Setup<span className="text-racing-green">Sheet</span>
                 </SheetTitle>
               </SheetHeader>
