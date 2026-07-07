@@ -24,7 +24,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -33,6 +35,8 @@ import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
 import { createSetup, updateSetup, uploadSetupFile } from "@/lib/actions/setups";
 import { carLists } from "@/lib/car-lists";
+import { trackLists } from "@/lib/track-lists";
+import { isKnownOption, type SelectOptionGroup } from "@/lib/select-options";
 import { getEmptySetupValues } from "@/lib/setup-schemas";
 import { cn } from "@/lib/utils";
 import { conditions, games } from "@/lib/data";
@@ -56,6 +60,79 @@ const availableTags: SetupTag[] = [
   "Wet Weather",
 ];
 
+/**
+ * A dropdown grouped into labeled sections (e.g. car class, track pack)
+ * with a manual-entry escape hatch, falling back to plain free text when
+ * there's no known roster for the current game at all.
+ */
+function GroupedSelectField({
+  id,
+  groups,
+  useManual,
+  onToggleManual,
+  defaultValue,
+  selectPlaceholder,
+  inputPlaceholder,
+}: {
+  id: string;
+  groups: SelectOptionGroup[] | undefined;
+  useManual: boolean;
+  onToggleManual: (manual: boolean) => void;
+  defaultValue?: string;
+  selectPlaceholder: string;
+  inputPlaceholder: string;
+}) {
+  if (groups && !useManual) {
+    return (
+      <>
+        <Select
+          name={id}
+          required
+          defaultValue={defaultValue && isKnownOption(groups, defaultValue) ? defaultValue : undefined}
+        >
+          <SelectTrigger id={id} className="w-full">
+            <SelectValue placeholder={selectPlaceholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {groups.map((group) => (
+              <SelectGroup key={group.label}>
+                <SelectLabel>{group.label}</SelectLabel>
+                {group.options.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ))}
+          </SelectContent>
+        </Select>
+        <button
+          type="button"
+          onClick={() => onToggleManual(true)}
+          className="self-start text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        >
+          Not listed? Enter it manually
+        </button>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Input id={id} name={id} placeholder={inputPlaceholder} defaultValue={defaultValue} required />
+      {groups && (
+        <button
+          type="button"
+          onClick={() => onToggleManual(false)}
+          className="self-start text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        >
+          Choose from the list instead
+        </button>
+      )}
+    </>
+  );
+}
+
 export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
@@ -66,8 +143,11 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   const [game, setGame] = useState<Game | "">(existingSetup?.game ?? "");
   const [useManualCarInput, setUseManualCarInput] = useState(() => {
     if (!existingSetup) return false;
-    const list = carLists[existingSetup.game];
-    return !list || !list.includes(existingSetup.car);
+    return !isKnownOption(carLists[existingSetup.game], existingSetup.car);
+  });
+  const [useManualTrackInput, setUseManualTrackInput] = useState(() => {
+    if (!existingSetup) return false;
+    return !isKnownOption(trackLists[existingSetup.game], existingSetup.track);
   });
   const [file, setFile] = useState<File | null>(null);
   const [keepExistingFile, setKeepExistingFile] = useState(Boolean(existingSetup?.fileName));
@@ -89,6 +169,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     setGame(value as Game);
     setSetupValues(getEmptySetupValues(value as Game));
     setUseManualCarInput(false);
+    setUseManualTrackInput(false);
   }
 
   function updateSetupValue(key: string, value: string) {
@@ -365,77 +446,29 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           </section>
 
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5" key={`car-${game}`}>
               <Label htmlFor="car">Car</Label>
-              {(() => {
-                const carList = game ? carLists[game] : undefined;
-
-                if (carList && !useManualCarInput) {
-                  return (
-                    <>
-                      <Select
-                        name="car"
-                        required
-                        key={game}
-                        defaultValue={
-                          existingSetup?.car && carList.includes(existingSetup.car)
-                            ? existingSetup.car
-                            : undefined
-                        }
-                      >
-                        <SelectTrigger id="car" className="w-full">
-                          <SelectValue placeholder="Select a car" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {carList.map((c) => (
-                            <SelectItem key={c} value={c}>
-                              {c}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <button
-                        type="button"
-                        onClick={() => setUseManualCarInput(true)}
-                        className="self-start text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-                      >
-                        Car not listed? Enter it manually
-                      </button>
-                    </>
-                  );
-                }
-
-                return (
-                  <>
-                    <Input
-                      id="car"
-                      name="car"
-                      placeholder="e.g. Porsche 992 GT3 Cup"
-                      defaultValue={existingSetup?.car}
-                      required
-                    />
-                    {carList && (
-                      <button
-                        type="button"
-                        onClick={() => setUseManualCarInput(false)}
-                        className="self-start text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-                      >
-                        Choose from the list instead
-                      </button>
-                    )}
-                  </>
-                );
-              })()}
+              <GroupedSelectField
+                id="car"
+                groups={game ? carLists[game] : undefined}
+                useManual={useManualCarInput}
+                onToggleManual={setUseManualCarInput}
+                defaultValue={existingSetup?.car}
+                selectPlaceholder="Select a car"
+                inputPlaceholder="e.g. Porsche 992 GT3 Cup"
+              />
             </div>
 
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5" key={`track-${game}`}>
               <Label htmlFor="track">Track</Label>
-              <Input
+              <GroupedSelectField
                 id="track"
-                name="track"
-                placeholder="e.g. Spa-Francorchamps"
+                groups={game ? trackLists[game] : undefined}
+                useManual={useManualTrackInput}
+                onToggleManual={setUseManualTrackInput}
                 defaultValue={existingSetup?.track}
-                required
+                selectPlaceholder="Select a track"
+                inputPlaceholder="e.g. Spa-Francorchamps"
               />
             </div>
 
