@@ -32,6 +32,7 @@ import { SetupValuesFields, type SetupValues } from "@/components/setup-values-f
 import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
 import { createSetup, updateSetup, uploadSetupFile } from "@/lib/actions/setups";
+import { carLists } from "@/lib/car-lists";
 import { getEmptySetupValues } from "@/lib/setup-schemas";
 import { cn } from "@/lib/utils";
 import { conditions, games } from "@/lib/data";
@@ -63,6 +64,11 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     existingSetup?.setupValues ? "manual" : "file"
   );
   const [game, setGame] = useState<Game | "">(existingSetup?.game ?? "");
+  const [useManualCarInput, setUseManualCarInput] = useState(() => {
+    if (!existingSetup) return false;
+    const list = carLists[existingSetup.game];
+    return !list || !list.includes(existingSetup.car);
+  });
   const [file, setFile] = useState<File | null>(null);
   const [keepExistingFile, setKeepExistingFile] = useState(Boolean(existingSetup?.fileName));
   const [setupValues, setSetupValues] = useState<SetupValues>(existingSetup?.setupValues ?? {});
@@ -82,6 +88,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   function handleGameChange(value: string) {
     setGame(value as Game);
     setSetupValues(getEmptySetupValues(value as Game));
+    setUseManualCarInput(false);
   }
 
   function updateSetupValue(key: string, value: string) {
@@ -360,13 +367,65 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="car">Car</Label>
-              <Input
-                id="car"
-                name="car"
-                placeholder="e.g. Porsche 992 GT3 Cup"
-                defaultValue={existingSetup?.car}
-                required
-              />
+              {(() => {
+                const carList = game ? carLists[game] : undefined;
+
+                if (carList && !useManualCarInput) {
+                  return (
+                    <>
+                      <Select
+                        name="car"
+                        required
+                        key={game}
+                        defaultValue={
+                          existingSetup?.car && carList.includes(existingSetup.car)
+                            ? existingSetup.car
+                            : undefined
+                        }
+                      >
+                        <SelectTrigger id="car" className="w-full">
+                          <SelectValue placeholder="Select a car" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {carList.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <button
+                        type="button"
+                        onClick={() => setUseManualCarInput(true)}
+                        className="self-start text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                      >
+                        Car not listed? Enter it manually
+                      </button>
+                    </>
+                  );
+                }
+
+                return (
+                  <>
+                    <Input
+                      id="car"
+                      name="car"
+                      placeholder="e.g. Porsche 992 GT3 Cup"
+                      defaultValue={existingSetup?.car}
+                      required
+                    />
+                    {carList && (
+                      <button
+                        type="button"
+                        onClick={() => setUseManualCarInput(false)}
+                        className="self-start text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                      >
+                        Choose from the list instead
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             <div className="flex flex-col gap-1.5">
