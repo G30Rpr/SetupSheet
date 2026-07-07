@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
+  BadgeCheck,
   Calendar,
   ChevronDown,
   FileDown,
@@ -167,12 +168,18 @@ export function SetupCard({ setup }: { setup: Setup }) {
         </div>
 
         {/* Lap time */}
-        <div className="flex items-center gap-2 rounded-md bg-secondary/60 px-3 py-2">
-          <Timer className="size-4 text-racing-green" />
-          <span className="font-mono text-base font-semibold tabular-nums text-racing-green">
+        <div className="flex items-center gap-2 rounded-md bg-secondary/60 px-3 py-2.5">
+          <Timer className="size-5 shrink-0 text-racing-green" />
+          <span className="font-mono text-2xl font-bold tabular-nums text-racing-green">
             {setup.lapTime}
           </span>
           <span className="text-xs text-muted-foreground">lap time</span>
+          {setup.fileUrl && (
+            <Badge variant="green" className="ml-auto shrink-0">
+              <BadgeCheck className="size-3" />
+              Verified
+            </Badge>
+          )}
         </div>
 
         {/* Description snippet */}
@@ -233,13 +240,16 @@ export function SetupCard({ setup }: { setup: Setup }) {
             type="button"
             onClick={handleDownload}
             disabled={isDownloading}
-            className="flex w-full items-center justify-between gap-2 rounded-md border border-border/80 bg-secondary/30 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-60"
+            title={setup.fileName ?? undefined}
+            className="flex w-full items-center justify-between gap-2 rounded-md bg-racing-green/10 px-3 py-2.5 text-sm font-semibold text-racing-green ring-1 ring-inset ring-racing-green/30 transition-colors hover:bg-racing-green/15 disabled:opacity-60"
           >
-            <span className="flex min-w-0 items-center gap-1.5">
-              <FileDown className="size-3.5 shrink-0" />
-              <span className="truncate">{setup.fileName ?? "Download setup file"}</span>
+            <span className="flex min-w-0 items-center gap-2">
+              <FileDown className="size-4 shrink-0" />
+              <span className="truncate">
+                {isDownloading ? "Preparing download..." : "Download Setup File"}
+              </span>
             </span>
-            <span className="shrink-0 text-[10px] text-muted-foreground/70">
+            <span className="shrink-0 text-xs font-normal text-racing-green/70">
               {downloads} {downloads === 1 ? "download" : "downloads"}
             </span>
           </button>
