@@ -6,6 +6,7 @@ import { AuthProvider } from "@/components/auth-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { createClient } from "@/lib/supabase/server";
+import { getNotifications, getUnreadNotificationCount } from "@/lib/supabase/notifications";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,10 @@ export default async function RootLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const [initialNotifications, initialUnreadCount] = user
+    ? await Promise.all([getNotifications(user.id, 10), getUnreadNotificationCount(user.id)])
+    : [[], 0];
+
   return (
     <html
       lang="en"
@@ -40,7 +45,10 @@ export default async function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         <AuthProvider initialUser={user}>
-          <SiteHeader />
+          <SiteHeader
+            initialNotifications={initialNotifications}
+            initialUnreadCount={initialUnreadCount}
+          />
           <main className="flex-1">{children}</main>
           <SiteFooter />
         </AuthProvider>

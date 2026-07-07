@@ -7,6 +7,7 @@ import { Menu, Upload } from "lucide-react";
 import { AuthNav, DiscordLoginButton, UserMenu } from "@/components/auth-nav";
 import { useAuth } from "@/components/auth-provider";
 import { LogoMark } from "@/components/icons/logo-mark";
+import { NotificationBell } from "@/components/notification-bell";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -16,6 +17,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import type { NotificationItem } from "@/lib/supabase/notifications";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -24,7 +26,13 @@ const navLinks = [
   { href: "/upload", label: "Upload" },
 ];
 
-export function SiteHeader() {
+export function SiteHeader({
+  initialNotifications,
+  initialUnreadCount,
+}: {
+  initialNotifications: NotificationItem[];
+  initialUnreadCount: number;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -61,12 +69,20 @@ export function SiteHeader() {
               Upload Setup
             </Link>
           </Button>
-          <div className="ml-1 border-l border-border/80 pl-3">
+          <div className="ml-1 flex items-center gap-1 border-l border-border/80 pl-3">
+            <NotificationBell
+              initialNotifications={initialNotifications}
+              initialUnreadCount={initialUnreadCount}
+            />
             <AuthNav />
           </div>
         </div>
 
-        <div className="flex items-center gap-2 md:hidden">
+        <div className="flex items-center gap-1 md:hidden">
+          <NotificationBell
+            initialNotifications={initialNotifications}
+            initialUnreadCount={initialUnreadCount}
+          />
           <AuthNav />
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
