@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ProfileView } from "@/components/profile-view";
 import { createClient } from "@/lib/supabase/server";
+import { isFollowing } from "@/lib/supabase/follows";
 import { getProfile } from "@/lib/supabase/profiles";
 import { getSetupsByUser } from "@/lib/supabase/setups";
 
@@ -56,13 +57,18 @@ export default async function PublicProfilePage({
     );
   }
 
+  const viewerIsOwner = user?.id === userId;
+  const viewerFollowsThem = !viewerIsOwner && (await isFollowing(user?.id ?? null, userId));
+
   return (
     <ProfileView
       displayName={profile.username}
       avatarUrl={profile.avatarUrl ?? undefined}
       memberSince={profile.memberSince}
+      followerCount={profile.followerCount}
+      follow={viewerIsOwner ? undefined : { targetUserId: userId, initialIsFollowing: viewerFollowsThem }}
       setups={setups}
-      isOwnProfile={user?.id === userId}
+      isOwnProfile={viewerIsOwner}
     />
   );
 }

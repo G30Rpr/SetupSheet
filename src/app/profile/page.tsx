@@ -56,6 +56,7 @@ export default async function ProfilePage() {
       displayName={displayName}
       avatarUrl={avatarUrl}
       memberSince={profile?.memberSince}
+      followerCount={profile?.followerCount ?? 0}
       setups={setups}
       isOwnProfile
     />

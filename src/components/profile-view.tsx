@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Calendar, Star, TrendingUp, Upload } from "lucide-react";
+import { Calendar, Star, TrendingUp, Upload, Users } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ContributorBadge } from "@/components/contributor-badge";
+import { FollowButton } from "@/components/follow-button";
 import { SetupCard } from "@/components/setup-card";
 import { getInitials } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
@@ -29,12 +30,17 @@ export function ProfileView({
   displayName,
   avatarUrl,
   memberSince,
+  followerCount,
+  follow,
   setups,
   isOwnProfile,
 }: {
   displayName: string;
   avatarUrl?: string;
   memberSince?: string;
+  followerCount: number;
+  /** Present only when viewing someone else's profile -- renders a Follow button. */
+  follow?: { targetUserId: string; initialIsFollowing: boolean };
   setups: Setup[];
   isOwnProfile: boolean;
 }) {
@@ -64,6 +70,10 @@ export function ProfileView({
           )}
         </div>
 
+        {follow && (
+          <FollowButton targetUserId={follow.targetUserId} initialIsFollowing={follow.initialIsFollowing} />
+        )}
+
         <div className="flex items-center gap-5">
           <div className="flex flex-col items-center">
             <span className="text-lg font-semibold tabular-nums">{setups.length}</span>
@@ -82,6 +92,13 @@ export function ProfileView({
               {totalRatings}
             </span>
             <span className="text-xs text-muted-foreground">Ratings</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="flex items-center gap-1 text-lg font-semibold tabular-nums">
+              <Users className="size-4" />
+              {followerCount}
+            </span>
+            <span className="text-xs text-muted-foreground">Followers</span>
           </div>
         </div>
       </Card>
