@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   BadgeCheck,
+  BookOpen,
   Calendar,
   ChevronDown,
   FileDown,
@@ -30,6 +31,7 @@ import {
   toggleUpvote,
 } from "@/lib/actions/setups";
 import { buildSetupExportFilename, buildSetupExportText } from "@/lib/setup-export";
+import { installGuides } from "@/lib/install-guides";
 import { setupSchemas } from "@/lib/setup-schemas";
 import { cn } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
@@ -51,6 +53,7 @@ export function SetupCard({ setup }: { setup: Setup }) {
   const router = useRouter();
   const [showValues, setShowValues] = useState(false);
   const [showRateWidget, setShowRateWidget] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [upvotes, setUpvotes] = useState(setup.upvotes);
   const [hasUpvoted, setHasUpvoted] = useState(setup.hasUpvoted);
   const [myRating, setMyRating] = useState(setup.myRating);
@@ -60,6 +63,7 @@ export function SetupCard({ setup }: { setup: Setup }) {
   const [downloads, setDownloads] = useState(setup.downloads);
   const { user, signInWithDiscord } = useAuth();
   const v = setup.setupValues;
+  const guide = installGuides[setup.game];
 
   function handleUpvoteClick() {
     if (!user) {
@@ -278,6 +282,36 @@ export function SetupCard({ setup }: { setup: Setup }) {
             </span>
           </button>
         )}
+
+        {/* How to install (expandable) */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowInstallGuide((s) => !s)}
+            className="flex w-full items-center justify-between rounded-md border border-border/80 bg-secondary/30 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <span className="flex items-center gap-1.5">
+              <BookOpen className="size-3.5" />
+              How to install this setup
+            </span>
+            <ChevronDown
+              className={cn("size-3.5 transition-transform", showInstallGuide && "rotate-180")}
+            />
+          </button>
+
+          {showInstallGuide && (
+            <div className="mt-2 flex flex-col gap-2 rounded-md border border-border/60 px-3 py-2.5 text-xs">
+              <Badge variant={guide.supportsFileImport ? "green" : "amber"} className="w-fit">
+                {guide.supportsFileImport ? "File import supported" : "Manual entry only"}
+              </Badge>
+              <ol className="flex list-decimal flex-col gap-1.5 pl-4 text-muted-foreground">
+                {guide.steps.map((step, i) => (
+                  <li key={i}>{step}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 border-t border-border/80 bg-black/15 px-5 py-3">
