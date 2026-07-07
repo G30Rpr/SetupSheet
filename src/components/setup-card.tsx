@@ -22,7 +22,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { StarRating } from "@/components/star-rating";
 import { TagBadge } from "@/components/tag-badge";
-import { deleteSetup, downloadSetup, rateSetup, toggleUpvote } from "@/lib/actions/setups";
+import {
+  deleteSetup,
+  downloadSetup,
+  rateSetup,
+  recordSetupExport,
+  toggleUpvote,
+} from "@/lib/actions/setups";
+import { buildSetupExportFilename, buildSetupExportText } from "@/lib/setup-export";
 import { setupSchemas } from "@/lib/setup-schemas";
 import { cn } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
@@ -101,8 +108,31 @@ export function SetupCard({ setup }: { setup: Setup }) {
     });
   }
 
+  function triggerBlobDownload(blob: Blob, filename: string) {
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(blobUrl);
+  }
+
   function handleDownload() {
     startDownloadTransition(async () => {
+      // No uploaded file behind this setup -- export the manually-entered
+      // values as a text file instead, so Download always does something.
+      if (!setup.fileUrl) {
+        triggerBlobDownload(
+          new Blob([buildSetupExportText(setup)], { type: "text/plain" }),
+          buildSetupExportFilename(setup)
+        );
+        setDownloads((n) => n + 1);
+        await recordSetupExport(setup.id);
+        return;
+      }
+
       const result = await downloadSetup(setup.id);
       if (result.error || !result.url) return;
 
@@ -111,14 +141,7 @@ export function SetupCard({ setup }: { setup: Setup }) {
       try {
         const response = await fetch(result.url);
         const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.download = result.fileName ?? "setup-file";
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(blobUrl);
+        triggerBlobDownload(blob, result.fileName ?? "setup-file");
       } catch {
         window.open(result.url, "_blank");
       }
@@ -234,8 +257,9 @@ export function SetupCard({ setup }: { setup: Setup }) {
           </div>
         )}
 
-        {/* Setup file download */}
-        {setup.fileUrl && (
+        {/* Download: the original uploaded file if there is one, otherwise
+            a generated text export of the manually-entered values */}
+        {(setup.fileUrl || setup.setupValues) && (
           <button
             type="button"
             onClick={handleDownload}
@@ -246,7 +270,7 @@ export function SetupCard({ setup }: { setup: Setup }) {
             <span className="flex min-w-0 items-center gap-2">
               <FileDown className="size-4 shrink-0" />
               <span className="truncate">
-                {isDownloading ? "Preparing download..." : "Download Setup File"}
+                {isDownloading ? "Preparing download..." : "Download Setup"}
               </span>
             </span>
             <span className="shrink-0 text-xs font-normal text-racing-green/70">

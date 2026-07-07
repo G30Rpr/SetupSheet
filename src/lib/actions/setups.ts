@@ -350,3 +350,23 @@ export async function downloadSetup(
   revalidatePath("/");
   return { url: publicUrl, fileName: setup.file_name, error: null };
 }
+
+/**
+ * Bumps the download counter for a setup exported client-side (manually
+ * entered values with no uploaded file behind them). Same free-for-anyone
+ * access as downloadSetup, just without a Storage object to look up.
+ */
+export async function recordSetupExport(setupId: string): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("increment_downloads", { setup_id: setupId });
+
+  if (error) {
+    console.error("recordSetupExport: increment_downloads failed", error);
+    return { error: error.message };
+  }
+
+  revalidatePath("/setups");
+  revalidatePath("/");
+  return { error: null };
+}
