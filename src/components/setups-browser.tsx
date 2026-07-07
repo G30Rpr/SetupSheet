@@ -19,12 +19,30 @@ import type { Setup } from "@/lib/types";
 
 const ALL = "all";
 
+type SortOption = "newest" | "trending" | "safest" | "fastest";
+
+const sortOptions: { value: SortOption; label: string }[] = [
+  { value: "newest", label: "Newest" },
+  { value: "trending", label: "Trending" },
+  { value: "safest", label: "Safest" },
+  { value: "fastest", label: "Fastest" },
+];
+
+/** Parses an "M:SS.mmm" lap time into total seconds; unparseable/blank times sort last. */
+function lapTimeSeconds(lapTime: string): number {
+  const match = lapTime.trim().match(/^(\d+):(\d+(?:\.\d+)?)$/);
+  if (!match) return Infinity;
+  const [, minutes, seconds] = match;
+  return Number(minutes) * 60 + Number(seconds);
+}
+
 export function SetupsBrowser({ setups }: { setups: Setup[] }) {
   const [search, setSearch] = useState("");
   const [game, setGame] = useState<string>(ALL);
   const [car, setCar] = useState<string>(ALL);
   const [track, setTrack] = useState<string>(ALL);
   const [condition, setCondition] = useState<string>(ALL);
+  const [sort, setSort] = useState<SortOption>("newest");
 
   const carOptions = useMemo(
     () => getCarsForGame(setups, game === ALL ? undefined : game),
@@ -37,7 +55,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return setups.filter((s) => {
+    const results = setups.filter((s) => {
       if (game !== ALL && s.game !== game) return false;
       if (car !== ALL && s.car !== car) return false;
       if (track !== ALL && s.track !== track) return false;
@@ -50,7 +68,20 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
       }
       return true;
     });
-  }, [setups, search, game, car, track, condition]);
+
+    switch (sort) {
+      case "trending":
+        return [...results].sort((a, b) => b.upvotes - a.upvotes);
+      case "safest":
+        return [...results].sort((a, b) => b.predictability - a.predictability);
+      case "fastest":
+        return [...results].sort(
+          (a, b) => lapTimeSeconds(a.lapTime) - lapTimeSeconds(b.lapTime)
+        );
+      default:
+        return results;
+    }
+  }, [setups, search, game, car, track, condition, sort]);
 
   const hasActiveFilters =
     search !== "" || game !== ALL || car !== ALL || track !== ALL || condition !== ALL;
@@ -129,10 +160,28 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
         )}
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {filtered.length} {filtered.length === 1 ? "setup" : "setups"} found
         </p>
+
+        <div className="flex items-center gap-2">
+          <label htmlFor="sort" className="text-xs font-medium text-muted-foreground">
+            Sort by
+          </label>
+          <Select value={sort} onValueChange={(value) => setSort(value as SortOption)}>
+            <SelectTrigger id="sort" size="sm" className="w-[130px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {sortOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {filtered.length > 0 ? (
