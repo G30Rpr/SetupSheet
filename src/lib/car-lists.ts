@@ -2,13 +2,14 @@ import type { SelectOptionGroup } from "@/lib/select-options";
 import type { Game } from "@/lib/types";
 
 /**
- * Known car rosters per game, grouped by class, used to power a searchable
- * dropdown on the upload form instead of free text -- avoids the same car
- * getting listed under slightly different spellings ("Porsche 992", "992
- * GT3 R", "Porsche 911 GT3 R 2023") across different setups. Every entry
- * names its class explicitly (GT3/GT4/GT2/GTC) even where the car's own
- * model badge doesn't include it (e.g. ACC's GTC class cars), so the class
- * is always unambiguous from the car name alone.
+ * Known car rosters per game, grouped by class (e.g. ACC's GT3/GT4/GT2/GTC,
+ * LMU's Hypercar/LMP2/GTE/GT3/LMP3), used to power a searchable dropdown on
+ * the upload form instead of free text -- avoids the same car getting
+ * listed under slightly different spellings ("Porsche 992", "992 GT3 R",
+ * "Porsche 911 GT3 R 2023") across different setups. Where a car's own
+ * model badge doesn't already say its class (e.g. ACC's GTC cars), the
+ * class is spelled out in the name so it's unambiguous even outside its
+ * group.
  *
  * Not every game has a roster here yet -- games without one fall back to
  * free-text entry, and every game's dropdown includes a manual-entry escape
@@ -88,6 +89,65 @@ export const carLists: Partial<Record<Game, SelectOptionGroup[]>> = {
         "Porsche 911 II GT3 Cup 2017 GTC",
         "Porsche 992 GT3 Cup 2021 GTC",
       ],
+    },
+  ],
+  "Le Mans Ultimate": [
+    {
+      label: "Hypercar",
+      options: [
+        "Alpine A424 (2024 Pack 2 DLC)",
+        "Aston Martin Valkyrie AMR LMH Hypercar",
+        "BMW M Hybrid V8",
+        "BMW M Hybrid V8 Evo (2026)",
+        "Cadillac V-Series.R",
+        "Ferrari 499P",
+        "Genesis GMR-001 LMDh",
+        "Glickenhaus SCG 007",
+        "Isotta Fraschini Tipo 6-C (2024 Pack 2 DLC)",
+        "Lamborghini SC63 (2024 Pack 1 DLC)",
+        "Peugeot 9X8 2023",
+        "Peugeot 9X8 2024 (2024 Pack 1 DLC)",
+        "Porsche 963",
+        "Toyota GR010 Hybrid",
+        "Toyota GR010 Hybrid (2026)",
+        "Vanwall Vandervell 680",
+      ],
+    },
+    {
+      label: "LMP2",
+      options: ["Oreca 07 Gibson", "Oreca 07 Gibson ELMS"],
+    },
+    {
+      label: "GTE",
+      options: [
+        "Aston Martin Vantage GTE",
+        "Chevrolet Corvette C8.R",
+        "Ferrari 488 GTE Evo",
+        "Porsche 911 RSR-19",
+      ],
+    },
+    {
+      label: "GT3",
+      options: [
+        "Aston Martin Vantage AMR LMGT3 Evo",
+        "BMW M4 LMGT3",
+        "BMW M4 LMGT3 Evo",
+        "Chevrolet Corvette Z06 LMGT3.R",
+        "Ferrari 296 LMGT3",
+        "Ferrari 296 LMGT3 Evo",
+        "Ford Mustang LMGT3",
+        "Ford Mustang LMGT3 Evo",
+        "Lamborghini Huracan LMGT3 Evo 2",
+        "Lexus RC F LMGT3",
+        "Mercedes-AMG LMGT3",
+        "McLaren 720S LMGT3 Evo",
+        "Porsche 911 LMGT3 R (992)",
+        "Porsche 911 LMGT3 R (992) 2026",
+      ],
+    },
+    {
+      label: "LMP3",
+      options: ["Ligier JS P325", "Ginetta G61-LT-P3 Evo", "Duqueine D09", "Adess AD25"],
     },
   ],
 };
