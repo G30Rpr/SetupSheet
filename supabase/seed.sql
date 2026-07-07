@@ -55,14 +55,34 @@ from (values
    'Low drag qualifying setup, max top speed down the straights. Twitchy on cold tires so build up to the limit.',
    array['Quali', 'Aggressive'], 'Wheel + 3 Pedals',
    jsonb_build_object(
-     'frontTirePressure', '26.3 psi', 'rearTirePressure', '26.8 psi',
-     'frontCamber', '-4.3°', 'rearCamber', '-3.8°', 'frontToe', '0.02°', 'rearToe', '0.10°',
-     'frontArb', '2 clicks', 'rearArb', '2 clicks',
-     'frontBumpRebound', '8/9 clicks', 'rearBumpRebound', '7/8 clicks',
-     'brakeBias', '58% front', 'brakeDuct', '4/3',
-     'frontSplitter', '1 (min downforce)', 'rearWing', '2',
-     'frontRideHeight', '52 mm', 'rearRideHeight', '58 mm',
-     'diffPreload', '40 Nm (GT3 fixed lock)', 'finalDrive', 'Short — Monza top speed'
+     'frontLeftTyrePressure', '26.3 psi', 'frontRightTyrePressure', '26.3 psi',
+     'rearLeftTyrePressure', '26.8 psi', 'rearRightTyrePressure', '26.8 psi',
+     'frontLeftCamber', '-4.3°', 'frontRightCamber', '-4.3°',
+     'rearLeftCamber', '-3.8°', 'rearRightCamber', '-3.8°',
+     'frontLeftToe', '-0.02°', 'frontRightToe', '0.02°',
+     'rearLeftToe', '-0.10°', 'rearRightToe', '0.10°',
+     'caster', '12.0°'
+   ) || jsonb_build_object(
+     'tractionControl', '3', 'tractionControl2', '0', 'abs', '3', 'engineMap', '1',
+     'fuel', '10 L', 'tyreCompound', 'Dry', 'tyreSet', '1',
+     'frontBrakePadSet', '1', 'rearBrakePadSet', '1'
+   ) || jsonb_build_object(
+     'frontArb', '2', 'rearArb', '2',
+     'brakePower', '100%', 'brakeBias', '58% front', 'steeringRatio', '15.0',
+     'diffPreload', '40 Nm (GT3 fixed lock)',
+     'frontLeftSpringRate', '130000 N/m', 'frontRightSpringRate', '130000 N/m',
+     'rearLeftSpringRate', '160000 N/m', 'rearRightSpringRate', '160000 N/m',
+     'frontLeftBumpStopRate', '1000 N', 'frontRightBumpStopRate', '1000 N',
+     'rearLeftBumpStopRate', '1100 N', 'rearRightBumpStopRate', '1100 N',
+     'frontLeftBumpStopRange', '10 mm', 'frontRightBumpStopRange', '10 mm',
+     'rearLeftBumpStopRange', '18 mm', 'rearRightBumpStopRange', '18 mm'
+   ) || jsonb_build_object(
+     'frontLeftSlowBump', '9', 'frontLeftFastBump', '5', 'frontLeftSlowRebound', '8', 'frontLeftFastRebound', '6',
+     'frontRightSlowBump', '9', 'frontRightFastBump', '5', 'frontRightSlowRebound', '8', 'frontRightFastRebound', '6',
+     'rearLeftSlowBump', '7', 'rearLeftFastBump', '3', 'rearLeftSlowRebound', '7', 'rearLeftFastRebound', '8',
+     'rearRightSlowBump', '7', 'rearRightFastBump', '3', 'rearRightSlowRebound', '7', 'rearRightFastRebound', '8',
+     'frontRideHeight', '52 mm', 'frontDiffuser', '0', 'frontBrakeDuct', '1',
+     'rearRideHeight', '58 mm', 'rearWing', '2', 'rearBrakeDuct', '1'
    ),
    5, 2, 358, 2650, '2026-06-30'::timestamptz),
 
@@ -70,14 +90,34 @@ from (values
    'Full wet tune with max wing and softer bias to manage the standing water through the old Nordschleife sections.',
    array['Wet Weather', 'Safe'], 'Direct Drive + Load Cell',
    jsonb_build_object(
-     'frontTirePressure', '25.0 psi', 'rearTirePressure', '25.5 psi',
-     'frontCamber', '-2.6°', 'rearCamber', '-2.0°', 'frontToe', '0.05°', 'rearToe', '0.15°',
-     'frontArb', '1 click', 'rearArb', '1 click',
-     'frontBumpRebound', '6/7 clicks', 'rearBumpRebound', '5/6 clicks',
-     'brakeBias', '54% front', 'brakeDuct', '5/4',
-     'frontSplitter', '4', 'rearWing', '6 (max wet wing)',
-     'frontRideHeight', '66 mm', 'rearRideHeight', '72 mm',
-     'diffPreload', '45 Nm (GT3 fixed lock)', 'finalDrive', 'Tall — standing water'
+     'frontLeftTyrePressure', '25.0 psi', 'frontRightTyrePressure', '25.0 psi',
+     'rearLeftTyrePressure', '25.5 psi', 'rearRightTyrePressure', '25.5 psi',
+     'frontLeftCamber', '-2.6°', 'frontRightCamber', '-2.6°',
+     'rearLeftCamber', '-2.0°', 'rearRightCamber', '-2.0°',
+     'frontLeftToe', '-0.05°', 'frontRightToe', '0.05°',
+     'rearLeftToe', '-0.15°', 'rearRightToe', '0.15°',
+     'caster', '11.5°'
+   ) || jsonb_build_object(
+     'tractionControl', '5', 'tractionControl2', '2', 'abs', '5', 'engineMap', '3',
+     'fuel', '30 L', 'tyreCompound', 'Wet', 'tyreSet', '2',
+     'frontBrakePadSet', '1', 'rearBrakePadSet', '1'
+   ) || jsonb_build_object(
+     'frontArb', '1', 'rearArb', '1',
+     'brakePower', '90%', 'brakeBias', '54% front', 'steeringRatio', '15.0',
+     'diffPreload', '45 Nm (GT3 fixed lock)',
+     'frontLeftSpringRate', '120000 N/m', 'frontRightSpringRate', '120000 N/m',
+     'rearLeftSpringRate', '150000 N/m', 'rearRightSpringRate', '150000 N/m',
+     'frontLeftBumpStopRate', '900 N', 'frontRightBumpStopRate', '900 N',
+     'rearLeftBumpStopRate', '1000 N', 'rearRightBumpStopRate', '1000 N',
+     'frontLeftBumpStopRange', '14 mm', 'frontRightBumpStopRange', '14 mm',
+     'rearLeftBumpStopRange', '22 mm', 'rearRightBumpStopRange', '22 mm'
+   ) || jsonb_build_object(
+     'frontLeftSlowBump', '6', 'frontLeftFastBump', '3', 'frontLeftSlowRebound', '6', 'frontLeftFastRebound', '5',
+     'frontRightSlowBump', '6', 'frontRightFastBump', '3', 'frontRightSlowRebound', '6', 'frontRightFastRebound', '5',
+     'rearLeftSlowBump', '5', 'rearLeftFastBump', '2', 'rearLeftSlowRebound', '5', 'rearLeftFastRebound', '6',
+     'rearRightSlowBump', '5', 'rearRightFastBump', '2', 'rearRightSlowRebound', '5', 'rearRightFastRebound', '6',
+     'frontRideHeight', '66 mm', 'frontDiffuser', '0', 'frontBrakeDuct', '5',
+     'rearRideHeight', '72 mm', 'rearWing', '6 (max wet wing)', 'rearBrakeDuct', '4'
    ),
    3, 4, 51, 240, '2026-05-25'::timestamptz),
 
