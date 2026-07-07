@@ -3,8 +3,9 @@ import type { Game } from "@/lib/types";
 
 /**
  * Known track rosters per game, grouped the same way as carLists (see
- * car-lists.ts) -- "Core Circuits" is the base-game/GT World Challenge
- * roster, "Additional Circuits" is the Intercontinental GT Pack DLC.
+ * car-lists.ts) -- "Core Circuits" is the base-game roster, the other
+ * groups are ACC's DLC track packs (British GT / Intercontinental GT,
+ * Challengers Pack, and later additions).
  *
  * Not every game has a roster here yet -- games without one fall back to
  * free-text entry, and every game's dropdown includes a manual-entry escape
@@ -39,6 +40,20 @@ export const trackLists: Partial<Record<Game, SelectOptionGroup[]>> = {
         "WeatherTech Raceway Laguna Seca",
         "Mount Panorama Circuit",
       ],
+    },
+    {
+      label: "Challengers Pack",
+      options: [
+        "Autodromo Enzo e Dino Ferrari – Imola",
+        "Watkins Glen",
+        "Circuit of the Americas (COTA)",
+        "Indianapolis",
+        "Circuit Ricardo Tormo (Valencia)",
+      ],
+    },
+    {
+      label: "More Circuits",
+      options: ["Red Bull Ring", "24H Nürburgring (Nordschleife)"],
     },
   ],
 };
