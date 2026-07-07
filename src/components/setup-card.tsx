@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { StarRating } from "@/components/star-rating";
@@ -33,7 +34,7 @@ import {
 import { buildSetupExportFilename, buildSetupExportText } from "@/lib/setup-export";
 import { installGuides } from "@/lib/install-guides";
 import { setupSchemas } from "@/lib/setup-schemas";
-import { cn } from "@/lib/utils";
+import { cn, getInitials } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
 function formatDate(dateStr: string) {
@@ -185,6 +186,20 @@ export function SetupCard({ setup }: { setup: Setup }) {
             <Badge variant={conditionVariant[setup.condition]}>{setup.condition}</Badge>
           </div>
         </div>
+
+        {/* Author byline */}
+        <Link
+          href={`/profile/${setup.authorId}`}
+          className="flex w-fit items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <Avatar className="size-5">
+            <AvatarImage src={setup.authorAvatarUrl ?? undefined} alt={setup.author} />
+            <AvatarFallback className="bg-racing-green/15 text-[9px] text-racing-green">
+              {getInitials(setup.author)}
+            </AvatarFallback>
+          </Avatar>
+          {setup.author}
+        </Link>
 
         {/* Car + Track */}
         <div>

@@ -43,6 +43,8 @@ export interface Setup {
   tags: SetupTag[];
   rigProfile: RigProfile;
   author: string;
+  authorId: string;
+  authorAvatarUrl: string | null;
   uploadedAt: string;
   upvotes: number;
   hasUpvoted: boolean;

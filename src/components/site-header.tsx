@@ -20,6 +20,7 @@ import {
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/setups", label: "Browse Setups" },
+  { href: "/leaderboard", label: "Leaderboard" },
   { href: "/upload", label: "Upload" },
 ];
 

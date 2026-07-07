@@ -65,9 +65,10 @@ async function getViewer(
 function mapRow(
   row: SetupRow,
   viewer: Viewer,
-  usernames: Map<string, string>,
+  authors: Map<string, { username: string; avatarUrl: string | null }>,
   supabase: Awaited<ReturnType<typeof createClient>>
 ): Setup {
+  const author = authors.get(row.user_id);
   return {
     id: row.id,
     game: row.game as Game,
@@ -78,7 +79,9 @@ function mapRow(
     description: row.description,
     tags: row.tags as SetupTag[],
     rigProfile: row.rig_profile as RigProfile,
-    author: usernames.get(row.user_id) ?? "Racer",
+    author: author?.username ?? "Racer",
+    authorId: row.user_id,
+    authorAvatarUrl: author?.avatarUrl ?? null,
     uploadedAt: row.created_at,
     upvotes: row.upvotes,
     hasUpvoted: viewer.upvotedSetupIds.has(row.id),
@@ -96,24 +99,26 @@ function mapRow(
   };
 }
 
-async function getUsernames(
+async function getAuthors(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userIds: string[]
-): Promise<Map<string, string>> {
-  const usernames = new Map<string, string>();
-  if (userIds.length === 0) return usernames;
+): Promise<Map<string, { username: string; avatarUrl: string | null }>> {
+  const authors = new Map<string, { username: string; avatarUrl: string | null }>();
+  if (userIds.length === 0) return authors;
 
   const { data: profiles, error } = await supabase
     .from("profiles")
-    .select("id, username")
+    .select("id, username, avatar_url")
     .in("id", Array.from(new Set(userIds)));
 
   if (error) {
-    console.error("getUsernames: failed to load profiles", error);
-    return usernames;
+    console.error("getAuthors: failed to load profiles", error);
+    return authors;
   }
-  for (const profile of profiles ?? []) usernames.set(profile.id, profile.username);
-  return usernames;
+  for (const profile of profiles ?? []) {
+    authors.set(profile.id, { username: profile.username, avatarUrl: profile.avatar_url });
+  }
+  return authors;
 }
 
 /**
@@ -143,18 +148,18 @@ export async function getSetups(): Promise<Setup[]> {
   }
 
   const typedRows = rows as unknown as SetupRow[];
-  const [viewer, usernames] = await Promise.all([
+  const [viewer, authors] = await Promise.all([
     getViewer(
       supabase,
       typedRows.map((r) => r.id)
     ),
-    getUsernames(
+    getAuthors(
       supabase,
       typedRows.map((r) => r.user_id)
     ),
   ]);
 
-  return typedRows.map((row) => mapRow(row, viewer, usernames, supabase));
+  return typedRows.map((row) => mapRow(row, viewer, authors, supabase));
 }
 
 /** Fetches every setup uploaded by a given user, newest first. */
@@ -173,15 +178,15 @@ export async function getSetupsByUser(userId: string): Promise<Setup[]> {
   }
 
   const typedRows = rows as unknown as SetupRow[];
-  const [viewer, usernames] = await Promise.all([
+  const [viewer, authors] = await Promise.all([
     getViewer(
       supabase,
       typedRows.map((r) => r.id)
     ),
-    getUsernames(supabase, [userId]),
+    getAuthors(supabase, [userId]),
   ]);
 
-  return typedRows.map((row) => mapRow(row, viewer, usernames, supabase));
+  return typedRows.map((row) => mapRow(row, viewer, authors, supabase));
 }
 
 /** Fetches a single setup by id, or null if it doesn't exist / the query fails. */
@@ -200,10 +205,10 @@ export async function getSetupById(id: string): Promise<Setup | null> {
   }
 
   const typedRow = row as unknown as SetupRow;
-  const [viewer, usernames] = await Promise.all([
+  const [viewer, authors] = await Promise.all([
     getViewer(supabase, [typedRow.id]),
-    getUsernames(supabase, [typedRow.user_id]),
+    getAuthors(supabase, [typedRow.user_id]),
   ]);
 
-  return mapRow(typedRow, viewer, usernames, supabase);
+  return mapRow(typedRow, viewer, authors, supabase);
 }
