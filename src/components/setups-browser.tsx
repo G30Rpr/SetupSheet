@@ -19,11 +19,12 @@ import type { Setup } from "@/lib/types";
 
 const ALL = "all";
 
-type SortOption = "newest" | "trending" | "safest" | "fastest";
+type SortOption = "newest" | "trending" | "mostDownloaded" | "safest" | "fastest";
 
 const sortOptions: { value: SortOption; label: string }[] = [
   { value: "newest", label: "Newest" },
   { value: "trending", label: "Trending" },
+  { value: "mostDownloaded", label: "Most Downloaded" },
   { value: "safest", label: "Safest" },
   { value: "fastest", label: "Fastest" },
 ];
@@ -72,6 +73,8 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
     switch (sort) {
       case "trending":
         return [...results].sort((a, b) => b.upvotes - a.upvotes);
+      case "mostDownloaded":
+        return [...results].sort((a, b) => b.downloads - a.downloads);
       case "safest":
         return [...results].sort((a, b) => b.predictability - a.predictability);
       case "fastest":
@@ -170,7 +173,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
             Sort by
           </label>
           <Select value={sort} onValueChange={(value) => setSort(value as SortOption)}>
-            <SelectTrigger id="sort" size="sm" className="w-[130px]">
+            <SelectTrigger id="sort" size="sm" className="w-[175px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
