@@ -1,4 +1,4 @@
--- Seeds the setups table with sample data across all 9 supported games.
+-- Seeds the setups table with sample data across all 8 supported games.
 -- Supersedes the old seed.sql + seed_more_games.sql: those used one
 -- generic setup_values shape for every game, which no longer matches
 -- src/lib/setup-schemas.ts (each game now has its own real setup-screen
@@ -205,59 +205,6 @@ from (values
      'brakeBias', '55% front', 'finalDrive', 'Long — Conrod Straight'
    ),
    4, 4, 47, 210, '2026-06-05'::timestamptz),
-
-  -- F1 24 -----------------------------------------------------------------
-  ('F1 24', 'F1 2024 Car', 'Silverstone', 'Mixed', '1:26.104',
-   'Balanced downforce for the fast flowing sections, softened rear anti-roll bar to handle changing grip levels.',
-   array['Race', 'Wet Weather'], 'Wheel + Handbrake',
-   jsonb_build_object(
-     'frontWing', '26', 'rearWing', '16',
-     'diffOnThrottle', '65%', 'diffOffThrottle', '55%', 'engineBraking', '50%',
-     'frontCamber', '-2.90°', 'rearCamber', '-1.50°', 'frontToe', '0.04°', 'rearToe', '0.08°',
-     'frontArb', '6/11', 'rearArb', '5/11', 'frontRideHeight', '3/11', 'rearRideHeight', '4/11',
-     'brakePressure', '95%', 'brakeBias', '54%',
-     'frontTirePressure', '23.0 psi', 'rearTirePressure', '21.0 psi'
-   ),
-   4, 4, 132, 940, '2026-06-25'::timestamptz),
-
-  ('F1 24', 'F1 2024 Car', 'Monaco', 'Dry', '1:12.037',
-   'Max downforce street circuit tune. Short gearing for the tight hairpins, stiff front end for late braking into Turn 1.',
-   array['Quali', 'Aggressive'], 'Wheel + Handbrake',
-   jsonb_build_object(
-     'frontWing', '48', 'rearWing', '50',
-     'diffOnThrottle', '50%', 'diffOffThrottle', '65%', 'engineBraking', '40%',
-     'frontCamber', '-2.60°', 'rearCamber', '-1.20°', 'frontToe', '0.06°', 'rearToe', '0.10°',
-     'frontArb', '9/11', 'rearArb', '7/11', 'frontRideHeight', '1/11 (min)', 'rearRideHeight', '2/11',
-     'brakePressure', '100%', 'brakeBias', '52%',
-     'frontTirePressure', '24.5 psi', 'rearTirePressure', '23.0 psi'
-   ),
-   5, 3, 289, 2010, '2026-06-24'::timestamptz),
-
-  ('F1 24', 'F1 2024 Car', 'Zandvoort', 'Mixed', '1:11.826',
-   'Zandvoort''s banked corners reward a car that rotates freely — a touch more rear anti-roll bar and rear wing help find rotation through Turn 3 and the final banked corner without unsettling the rear on turn-in.',
-   array['Race', 'Safe'], 'Wheel + 3 Pedals',
-   jsonb_build_object(
-     'frontWing', '28', 'rearWing', '18',
-     'diffOnThrottle', '62%', 'diffOffThrottle', '52%', 'engineBraking', '45%',
-     'frontCamber', '-2.85°', 'rearCamber', '-1.45°', 'frontToe', '0.05°', 'rearToe', '0.09°',
-     'frontArb', '5/11', 'rearArb', '6/11', 'frontRideHeight', '3/11', 'rearRideHeight', '4/11',
-     'brakePressure', '94%', 'brakeBias', '54%',
-     'frontTirePressure', '22.5 psi', 'rearTirePressure', '20.5 psi'
-   ),
-   4, 5, 26, 110, '2026-06-30'::timestamptz),
-
-  ('F1 24', 'F1 2024 Car', 'Marina Bay', 'Wet', '1:47.933',
-   'High-downforce wet setup for Marina Bay''s bumpy, low-grip street surface — softer suspension and a rearward brake bias keep the car predictable under braking into Turn 7 and Turn 14 when the track is greasy.',
-   array['Wet Weather', 'Safe'], 'Wheel + Handbrake',
-   jsonb_build_object(
-     'frontWing', '42', 'rearWing', '32',
-     'diffOnThrottle', '58%', 'diffOffThrottle', '62%', 'engineBraking', '35%',
-     'frontCamber', '-2.50°', 'rearCamber', '-1.20°', 'frontToe', '0.06°', 'rearToe', '0.11°',
-     'frontArb', '3/11', 'rearArb', '4/11', 'frontRideHeight', '4/11', 'rearRideHeight', '5/11',
-     'brakePressure', '88%', 'brakeBias', '51%',
-     'frontTirePressure', '21.0 psi', 'rearTirePressure', '19.5 psi'
-   ),
-   3, 5, 33, 150, '2026-07-04'::timestamptz),
 
   -- F1 25 -----------------------------------------------------------------
   ('F1 25', 'F1 2025 Car', 'Suzuka', 'Dry', '1:28.947',

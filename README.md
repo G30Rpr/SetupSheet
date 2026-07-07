@@ -55,7 +55,8 @@ supabase/
   migrations/
     0001_init_setups_schema.sql   profiles, setups, setup_upvotes + RLS
     0002_update_games_list.sql     drops F1 19-23, adds F1 25 + Gran Turismo 7
-  seed.sql                          sample setups across all 9 supported games
+    0005_remove_f1_24.sql           drops F1 24, leaving F1 25 as the only F1 title
+  seed.sql                          sample setups across all 8 supported games
 ```
 
 ## Getting started
@@ -192,7 +193,7 @@ yourself.
 
 ### 2. (Optional) Seed sample data
 
-`supabase/seed.sql` has sample setups across all 9 supported games,
+`supabase/seed.sql` has sample setups across all 8 supported games,
 informed by public setup-guide consensus (Coach Dave Academy, F1Laps, GT
 Planet, simracingsetup.com, etc.) rather than copied from any single
 source — see git history for the research trail. Log in with Discord on
@@ -219,7 +220,7 @@ has nothing in common with F1 25's Suspension Geometry tab (camber, toe,
 one field-group schema per `Game`, grounded in each title's actual setup
 UI, and `SetupValues` (in `src/lib/types.ts`) is a plain
 `Record<string, string>` rather than a fixed interface — there's no single
-shape that could represent all nine.
+shape that could represent all eight.
 
 Two places consume this:
 

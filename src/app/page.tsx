@@ -62,7 +62,7 @@ export default async function Home() {
 
           <p className="max-w-xl text-balance text-base text-muted-foreground sm:text-lg">
             SetupSheet is a free community hub for sim racing setups — iRacing,
-            Assetto Corsa, Le Mans Ultimate, F1 24 and more. Find a setup that
+            Assetto Corsa, Le Mans Ultimate, F1 25 and more. Find a setup that
             matches your rig, your skill level, and the conditions on track.
           </p>
 

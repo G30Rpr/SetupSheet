@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SetupSheet — Free Community Sim Racing Setups",
   description:
-    "Download and share free sim racing setups for iRacing, Assetto Corsa, Le Mans Ultimate, F1 24 and more. Built by the community, for the community.",
+    "Download and share free sim racing setups for iRacing, Assetto Corsa, Le Mans Ultimate, F1 25 and more. Built by the community, for the community.",
 };
 
 export default async function RootLayout({

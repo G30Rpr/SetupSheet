@@ -6,8 +6,7 @@ export type Game =
   | "Le Mans Ultimate"
   | "Automobilista 2"
   | "Gran Turismo 7"
-  | "F1 25"
-  | "F1 24";
+  | "F1 25";
 
 export type Condition = "Dry" | "Wet" | "Mixed";
 

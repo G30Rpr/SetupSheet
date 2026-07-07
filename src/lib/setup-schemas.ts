@@ -266,51 +266,6 @@ export const setupSchemas: Record<Game, SetupFieldGroup[]> = {
     },
   ],
 
-  "F1 24": [
-    {
-      title: "Aerodynamics",
-      fields: [
-        { key: "frontWing", label: "Front wing", placeholder: "e.g. 26 (0-50 scale)" },
-        { key: "rearWing", label: "Rear wing", placeholder: "e.g. 16 (0-50 scale)" },
-      ],
-    },
-    {
-      title: "Transmission",
-      fields: [
-        { key: "diffOnThrottle", label: "Differential — on throttle", placeholder: "e.g. 65%" },
-        { key: "diffOffThrottle", label: "Differential — off throttle", placeholder: "e.g. 55%" },
-        { key: "engineBraking", label: "Engine braking", placeholder: "e.g. 50%" },
-      ],
-    },
-    {
-      title: "Suspension Geometry",
-      fields: [
-        { key: "frontCamber", label: "Front camber", placeholder: "e.g. -3.00° (range -3.50 to -2.50)" },
-        { key: "rearCamber", label: "Rear camber", placeholder: "e.g. -1.50° (range -2.20 to -0.70)" },
-        { key: "frontToe", label: "Front toe out", placeholder: "e.g. 0.05°" },
-        { key: "rearToe", label: "Rear toe out", placeholder: "e.g. 0.10°" },
-      ],
-    },
-    {
-      title: "Suspension",
-      fields: [
-        { key: "frontArb", label: "Front anti-roll bar", placeholder: "e.g. 6/11" },
-        { key: "rearArb", label: "Rear anti-roll bar", placeholder: "e.g. 5/11" },
-        { key: "frontRideHeight", label: "Front ride height", placeholder: "e.g. 3/11" },
-        { key: "rearRideHeight", label: "Rear ride height", placeholder: "e.g. 4/11" },
-      ],
-    },
-    {
-      title: "Brakes & Tyres",
-      fields: [
-        { key: "brakePressure", label: "Brake pressure", placeholder: "e.g. 95%" },
-        { key: "brakeBias", label: "Front brake bias", placeholder: "e.g. 54%" },
-        { key: "frontTirePressure", label: "Front tyre pressure", placeholder: "e.g. 23.0 psi" },
-        { key: "rearTirePressure", label: "Rear tyre pressure", placeholder: "e.g. 21.0 psi" },
-      ],
-    },
-  ],
-
   "Gran Turismo 7": [
     {
       title: "Suspension",

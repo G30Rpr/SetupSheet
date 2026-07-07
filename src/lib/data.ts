@@ -9,7 +9,6 @@ export const games: Game[] = [
   "Automobilista 2",
   "Gran Turismo 7",
   "F1 25",
-  "F1 24",
 ];
 
 export const conditions: Condition[] = ["Dry", "Wet", "Mixed"];

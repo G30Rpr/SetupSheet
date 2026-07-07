@@ -9,10 +9,10 @@ export interface InstallGuide {
 /**
  * Per-game "how do I actually use this" instructions. Grounded in each
  * game's real setup-file convention (folder layout, file extension) where
- * one exists; several titles (Gran Turismo 7, F1 24/25, and Assetto Corsa
- * EVO as of its early-access setup-sharing status) don't support importing
- * an external file at all, so those guides point back at manual entry
- * instead of inventing an import path that doesn't exist.
+ * one exists; several titles (Gran Turismo 7, F1 25, and Assetto Corsa EVO
+ * as of its early-access setup-sharing status) don't support importing an
+ * external file at all, so those guides point back at manual entry instead
+ * of inventing an import path that doesn't exist.
  */
 export const installGuides: Record<Game, InstallGuide> = {
   iRacing: {
@@ -75,14 +75,6 @@ export const installGuides: Record<Game, InstallGuide> = {
     supportsFileImport: false,
     steps: [
       "F1 25 doesn't support importing external setup files.",
-      'Open the Setup screen and enter each value from the "Setup values" panel above by hand.',
-      "Save it as a preset setup so you can load it again in one click.",
-    ],
-  },
-  "F1 24": {
-    supportsFileImport: false,
-    steps: [
-      "F1 24 doesn't support importing external setup files.",
       'Open the Setup screen and enter each value from the "Setup values" panel above by hand.',
       "Save it as a preset setup so you can load it again in one click.",
     ],
