@@ -152,7 +152,6 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   });
   const [file, setFile] = useState<File | null>(null);
   const [detectedCar, setDetectedCar] = useState<string | null>(null);
-  const [parsedFieldCount, setParsedFieldCount] = useState<number | null>(null);
   const [keepExistingFile, setKeepExistingFile] = useState(Boolean(existingSetup?.fileName));
   const [setupValues, setSetupValues] = useState<SetupValues>(existingSetup?.setupValues ?? {});
   const [tags, setTags] = useState<SetupTag[]>(existingSetup?.tags ?? []);
@@ -174,7 +173,6 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     setUseManualCarInput(false);
     setUseManualTrackInput(false);
     setDetectedCar(null);
-    setParsedFieldCount(null);
   }
 
   function updateSetupValue(key: string, value: string) {
@@ -183,17 +181,16 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
 
   /**
    * When a file is dropped for ACC (or no game picked yet -- we can infer
-   * it's ACC from the file's own shape), tries to extract the car and the
-   * subset of setup values ACC's export actually stores in real units
-   * rather than an unpublished per-car step scale (see acc-setup-parser.ts).
-   * Silently does nothing for files that don't parse -- the user just fills
-   * the form in by hand as before, no error shown for what might just be a
-   * different game's file.
+   * it's ACC from the file's own shape), tries to extract just the car
+   * (see acc-setup-parser.ts) so it's pre-filled below -- everything else
+   * still gets entered by hand, so a dropped file is never blocked on
+   * having every setup field filled in. Silently does nothing for files
+   * that don't parse -- no error shown for what might just be a different
+   * game's file.
    */
   async function handleFileChange(newFile: File | null) {
     setFile(newFile);
     setDetectedCar(null);
-    setParsedFieldCount(null);
 
     if (!newFile || (game !== "" && game !== "Assetto Corsa Competizione")) {
       return;
@@ -201,7 +198,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
 
     const text = await newFile.text();
     const result = parseAccSetupFile(text);
-    if (!result || result.fieldCount === 0) return;
+    if (!result || !result.car) return;
 
     const targetGame: Game = "Assetto Corsa Competizione";
     if (game !== targetGame) {
@@ -209,9 +206,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
       setUseManualTrackInput(false);
     }
     setUseManualCarInput(false);
-    setSetupValues({ ...getEmptySetupValues(targetGame), ...result.setupValues });
-    setParsedFieldCount(result.fieldCount);
-    if (result.car) setDetectedCar(result.car);
+    setDetectedCar(result.car);
   }
 
   /**
@@ -259,10 +254,6 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     const lapTime = String(formData.get("lapTime") ?? "");
     const rigProfile = String(formData.get("rig") ?? "");
     const description = String(formData.get("description") ?? "");
-    // A file can now come with auto-extracted setup values attached (see
-    // handleFileChange), so "do we have values to send" is no longer just
-    // "are we in manual mode" -- it's manual mode, or a successful parse.
-    const hasSetupValuesToSend = entryMode === "manual" || Boolean(parsedFieldCount);
 
     startTransition(async () => {
       const fileFields = await resolveFileFields();
@@ -281,7 +272,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           description,
           tags,
           rigProfile,
-          setupValues: hasSetupValuesToSend ? setupValues : undefined,
+          setupValues: entryMode === "manual" ? setupValues : undefined,
           filePath: fileFields.filePath,
           fileName: fileFields.fileName,
         });
@@ -305,7 +296,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
         rigProfile,
         pace,
         predictability,
-        setupValues: hasSetupValuesToSend ? setupValues : undefined,
+        setupValues: entryMode === "manual" ? setupValues : undefined,
         filePath: fileFields.filePath,
         fileName: fileFields.fileName,
       });
@@ -323,7 +314,6 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     setGame("");
     setFile(null);
     setDetectedCar(null);
-    setParsedFieldCount(null);
     setKeepExistingFile(false);
     setSetupValues({});
     setTags([]);
@@ -480,20 +470,10 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                   setup card.
                 </p>
 
-                {parsedFieldCount ? (
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-2 rounded-md border border-racing-green/30 bg-racing-green/10 px-3 py-2.5 text-xs text-racing-green">
-                      <CheckCircle2 className="size-4 shrink-0" />
-                      <span>
-                        {detectedCar ? `Detected ${detectedCar} — ` : ""}
-                        {parsedFieldCount} setup value{parsedFieldCount === 1 ? "" : "s"} read
-                        straight from your file. Double check them below before sharing —
-                        we couldn&apos;t reliably read every field, so some are still blank.
-                      </span>
-                    </div>
-                    {game && (
-                      <SetupValuesFields game={game} values={setupValues} onChange={updateSetupValue} />
-                    )}
+                {detectedCar ? (
+                  <div className="flex items-center gap-2 rounded-md border border-racing-green/30 bg-racing-green/10 px-3 py-2.5 text-xs text-racing-green">
+                    <CheckCircle2 className="size-4 shrink-0" />
+                    <span>Detected {detectedCar} — car field pre-filled below.</span>
                   </div>
                 ) : null}
               </div>
