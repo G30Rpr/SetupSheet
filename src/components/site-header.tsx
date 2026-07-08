@@ -59,69 +59,69 @@ export function SiteHeader({
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 md:flex">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/setups">Browse Setups</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/upload">
-              <Upload />
-              Upload Setup
-            </Link>
-          </Button>
-          <div className="ml-1 flex items-center gap-1 border-l border-border/80 pl-3">
+        <div className="flex items-center gap-2">
+          <div className="hidden items-center gap-2 md:flex">
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/setups">Browse Setups</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/upload">
+                <Upload />
+                Upload Setup
+              </Link>
+            </Button>
+          </div>
+
+          {/* Mounted once regardless of viewport -- previously duplicated
+              (one copy per breakpoint), doubling their hydration cost. */}
+          <div className="flex items-center gap-1 md:ml-1 md:border-l md:border-border/80 md:pl-3">
             <NotificationBell
               initialNotifications={initialNotifications}
               initialUnreadCount={initialUnreadCount}
             />
             <AuthNav />
           </div>
-        </div>
 
-        <div className="flex items-center gap-1 md:hidden">
-          <NotificationBell
-            initialNotifications={initialNotifications}
-            initialUnreadCount={initialUnreadCount}
-          />
-          <AuthNav />
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="icon" aria-label="Open menu">
-                <Menu />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-4/5">
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2">
-                  <LogoMark className="size-4 text-racing-green" />
-                  Setup<span className="text-racing-green">Sheet</span>
-                </SheetTitle>
-              </SheetHeader>
-              <nav className="flex flex-col gap-1 px-4">
-                {navLinks.map((link) => (
-                  <SheetClose asChild key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="rounded-md px-3 py-3 text-base font-medium text-foreground transition-colors hover:bg-accent"
-                    >
-                      {link.label}
-                    </Link>
+          <div className="md:hidden">
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="Open menu">
+                  <Menu />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-4/5">
+                <SheetHeader>
+                  <SheetTitle className="flex items-center gap-2">
+                    <LogoMark className="size-4 text-racing-green" />
+                    Setup<span className="text-racing-green">Sheet</span>
+                  </SheetTitle>
+                </SheetHeader>
+                <nav className="flex flex-col gap-1 px-4">
+                  {navLinks.map((link) => (
+                    <SheetClose asChild key={link.href}>
+                      <Link
+                        href={link.href}
+                        className="rounded-md px-3 py-3 text-base font-medium text-foreground transition-colors hover:bg-accent"
+                      >
+                        {link.label}
+                      </Link>
+                    </SheetClose>
+                  ))}
+                </nav>
+                <div className="mt-auto flex flex-col gap-2 px-4 pb-6">
+                  <MobileAuthRow />
+                  <SheetClose asChild>
+                    <Button asChild size="lg" className="w-full">
+                      <Link href="/upload">
+                        <Upload />
+                        Upload Setup
+                      </Link>
+                    </Button>
                   </SheetClose>
-                ))}
-              </nav>
-              <div className="mt-auto flex flex-col gap-2 px-4 pb-6">
-                <MobileAuthRow />
-                <SheetClose asChild>
-                  <Button asChild size="lg" className="w-full">
-                    <Link href="/upload">
-                      <Upload />
-                      Upload Setup
-                    </Link>
-                  </Button>
-                </SheetClose>
-              </div>
-            </SheetContent>
-          </Sheet>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </div>
     </header>

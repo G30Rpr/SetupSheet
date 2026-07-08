@@ -1,11 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 /**
  * Supabase client for use in Server Components, Server Actions, and Route
- * Handlers. Must be created fresh per request (cookies() is request-scoped).
+ * Handlers. Wrapped in React's cache() so the several calls a single
+ * request typically makes (e.g. RootLayout's auth.getUser() plus each
+ * data-layer function it fans out to) share one client instance instead
+ * of each constructing their own -- cache() dedupes per request, so this
+ * never leaks a client across requests the way a module-level singleton
+ * would.
  */
-export async function createClient() {
+export const createClient = cache(async () => {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -29,4 +35,4 @@ export async function createClient() {
       },
     }
   );
-}
+});

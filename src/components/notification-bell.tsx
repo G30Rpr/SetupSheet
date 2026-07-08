@@ -14,7 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { markAllNotificationsRead, markNotificationRead } from "@/lib/actions/notifications";
+import {
+  clearReadNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/lib/actions/notifications";
 import { cn, getInitials } from "@/lib/utils";
 import type { NotificationItem } from "@/lib/supabase/notifications";
 
@@ -99,6 +103,15 @@ export function NotificationBell({
     });
   }
 
+  function handleClearRead() {
+    setNotifications((prev) => prev.filter((n) => !n.read));
+    startTransition(async () => {
+      await clearReadNotifications();
+    });
+  }
+
+  const hasReadNotifications = notifications.some((n) => n.read);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -160,6 +173,18 @@ export function NotificationBell({
               {!n.read && <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-racing-green" />}
             </DropdownMenuItem>
           ))
+        )}
+        {hasReadNotifications && (
+          <>
+            <DropdownMenuSeparator />
+            <button
+              type="button"
+              onClick={handleClearRead}
+              className="w-full px-2 py-1.5 text-center text-xs text-muted-foreground hover:text-foreground"
+            >
+              Clear read notifications
+            </button>
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>
