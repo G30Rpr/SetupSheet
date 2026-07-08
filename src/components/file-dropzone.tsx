@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { File, UploadCloud, X } from "lucide-react";
 
+import { ALLOWED_SETUP_FILE_EXTENSIONS } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
 function formatBytes(bytes: number) {
@@ -62,14 +63,14 @@ export function FileDropzone({
               <span className="hidden sm:inline"> or drag it here</span>
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              .json, .sav, .txt, .xml or .csv — up to 5 MB
+              .sto, .json, .ini, .svm and more — up to 5 MB
             </p>
           </div>
           <input
             ref={inputRef}
             type="file"
             className="hidden"
-            accept=".json,.sav,.txt,.xml,.csv"
+            accept={ALLOWED_SETUP_FILE_EXTENSIONS.join(",")}
             onChange={(e) => pickFile(e.target.files)}
           />
         </div>
