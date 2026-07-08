@@ -6,44 +6,72 @@ dark, sim-racing themed UI (carbon black, racing green, alert red).
 
 ## Pages
 
-- `/` — Landing page: hero, stats, featured setups, call-to-action.
+- `/` — Landing page: hero, stats, a bounded top-6-by-upvotes featured rail,
+  call-to-action.
 - `/setups` — Browse page with a Game / Car / Track / Condition filter bar and
   a responsive grid of setup cards.
 - `/upload` — Drag-and-drop upload form for sharing a setup with the
   community.
+- `/leaderboard` — Top Contributors, ranked by total upvotes across every
+  setup a user has shared, with Bronze/Silver/Gold contributor badges.
+- `/profile` — Your own profile: avatar, badge, stats, your uploaded setups.
+- `/profile/[userId]` — Anyone's public profile (same layout as `/profile`),
+  with a Follow button when you're viewing someone else's.
 
 ## Project structure
 
 ```
 src/
   app/
-    layout.tsx        Root layout (header + footer + fonts + metadata)
+    layout.tsx        Root layout (header + footer + fonts + metadata + notification fetch)
+    error.tsx          Catches any client-side render error below the layout
+    global-error.tsx   Last-resort fallback if the root layout itself throws
     page.tsx           Landing page
     globals.css        Tailwind v4 theme (CSS variables, dark theme)
-    setups/page.tsx     Browse setups page
-    upload/page.tsx      Upload setup page
+    setups/page.tsx, loading.tsx     Browse setups page + loading skeleton
+    upload/page.tsx, loading.tsx      Upload setup page + loading skeleton
+    leaderboard/page.tsx, loading.tsx  Top Contributors page + loading skeleton
+    profile/page.tsx, loading.tsx      Your own profile
+    profile/[userId]/page.tsx, loading.tsx  Anyone's public profile
   components/
-    ui/                 shadcn/ui-style primitives (button, card, select, ...)
-    site-header.tsx     Top nav with mobile drawer (Sheet)
+    ui/                 shadcn/ui-style primitives (button, card, select, dropdown-menu, ...)
+    site-header.tsx     Top nav with mobile drawer (Sheet); notification bell + account
+                         menu each mount once regardless of viewport
     site-footer.tsx     Footer
-    setup-card.tsx      The setup card (car/track, lap time, tags, ratings...)
+    setup-card.tsx      The setup card (car/track, lap time, tags, ratings, author byline...)
     setups-browser.tsx  Client component: filter state + filtered grid
-    upload-form.tsx      Upload form with validation + simulated submit
+    upload-form.tsx      Upload form; drag a real ACC .json and it auto-fills the Car field
     file-dropzone.tsx    Drag-and-drop / tap-to-choose file input
     star-rating.tsx      Pace / Predictability star rating display
     tag-badge.tsx         Setup tag → Badge color mapping
+    profile-view.tsx      Shared display for both /profile and /profile/[userId]
+    profile-skeleton.tsx   Shared loading skeleton for both profile routes
+    contributor-badge.tsx  Bronze/Silver/Gold badge, derived from total upvotes
+    follow-button.tsx      Follow/Following toggle shown on someone else's profile
+    notification-bell.tsx  Unread badge + dropdown; re-syncs on navigation, no realtime yet
   lib/
-    types.ts             Setup / Game / Condition / SetupTag types
-    data.ts               Static filter option lists (games, conditions) + helpers
+    types.ts             Setup / Game / Condition / SetupTag / RigProfile types
+    data.ts               Static filter option lists (games, conditions, rigProfiles,
+                           setupTags) + helpers -- also what server actions validate against
+    badges.ts              Bronze/Silver/Gold upvote thresholds
+    acc-setup-parser.ts     Parses a dropped ACC .json to auto-fill the Car field
     setup-schemas.ts       Per-game setup-screen field definitions (see below)
-    utils.ts              `cn()` class-merging helper
+    utils.ts              `cn()` class-merging helper, `getInitials()`
     supabase/
       client.ts           Browser Supabase client (Client Components)
-      server.ts            Server Supabase client (Server Components/Actions/Route Handlers)
+      server.ts            Server Supabase client, memoized per-request via React's cache()
       middleware.ts         Session-refresh helper used by src/middleware.ts
-      setups.ts             getSetups() — real data fetch + row-to-Setup mapping
+      setups.ts             getSetups(), getFeaturedSetups(), getSetupCount(), row mapping
+      leaderboard.ts          getLeaderboard() — reads the public.leaderboard view
+      follows.ts               isFollowing()
+      notifications.ts         getNotifications(), getUnreadNotificationCount()
     actions/
-      setups.ts             Server actions: createSetup, toggleUpvote
+      setups.ts             Server actions: createSetup, updateSetup, toggleUpvote, rateSetup,
+                            uploadSetupFile, downloadSetup -- validates game/condition/rig/tags
+                            against lib/data.ts before touching the database
+      follows.ts              toggleFollow
+      notifications.ts         markNotificationRead, markAllNotificationsRead,
+                              clearReadNotifications
   middleware.ts            Runs on every request, keeps the auth cookie fresh
   app/
     auth/callback/route.ts       Exchanges the OAuth ?code= for a session
@@ -51,11 +79,20 @@ src/
   components/
     auth-provider.tsx      Client context: user/session state + sign in/out
     auth-nav.tsx            DiscordLoginButton, UserMenu (avatar dropdown), AuthNav
+next.config.ts             Security headers: CSP, X-Frame-Options, Referrer-Policy, etc.
 supabase/
   migrations/
-    0001_init_setups_schema.sql   profiles, setups, setup_upvotes + RLS
-    0002_update_games_list.sql     drops F1 19-23, adds F1 25 + Gran Turismo 7
-    0005_remove_f1_24.sql           drops F1 24, leaving F1 25 as the only F1 title
+    0001_init_setups_schema.sql          profiles, setups, setup_upvotes + RLS
+    0002_update_games_list.sql            drops F1 19-23, adds F1 25 + Gran Turismo 7
+    0003_setup_ratings.sql                 pace/predictability become community averages
+    0004_setup_files.sql                    Storage bucket + file_path/file_name columns
+    0005_remove_f1_24.sql                    drops F1 24, leaving F1 25 as the only F1 title
+    0006_leaderboard_view.sql                 public.leaderboard view (upvotes per profile)
+    0007_follows.sql                           follows table + profiles.follower_count
+    0008_notifications.sql                      notifications table + follower fan-out trigger
+    0009_column_level_grants.sql                 column-scoped UPDATE grants on setups/profiles
+    0010_notifications_delete_policy.sql          lets a user delete their own notifications
+    0011_notifications_column_grant.sql            same column-scoped grant, for notifications
   seed.sql                          sample setups across all 8 supported games
 ```
 
@@ -185,7 +222,19 @@ new `check` constraint doesn't reject on old data.
 |---|---|---|---|---|
 | `setups` | anyone | owner only (`auth.uid() = user_id`) | owner only | owner only |
 | `setup_upvotes` | owner only (each user sees only their own upvotes) | as self only | — | as self only |
-| `profiles` | anyone | (via trigger only) | owner only | — |
+| `setup_ratings` | owner only | as self only | own rating only | own rating only |
+| `follows` | owner only (own follows list) | as self only | — | as self only |
+| `notifications` | owner only | (via trigger only) | own rows, `read` column only | own rows only |
+| `profiles` | anyone | (via trigger only) | own row, `username`/`avatar_url` only | — |
+
+Row-level policies only restrict *which row* a user can touch — nothing
+about *which column*. `0009` and `0011` close that gap for the
+denormalized/trigger-owned columns (`setups.upvotes/downloads/pace/
+predictability/rating_count`, `profiles.follower_count`,
+`notifications.actor_id/setup_id/type`) with an explicit
+`revoke ... / grant update (<allowed columns>) ...`, so a user's own
+row-level write access can't be used to fabricate a public trust signal
+like an upvote count or a fake notification.
 
 Anonymous visitors can always browse (`setups` select is public) — only
 uploading, editing, and upvoting require being logged in and acting as
@@ -242,15 +291,50 @@ the schema changes — only `src/lib/setup-schemas.ts` and the seed data.
   query errors, it logs and returns `[]` instead of throwing, so a backend
   hiccup degrades to an empty browse page rather than a 500 — verified by
   running with the Supabase host deliberately unreachable.
-- `src/lib/actions/setups.ts` — `createSetup` and `toggleUpvote` are Server
-  Actions; both check for a logged-in user before touching the database
-  (defense in depth on top of RLS, so the error message is friendly instead
-  of a raw Postgres permission error).
-- `SetupCard`'s upvote pill is now a real toggle button: optimistic
-  update on click, reverted if the server action errors. Clicking it while
-  logged out triggers Discord login instead of failing silently.
+- `src/lib/actions/setups.ts` — `createSetup`, `updateSetup`, `deleteSetup`,
+  `toggleUpvote`, `rateSetup`, `uploadSetupFile`, and `downloadSetup` are all
+  Server Actions; each checks for a logged-in user before touching the
+  database (defense in depth on top of RLS), and `createSetup`/`updateSetup`
+  additionally validate `game`/`condition`/`rigProfile`/`tags` against the
+  arrays in `lib/data.ts` before the query runs, so a bad value gets a clean
+  error message instead of a raw Postgres constraint violation.
+- `SetupCard`'s upvote pill is a real toggle button: optimistic update on
+  click, reverted if the server action errors. Clicking it while logged out
+  triggers Discord login instead of failing silently. Its download button
+  serves the actual uploaded file from Supabase Storage when one exists, or
+  a generated text export of the manually-entered values when it doesn't.
 - `UploadForm` is gated behind auth — logged-out visitors see a "Log in to
-  upload" prompt instead of the form.
+  upload" prompt instead of the form. Dropping a real ACC (Assetto Corsa
+  Competizione) `.json` setup file auto-fills the Car field (see
+  `lib/acc-setup-parser.ts`); everything else stays manual, so a drop is
+  never blocked on filling in fields the parser can't reliably read.
+
+## Community features: leaderboard, follows, notifications
+
+- **Leaderboard & badges** — `public.leaderboard` (migration `0006`) is a
+  view aggregating `setup_count`/`total_upvotes` per profile;
+  `getLeaderboard()` reads it directly rather than summing setups in JS.
+  `lib/badges.ts` derives a Bronze/Silver/Gold tier from total upvotes,
+  rendered by `ContributorBadge` on both the leaderboard and any profile.
+- **Follows** — migration `0007` adds a `follows` join table plus a
+  denormalized `profiles.follower_count`, kept in sync by the same
+  `security definer` trigger pattern as `setups.upvotes`. `FollowButton`
+  shows on someone else's profile only; `isFollowing()` checks the
+  viewer's own follow state.
+- **Notifications** — migration `0008` fans a new setup upload out to every
+  follower of the uploader (one row per follower, inserted by a
+  `security definer` trigger on `setups` insert — currently unbatched, so a
+  contributor with an unusually large follower count would see a
+  proportionally larger insert on their next upload; worth revisiting if
+  that ever shows up in practice). The bell in the header
+  (`NotificationBell`) shows an unread count and a dropdown; its
+  `initialNotifications`/`initialUnreadCount` come from a server-side fetch
+  in the root layout re-synced on every navigation, not a live
+  subscription, so a notification created while a tab is already open won't
+  appear until the next navigation. Migrations `0010` and `0011` let a user
+  delete their own read notifications (via the "Clear read notifications"
+  action) and close the same row-vs-column RLS gap `0009` fixed for
+  `setups`/`profiles`.
 
 ## Deploying to Vercel
 
@@ -301,19 +385,29 @@ automatically, so no `vercel.json` or custom build settings are needed.
 
 ## Notes
 
-- Uploading a setup via the **file dropzone** only saves the form's metadata
-  right now — the actual file isn't persisted anywhere yet (no Supabase
-  Storage bucket wired up). The form says this explicitly under the
-  dropzone. The **manual entry** path (structured tire pressure/camber/ARB/
-  etc. fields) is fully real end-to-end since it's just data, not a file.
-- Pace and Predictability are currently self-rated by the uploader at
-  submission time (two star-pickers in the form) rather than aggregated from
-  other users who've tried the setup — a real community rating system would
-  be a good follow-up.
+- Uploading a setup via the **file dropzone** persists the real file to a
+  Supabase Storage bucket (`setup-files`, one folder per uploader) —
+  `SetupCard`'s download button serves that original file. The **manual
+  entry** path (structured tire pressure/camber/ARB/etc. fields) stays
+  available alongside a dropped file rather than replacing it, and
+  generates a text export on download when there's no file behind a setup.
+- Pace and Predictability are a real community average (migration `0003`,
+  `setup_ratings` table) — the uploader's own star-picker at submission
+  time just becomes their first rating row, not a fixed value nobody else
+  can change. Every setup shows `ratingCount` alongside the averages.
 - UI primitives in `src/components/ui` are hand-written in the shadcn/ui
   style (Radix primitives + `class-variance-authority` + Tailwind), so
   `npx shadcn@latest add <component>` continues to work against
   `components.json` if you want to add more.
+- `next.config.ts` sets a Content-Security-Policy and the standard security
+  headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
+  `Permissions-Policy`). The CSP allows `'unsafe-eval'` in development only
+  — webpack's Fast Refresh needs it, production never does — so it can't be
+  loosened for real visitors by a dev-mode change.
+- `src/app/error.tsx` and `global-error.tsx` catch client-side rendering
+  errors that would otherwise fall through to Next.js's generic, unstyled,
+  unlogged crash page; both log the real error to the console before
+  rendering a branded retry card.
 - The Next.js build logs a harmless warning about a Node.js API
   (`process.version`) in `@supabase/supabase-js` not being supported in the
   Edge Runtime. This comes from a version check inside the library that
