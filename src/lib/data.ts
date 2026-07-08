@@ -29,6 +29,10 @@ export const setupTags: SetupTag[] = [
   "Wet Weather",
 ];
 
+export const MAX_CAR_LENGTH = 80;
+export const MAX_TRACK_LENGTH = 80;
+export const MAX_DESCRIPTION_LENGTH = 2000;
+
 export function getCarsForGame(setups: Setup[], game?: string) {
   const filtered = game ? setups.filter((s) => s.game === game) : setups;
   return Array.from(new Set(filtered.map((s) => s.car))).sort();

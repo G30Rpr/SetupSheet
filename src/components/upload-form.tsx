@@ -40,7 +40,15 @@ import { trackLists } from "@/lib/track-lists";
 import { isKnownOption, type SelectOptionGroup } from "@/lib/select-options";
 import { getEmptySetupValues } from "@/lib/setup-schemas";
 import { cn } from "@/lib/utils";
-import { conditions, games, rigProfiles, setupTags } from "@/lib/data";
+import {
+  MAX_CAR_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_TRACK_LENGTH,
+  conditions,
+  games,
+  rigProfiles,
+  setupTags,
+} from "@/lib/data";
 import type { Game, Setup, SetupTag } from "@/lib/types";
 
 type EntryMode = "file" | "manual";
@@ -58,6 +66,7 @@ function GroupedSelectField({
   defaultValue,
   selectPlaceholder,
   inputPlaceholder,
+  maxLength,
 }: {
   id: string;
   groups: SelectOptionGroup[] | undefined;
@@ -66,6 +75,7 @@ function GroupedSelectField({
   defaultValue?: string;
   selectPlaceholder: string;
   inputPlaceholder: string;
+  maxLength?: number;
 }) {
   if (groups && !useManual) {
     return (
@@ -104,7 +114,14 @@ function GroupedSelectField({
 
   return (
     <>
-      <Input id={id} name={id} placeholder={inputPlaceholder} defaultValue={defaultValue} required />
+      <Input
+        id={id}
+        name={id}
+        placeholder={inputPlaceholder}
+        defaultValue={defaultValue}
+        maxLength={maxLength}
+        required
+      />
       {groups && (
         <button
           type="button"
@@ -481,6 +498,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                 defaultValue={existingSetup?.car ?? detectedCar ?? undefined}
                 selectPlaceholder="Select a car"
                 inputPlaceholder="e.g. Porsche 992 GT3 Cup"
+                maxLength={MAX_CAR_LENGTH}
               />
             </div>
 
@@ -494,6 +512,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                 defaultValue={existingSetup?.track}
                 selectPlaceholder="Select a track"
                 inputPlaceholder="e.g. Spa-Francorchamps"
+                maxLength={MAX_TRACK_LENGTH}
               />
             </div>
 
@@ -566,6 +585,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
               name="description"
               placeholder="What makes this setup fast or safe? Any tips for using it?"
               defaultValue={existingSetup?.description}
+              maxLength={MAX_DESCRIPTION_LENGTH}
               rows={4}
             />
           </section>

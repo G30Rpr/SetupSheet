@@ -3,7 +3,15 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
-import { conditions, games, rigProfiles, setupTags } from "@/lib/data";
+import {
+  MAX_CAR_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_TRACK_LENGTH,
+  conditions,
+  games,
+  rigProfiles,
+  setupTags,
+} from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import {
   ALLOWED_SETUP_FILE_EXTENSIONS,
@@ -19,10 +27,18 @@ import type { SetupValues } from "@/lib/types";
  * (constraint names, column names) instead of a clean message. Checked
  * against the same arrays the upload form itself renders its pickers
  * from, so there's one source of truth either way.
+ *
+ * car/track/description have no enum to check against (car and track fall
+ * back to free text when a game's list doesn't have the entry), so they're
+ * only bounded by length here -- otherwise the only limit is whatever
+ * Next.js's default Server Action body-size cap allows.
  */
 function validateSetupFields(input: {
   game: string;
+  car: string;
+  track: string;
   condition: string;
+  description: string;
   rigProfile: string;
   tags: string[];
 }): string | null {
@@ -37,6 +53,15 @@ function validateSetupFields(input: {
   }
   if (!input.tags.every((tag) => setupTags.includes(tag as (typeof setupTags)[number]))) {
     return "Unknown tag.";
+  }
+  if (input.car.length > MAX_CAR_LENGTH) {
+    return `Car name is too long — max ${MAX_CAR_LENGTH} characters.`;
+  }
+  if (input.track.length > MAX_TRACK_LENGTH) {
+    return `Track name is too long — max ${MAX_TRACK_LENGTH} characters.`;
+  }
+  if (input.description.length > MAX_DESCRIPTION_LENGTH) {
+    return `Description is too long — max ${MAX_DESCRIPTION_LENGTH} characters.`;
   }
   return null;
 }
