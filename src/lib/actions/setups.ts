@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
+import { conditions, games, rigProfiles, setupTags } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import {
   ALLOWED_SETUP_FILE_EXTENSIONS,
@@ -10,6 +11,35 @@ import {
   SETUP_FILES_BUCKET,
 } from "@/lib/storage";
 import type { SetupValues } from "@/lib/types";
+
+/**
+ * The database's own check constraints are the real backstop against a
+ * bad game/condition/tag/rig value, but letting that be the ONLY layer
+ * means a direct call to these actions gets back a raw Postgres error
+ * (constraint names, column names) instead of a clean message. Checked
+ * against the same arrays the upload form itself renders its pickers
+ * from, so there's one source of truth either way.
+ */
+function validateSetupFields(input: {
+  game: string;
+  condition: string;
+  rigProfile: string;
+  tags: string[];
+}): string | null {
+  if (!games.includes(input.game as (typeof games)[number])) {
+    return "Unknown game.";
+  }
+  if (!conditions.includes(input.condition as (typeof conditions)[number])) {
+    return "Unknown condition.";
+  }
+  if (!rigProfiles.includes(input.rigProfile as (typeof rigProfiles)[number])) {
+    return "Unknown rig profile.";
+  }
+  if (!input.tags.every((tag) => setupTags.includes(tag as (typeof setupTags)[number]))) {
+    return "Unknown tag.";
+  }
+  return null;
+}
 
 export interface CreateSetupInput {
   game: string;
@@ -117,6 +147,11 @@ export async function createSetup(
     return { error: "You need to be logged in with Discord to upload a setup." };
   }
 
+  const validationError = validateSetupFields(input);
+  if (validationError) {
+    return { error: validationError };
+  }
+
   const { data: setup, error } = await supabase
     .from("setups")
     .insert({
@@ -168,6 +203,11 @@ export async function updateSetup(
 
   if (!user) {
     return { error: "You need to be logged in with Discord to edit a setup." };
+  }
+
+  const validationError = validateSetupFields(input);
+  if (validationError) {
+    return { error: validationError };
   }
 
   const updates: Record<string, unknown> = {

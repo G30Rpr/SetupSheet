@@ -40,26 +40,10 @@ import { trackLists } from "@/lib/track-lists";
 import { isKnownOption, type SelectOptionGroup } from "@/lib/select-options";
 import { getEmptySetupValues } from "@/lib/setup-schemas";
 import { cn } from "@/lib/utils";
-import { conditions, games } from "@/lib/data";
+import { conditions, games, rigProfiles, setupTags } from "@/lib/data";
 import type { Game, Setup, SetupTag } from "@/lib/types";
 
 type EntryMode = "file" | "manual";
-
-const rigProfiles = [
-  "Gamepad",
-  "Wheel + 3 Pedals",
-  "Wheel + Handbrake",
-  "Direct Drive + Load Cell",
-];
-
-const availableTags: SetupTag[] = [
-  "Safe",
-  "Beginner",
-  "Quali",
-  "Race",
-  "Aggressive",
-  "Wet Weather",
-];
 
 /**
  * A dropdown grouped into labeled sections (e.g. car class, track pack)
@@ -560,7 +544,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           <section className="flex flex-col gap-3">
             <Label>Tags</Label>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {availableTags.map((tag) => (
+              {setupTags.map((tag) => (
                 <label
                   key={tag}
                   className="flex items-center gap-2 rounded-lg border border-border/80 px-3 py-2.5 text-sm has-[[data-state=checked]]:border-racing-green/50 has-[[data-state=checked]]:bg-racing-green/10"

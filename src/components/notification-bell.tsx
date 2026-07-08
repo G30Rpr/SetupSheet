@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Bell } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
@@ -28,11 +28,32 @@ function formatRelativeTime(dateStr: string) {
 }
 
 /**
+ * Renders a static placeholder on the server and on the client's first
+ * render (so hydration always agrees), then swaps in the real
+ * Date.now()-relative label from a client-only effect. Computing that
+ * label directly during render would risk a hydration mismatch, since
+ * the server renders it at request time and the client hydrates however
+ * many seconds later.
+ */
+function RelativeTime({ dateStr }: { dateStr: string }) {
+  const [label, setLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLabel(formatRelativeTime(dateStr));
+    const id = setInterval(() => setLabel(formatRelativeTime(dateStr)), 60_000);
+    return () => clearInterval(id);
+  }, [dateStr]);
+
+  return <span className="text-[11px] text-muted-foreground">{label ?? " "}</span>;
+}
+
+/**
  * initialNotifications/initialUnreadCount come from the root layout's
- * server-side fetch (same pattern as AuthProvider's initialUser) --
- * refreshes on the next full navigation rather than living, so a
- * notification created while this tab is already open won't appear until
- * the user navigates. No realtime subscription for this first pass.
+ * server-side fetch (same pattern as AuthProvider's initialUser) -- no
+ * realtime subscription for this first pass, so they're re-synced here
+ * whenever a fresh server render passes down new values (e.g. after
+ * navigating to another page), rather than only seeding state once on
+ * mount and going stale for the rest of the session.
  */
 export function NotificationBell({
   initialNotifications,
@@ -46,6 +67,14 @@ export function NotificationBell({
   const [notifications, setNotifications] = useState(initialNotifications);
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
   const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    setNotifications(initialNotifications);
+  }, [initialNotifications]);
+
+  useEffect(() => {
+    setUnreadCount(initialUnreadCount);
+  }, [initialUnreadCount]);
 
   if (!user) return null;
 
@@ -126,9 +155,7 @@ export function NotificationBell({
                     </>
                   ) : null}
                 </p>
-                <span className="text-[11px] text-muted-foreground">
-                  {formatRelativeTime(n.createdAt)}
-                </span>
+                <RelativeTime dateStr={n.createdAt} />
               </div>
               {!n.read && <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-racing-green" />}
             </DropdownMenuItem>

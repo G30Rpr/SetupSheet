@@ -1,4 +1,4 @@
-import type { Condition, Game, Setup } from "@/lib/types";
+import type { Condition, Game, RigProfile, Setup, SetupTag } from "@/lib/types";
 
 export const games: Game[] = [
   "iRacing",
@@ -12,6 +12,22 @@ export const games: Game[] = [
 ];
 
 export const conditions: Condition[] = ["Dry", "Wet", "Mixed"];
+
+export const rigProfiles: RigProfile[] = [
+  "Gamepad",
+  "Wheel + 3 Pedals",
+  "Wheel + Handbrake",
+  "Direct Drive + Load Cell",
+];
+
+export const setupTags: SetupTag[] = [
+  "Safe",
+  "Beginner",
+  "Quali",
+  "Race",
+  "Aggressive",
+  "Wet Weather",
+];
 
 export function getCarsForGame(setups: Setup[], game?: string) {
   const filtered = game ? setups.filter((s) => s.game === game) : setups;
