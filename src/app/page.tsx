@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SetupCard } from "@/components/setup-card";
 import { games } from "@/lib/data";
-import { getSetups } from "@/lib/supabase/setups";
+import { getFeaturedSetups, getSetupCount } from "@/lib/supabase/setups";
 
 const highlights = [
   {
@@ -36,11 +36,10 @@ const highlights = [
 ];
 
 export default async function Home() {
-  const setups = await getSetups();
-  const featured = [...setups].sort((a, b) => b.upvotes - a.upvotes).slice(0, 6);
+  const [featured, setupCount] = await Promise.all([getFeaturedSetups(6), getSetupCount()]);
 
   const stats = [
-    { label: "Free setups", value: `${setups.length}` },
+    { label: "Free setups", value: `${setupCount}` },
     { label: "Sim titles supported", value: `${games.length}` },
     { label: "Cost to browse or upload", value: "$0" },
   ];

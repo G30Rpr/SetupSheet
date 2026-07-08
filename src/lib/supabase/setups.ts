@@ -162,6 +162,58 @@ export async function getSetups(): Promise<Setup[]> {
   return typedRows.map((row) => mapRow(row, viewer, authors, supabase));
 }
 
+/**
+ * Fetches the top `limit` setups by upvotes, for the landing page's
+ * featured rail. Unlike getSetups(), this is bounded at the database --
+ * the landing page gets the highest traffic of any route and needs no
+ * more than a handful of cards, so it has no business pulling every row
+ * in the table down to the client just to sort and slice in JS.
+ */
+export async function getFeaturedSetups(limit: number): Promise<Setup[]> {
+  const supabase = await createClient();
+
+  const { data: rows, error } = await supabase
+    .from("setups")
+    .select(SETUP_COLUMNS)
+    .order("upvotes", { ascending: false })
+    .limit(limit);
+
+  if (error || !rows) {
+    console.error("getFeaturedSetups: failed to load setups", error);
+    return [];
+  }
+
+  const typedRows = rows as unknown as SetupRow[];
+  const [viewer, authors] = await Promise.all([
+    getViewer(
+      supabase,
+      typedRows.map((r) => r.id)
+    ),
+    getAuthors(
+      supabase,
+      typedRows.map((r) => r.user_id)
+    ),
+  ]);
+
+  return typedRows.map((row) => mapRow(row, viewer, authors, supabase));
+}
+
+/** Total number of setups, for the landing page's stat tile -- a count-only query, no rows transferred. */
+export async function getSetupCount(): Promise<number> {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("setups")
+    .select("id", { count: "exact", head: true });
+
+  if (error) {
+    console.error("getSetupCount: failed to count setups", error);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
 /** Fetches every setup uploaded by a given user, newest first. */
 export async function getSetupsByUser(userId: string): Promise<Setup[]> {
   const supabase = await createClient();
