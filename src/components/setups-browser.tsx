@@ -17,11 +17,8 @@ import {
 } from "@/components/ui/select";
 import { SetupCard } from "@/components/setup-card";
 import { conditions, games, getCarsForGame, getTracksForGame, rigProfiles } from "@/lib/data";
+import { ALL, filterAndSortSetups, type SortOption } from "@/lib/filter-setups";
 import type { Setup } from "@/lib/types";
-
-const ALL = "all";
-
-type SortOption = "newest" | "trending" | "mostDownloaded" | "safest" | "fastest";
 
 const sortOptions: { value: SortOption; label: string }[] = [
   { value: "newest", label: "Newest" },
@@ -30,14 +27,6 @@ const sortOptions: { value: SortOption; label: string }[] = [
   { value: "safest", label: "Safest" },
   { value: "fastest", label: "Fastest" },
 ];
-
-/** Parses an "M:SS.mmm" lap time into total seconds; unparseable/blank times sort last. */
-function lapTimeSeconds(lapTime: string): number {
-  const match = lapTime.trim().match(/^(\d+):(\d+(?:\.\d+)?)$/);
-  if (!match) return Infinity;
-  const [, minutes, seconds] = match;
-  return Number(minutes) * 60 + Number(seconds);
-}
 
 const SORT_VALUES = sortOptions.map((option) => option.value);
 
@@ -90,38 +79,10 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
     [setups, game]
   );
 
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const results = setups.filter((s) => {
-      if (game !== ALL && s.game !== game) return false;
-      if (car !== ALL && s.car !== car) return false;
-      if (track !== ALL && s.track !== track) return false;
-      if (condition !== ALL && s.condition !== condition) return false;
-      if (rig !== ALL && s.rigProfile !== rig) return false;
-      if (query) {
-        const haystack = [s.game, s.car, s.track, s.author, s.description, ...s.tags]
-          .join(" ")
-          .toLowerCase();
-        if (!haystack.includes(query)) return false;
-      }
-      return true;
-    });
-
-    switch (sort) {
-      case "trending":
-        return [...results].sort((a, b) => b.upvotes - a.upvotes);
-      case "mostDownloaded":
-        return [...results].sort((a, b) => b.downloads - a.downloads);
-      case "safest":
-        return [...results].sort((a, b) => b.predictability - a.predictability);
-      case "fastest":
-        return [...results].sort(
-          (a, b) => lapTimeSeconds(a.lapTime) - lapTimeSeconds(b.lapTime)
-        );
-      default:
-        return results;
-    }
-  }, [setups, search, game, car, track, condition, rig, sort]);
+  const filtered = useMemo(
+    () => filterAndSortSetups(setups, { search, game, car, track, condition, rig }, sort),
+    [setups, search, game, car, track, condition, rig, sort]
+  );
 
   const hasActiveFilters =
     search !== "" || game !== ALL || car !== ALL || track !== ALL || condition !== ALL || rig !== ALL;
