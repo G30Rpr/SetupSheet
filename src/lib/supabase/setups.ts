@@ -1,5 +1,6 @@
 import { cache } from "react";
 
+import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { SETUP_FILES_BUCKET } from "@/lib/storage";
 import type { Condition, Game, RigProfile, Setup, SetupTag, SetupValues } from "@/lib/types";
@@ -114,7 +115,7 @@ async function getAuthors(
     .in("id", Array.from(new Set(userIds)));
 
   if (error) {
-    console.error("getAuthors: failed to load profiles", error);
+    logger.error("getAuthors: failed to load profiles", error);
     return authors;
   }
   for (const profile of profiles ?? []) {
@@ -145,7 +146,7 @@ export async function getSetups(): Promise<Setup[]> {
     .order("created_at", { ascending: false });
 
   if (error || !rows) {
-    console.error("getSetups: failed to load setups", error);
+    logger.error("getSetups: failed to load setups", error);
     return [];
   }
 
@@ -181,7 +182,7 @@ export async function getFeaturedSetups(limit: number): Promise<Setup[]> {
     .limit(limit);
 
   if (error || !rows) {
-    console.error("getFeaturedSetups: failed to load setups", error);
+    logger.error("getFeaturedSetups: failed to load setups", error);
     return [];
   }
 
@@ -209,7 +210,7 @@ export async function getSetupCount(): Promise<number> {
     .select("id", { count: "exact", head: true });
 
   if (error) {
-    console.error("getSetupCount: failed to count setups", error);
+    logger.error("getSetupCount: failed to count setups", error);
     return 0;
   }
 
@@ -232,7 +233,7 @@ export async function getSetupSitemapEntries(): Promise<{ id: string; updatedAt:
     .limit(5000);
 
   if (error || !rows) {
-    console.error("getSetupSitemapEntries: failed to load setups", error);
+    logger.error("getSetupSitemapEntries: failed to load setups", error);
     return [];
   }
 
@@ -256,7 +257,7 @@ export async function getProfileSitemapEntries(): Promise<{ userId: string; upda
     .limit(5000);
 
   if (error || !rows) {
-    console.error("getProfileSitemapEntries: failed to load setups", error);
+    logger.error("getProfileSitemapEntries: failed to load setups", error);
     return [];
   }
 
@@ -281,7 +282,7 @@ export async function getSetupsByUser(userId: string): Promise<Setup[]> {
     .order("created_at", { ascending: false });
 
   if (error || !rows) {
-    console.error("getSetupsByUser: failed to load setups", error);
+    logger.error("getSetupsByUser: failed to load setups", error);
     return [];
   }
 
@@ -313,7 +314,7 @@ export const getSetupById = cache(async (id: string): Promise<Setup | null> => {
     .maybeSingle();
 
   if (error || !row) {
-    if (error) console.error("getSetupById: failed to load setup", error);
+    if (error) logger.error("getSetupById: failed to load setup", error);
     return null;
   }
 

@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import { logger } from "@/lib/logger";
+
 /**
  * Last-resort boundary for an error thrown by the root layout itself
  * (rare -- error.tsx can't catch that, since it renders inside the
@@ -17,7 +19,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("Unhandled root layout error:", error);
+    logger.error("Unhandled root layout error:", error);
   }, [error]);
 
   return (

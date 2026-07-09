@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 const fontCache = new Map<string, ArrayBuffer>();
 
 const FETCH_TIMEOUT_MS = 4000;
@@ -30,7 +32,7 @@ export async function loadGoogleFont(family: string, weight: number): Promise<Ar
 
     const match = css.match(/src: url\(([^)]+)\)/);
     if (!match) {
-      console.error(`loadGoogleFont: no font source found for ${family} ${weight}`);
+      logger.error(`loadGoogleFont: no font source found for ${family} ${weight}`);
       return null;
     }
 
@@ -40,7 +42,7 @@ export async function loadGoogleFont(family: string, weight: number): Promise<Ar
     fontCache.set(key, fontData);
     return fontData;
   } catch (error) {
-    console.error(`loadGoogleFont: failed to load ${family} ${weight}`, error);
+    logger.error(`loadGoogleFont: failed to load ${family} ${weight}`, error);
     return null;
   }
 }

@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
 export interface Profile {
@@ -19,7 +20,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     .maybeSingle();
 
   if (error || !row) {
-    if (error) console.error("getProfile: failed to load profile", error);
+    if (error) logger.error("getProfile: failed to load profile", error);
     return null;
   }
 

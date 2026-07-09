@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
 /** Follows or unfollows targetUserId as the current user. */
@@ -31,7 +32,7 @@ export async function toggleFollow(
     : await supabase.from("follows").insert({ follower_id: user.id, followed_id: targetUserId });
 
   if (error) {
-    console.error("toggleFollow: mutation failed", error);
+    logger.error("toggleFollow: mutation failed", error);
     return { error: error.message };
   }
 

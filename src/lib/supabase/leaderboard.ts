@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
 export interface LeaderboardEntry {
@@ -25,7 +26,7 @@ export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
     .limit(limit);
 
   if (error || !rows) {
-    console.error("getLeaderboard: failed to load leaderboard", error);
+    logger.error("getLeaderboard: failed to load leaderboard", error);
     return [];
   }
 

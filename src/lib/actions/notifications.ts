@@ -1,5 +1,6 @@
 "use server";
 
+import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
 export async function markNotificationRead(id: string): Promise<{ error: string | null }> {
@@ -19,7 +20,7 @@ export async function markNotificationRead(id: string): Promise<{ error: string 
     .eq("user_id", user.id);
 
   if (error) {
-    console.error("markNotificationRead: mutation failed", error);
+    logger.error("markNotificationRead: mutation failed", error);
     return { error: error.message };
   }
 
@@ -43,7 +44,7 @@ export async function markAllNotificationsRead(): Promise<{ error: string | null
     .eq("read", false);
 
   if (error) {
-    console.error("markAllNotificationsRead: mutation failed", error);
+    logger.error("markAllNotificationsRead: mutation failed", error);
     return { error: error.message };
   }
 
@@ -68,7 +69,7 @@ export async function clearReadNotifications(): Promise<{ error: string | null }
     .eq("read", true);
 
   if (error) {
-    console.error("clearReadNotifications: delete failed", error);
+    logger.error("clearReadNotifications: delete failed", error);
     return { error: error.message };
   }
 

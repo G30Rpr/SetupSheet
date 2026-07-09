@@ -5,6 +5,7 @@ import { AlertTriangle, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { logger } from "@/lib/logger";
 
 /**
  * Catches any client-side rendering error below the root layout. Without
@@ -20,7 +21,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("Unhandled application error:", error);
+    logger.error("Unhandled application error:", error);
   }, [error]);
 
   return (

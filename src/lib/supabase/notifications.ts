@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
 export interface NotificationItem {
@@ -37,7 +38,7 @@ export async function getNotifications(userId: string, limit = 20): Promise<Noti
     .limit(limit);
 
   if (error || !rows) {
-    console.error("getNotifications: failed to load notifications", error);
+    logger.error("getNotifications: failed to load notifications", error);
     return [];
   }
 
@@ -85,7 +86,7 @@ export async function getUnreadNotificationCount(userId: string): Promise<number
     .eq("read", false);
 
   if (error) {
-    console.error("getUnreadNotificationCount: failed to count notifications", error);
+    logger.error("getUnreadNotificationCount: failed to count notifications", error);
     return 0;
   }
 
