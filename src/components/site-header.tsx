@@ -60,10 +60,7 @@ export function SiteHeader({
         </nav>
 
         <div className="flex items-center gap-2">
-          <div className="hidden items-center gap-2 md:flex">
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/setups">Browse Setups</Link>
-            </Button>
+          <div className="hidden md:block">
             <Button asChild size="sm">
               <Link href="/upload">
                 <Upload />
