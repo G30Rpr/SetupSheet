@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
@@ -33,10 +34,14 @@ import {
   toggleUpvote,
 } from "@/lib/actions/setups";
 import { buildSetupExportFilename, buildSetupExportText } from "@/lib/setup-export";
-import { installGuides } from "@/lib/install-guides";
-import { setupSchemas } from "@/lib/setup-schemas";
 import { cn, getInitials } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
+
+// Both panels only render once a viewer expands them -- deferring the code
+// (and the per-game setupSchemas/installGuides data each one imports) until
+// then keeps that data out of every SetupCard's initial bundle.
+const SetupCardValues = dynamic(() => import("@/components/setup-card-values"));
+const SetupCardInstallGuide = dynamic(() => import("@/components/setup-card-install-guide"));
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -72,7 +77,6 @@ export function SetupCard({
   const [downloads, setDownloads] = useState(setup.downloads);
   const { user, signInWithDiscord } = useAuth();
   const v = setup.setupValues;
-  const guide = installGuides[setup.game];
 
   function handleUpvoteClick() {
     if (!user) {
@@ -264,31 +268,7 @@ export function SetupCard({
               />
             </button>
 
-            {showValues && (
-              <div className="mt-2 flex flex-col gap-3 rounded-md border border-border/60 px-3 py-2.5 text-xs">
-                {setupSchemas[setup.game].map((group) => {
-                  const rows = group.fields.filter((field) => v[field.key]);
-                  if (rows.length === 0) return null;
-                  return (
-                    <div key={group.title} className="flex flex-col gap-1.5">
-                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
-                        {group.title}
-                      </p>
-                      <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
-                        {rows.map((field) => (
-                          <div key={field.key} className="col-span-2 flex items-center justify-between gap-2 sm:col-span-1">
-                            <dt className="text-muted-foreground">{field.label}</dt>
-                            <dd className="font-mono font-medium tabular-nums text-foreground">
-                              {v[field.key]}
-                            </dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            {showValues && <SetupCardValues setup={setup} />}
           </div>
         )}
 
@@ -331,18 +311,7 @@ export function SetupCard({
             />
           </button>
 
-          {showInstallGuide && (
-            <div className="mt-2 flex flex-col gap-2 rounded-md border border-border/60 px-3 py-2.5 text-xs">
-              <Badge variant={guide.supportsFileImport ? "green" : "amber"} className="w-fit">
-                {guide.supportsFileImport ? "File import supported" : "Manual entry only"}
-              </Badge>
-              <ol className="flex list-decimal flex-col gap-1.5 pl-4 text-muted-foreground">
-                {guide.steps.map((step, i) => (
-                  <li key={i}>{step}</li>
-                ))}
-              </ol>
-            </div>
-          )}
+          {showInstallGuide && <SetupCardInstallGuide setup={setup} />}
         </div>
       </div>
 

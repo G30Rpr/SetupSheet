@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
+import { useEffect, useState, useTransition, type FormEvent } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -19,14 +19,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FileDropzone } from "@/components/file-dropzone";
+import { GroupedSelectField } from "@/components/grouped-select-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -35,10 +34,7 @@ import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
 import { createSetup, updateSetup, uploadSetupFile } from "@/lib/actions/setups";
 import { parseAccSetupFile } from "@/lib/acc-setup-parser";
-import { carLists } from "@/lib/car-lists";
-import { trackLists } from "@/lib/track-lists";
 import { isKnownOption, type SelectOptionGroup } from "@/lib/select-options";
-import { getEmptySetupValues } from "@/lib/setup-schemas";
 import { cn } from "@/lib/utils";
 import {
   MAX_CAR_LENGTH,
@@ -53,88 +49,6 @@ import type { Game, Setup, SetupTag } from "@/lib/types";
 
 type EntryMode = "file" | "manual";
 
-/**
- * A dropdown grouped into labeled sections (e.g. car class, track pack)
- * with a manual-entry escape hatch, falling back to plain free text when
- * there's no known roster for the current game at all.
- */
-function GroupedSelectField({
-  id,
-  groups,
-  useManual,
-  onToggleManual,
-  defaultValue,
-  selectPlaceholder,
-  inputPlaceholder,
-  maxLength,
-}: {
-  id: string;
-  groups: SelectOptionGroup[] | undefined;
-  useManual: boolean;
-  onToggleManual: (manual: boolean) => void;
-  defaultValue?: string;
-  selectPlaceholder: string;
-  inputPlaceholder: string;
-  maxLength?: number;
-}) {
-  if (groups && !useManual) {
-    return (
-      <>
-        <Select
-          name={id}
-          required
-          defaultValue={defaultValue && isKnownOption(groups, defaultValue) ? defaultValue : undefined}
-        >
-          <SelectTrigger id={id} className="w-full">
-            <SelectValue placeholder={selectPlaceholder} />
-          </SelectTrigger>
-          <SelectContent>
-            {groups.map((group) => (
-              <SelectGroup key={group.label}>
-                <SelectLabel>{group.label}</SelectLabel>
-                {group.options.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            ))}
-          </SelectContent>
-        </Select>
-        <button
-          type="button"
-          onClick={() => onToggleManual(true)}
-          className="self-start text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-        >
-          Not listed? Enter it manually
-        </button>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Input
-        id={id}
-        name={id}
-        placeholder={inputPlaceholder}
-        defaultValue={defaultValue}
-        maxLength={maxLength}
-        required
-      />
-      {groups && (
-        <button
-          type="button"
-          onClick={() => onToggleManual(false)}
-          className="self-start text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-        >
-          Choose from the list instead
-        </button>
-      )}
-    </>
-  );
-}
-
 export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
@@ -143,14 +57,14 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     existingSetup?.setupValues ? "manual" : "file"
   );
   const [game, setGame] = useState<Game | "">(existingSetup?.game ?? "");
-  const [useManualCarInput, setUseManualCarInput] = useState(() => {
-    if (!existingSetup) return false;
-    return !isKnownOption(carLists[existingSetup.game], existingSetup.car);
-  });
-  const [useManualTrackInput, setUseManualTrackInput] = useState(() => {
-    if (!existingSetup) return false;
-    return !isKnownOption(trackLists[existingSetup.game], existingSetup.track);
-  });
+  // Both are plain per-game data modules (not components, so next/dynamic
+  // doesn't apply) -- loaded via dynamic import() below so their ~150+ lines
+  // of car/track rosters ship in their own chunk instead of every /upload
+  // page's initial bundle.
+  const [carLists, setCarLists] = useState<Partial<Record<Game, SelectOptionGroup[]>>>({});
+  const [trackLists, setTrackLists] = useState<Partial<Record<Game, SelectOptionGroup[]>>>({});
+  const [useManualCarInput, setUseManualCarInput] = useState(false);
+  const [useManualTrackInput, setUseManualTrackInput] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [detectedCar, setDetectedCar] = useState<string | null>(null);
   const [keepExistingFile, setKeepExistingFile] = useState(Boolean(existingSetup?.fileName));
@@ -162,14 +76,45 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   const [status, setStatus] = useState<"idle" | "success">("idle");
   const [isPending, startTransition] = useTransition();
 
+  // Loaded once on mount rather than gated behind game selection: this still
+  // keeps both rosters out of every /upload page's initial JS (they only
+  // ship once this chunk is fetched), while avoiding a "which mode does the
+  // grouped field start in" race for the edit flow, which needs to know
+  // synchronously-ish whether the existing car/track is a known option.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([import("@/lib/car-lists"), import("@/lib/track-lists")]).then(
+      ([carListsModule, trackListsModule]) => {
+        if (cancelled) return;
+        setCarLists(carListsModule.carLists);
+        setTrackLists(trackListsModule.trackLists);
+        if (existingSetup) {
+          setUseManualCarInput(
+            !isKnownOption(carListsModule.carLists[existingSetup.game], existingSetup.car)
+          );
+          setUseManualTrackInput(
+            !isKnownOption(trackListsModule.trackLists[existingSetup.game], existingSetup.track)
+          );
+        }
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+    // existingSetup doesn't change across this component's lifetime -- only
+    // its initial value matters here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function toggleTag(tag: SetupTag) {
     setTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   }
 
-  function handleGameChange(value: string) {
+  async function handleGameChange(value: string) {
     setGame(value as Game);
+    const { getEmptySetupValues } = await import("@/lib/setup-schemas");
     setSetupValues(getEmptySetupValues(value as Game));
     setUseManualCarInput(false);
     setUseManualTrackInput(false);
