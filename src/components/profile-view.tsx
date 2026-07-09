@@ -59,7 +59,7 @@ export function ProfileView({
 
         <div className="flex flex-1 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">{displayName}</h1>
+            <h1 className="font-display text-2xl font-bold tracking-tight">{displayName}</h1>
             <ContributorBadge totalUpvotes={totalUpvotes} />
           </div>
           {memberSince && (
@@ -76,25 +76,25 @@ export function ProfileView({
 
         <div className="flex items-center gap-5">
           <div className="flex flex-col items-center">
-            <span className="text-lg font-semibold tabular-nums">{setups.length}</span>
+            <span className="font-mono text-lg font-semibold tabular-nums">{setups.length}</span>
             <span className="text-xs text-muted-foreground">Setups</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="flex items-center gap-1 text-lg font-semibold tabular-nums text-racing-green">
+            <span className="flex items-center gap-1 font-mono text-lg font-semibold tabular-nums text-racing-green">
               <TrendingUp className="size-4" />
               {totalUpvotes}
             </span>
             <span className="text-xs text-muted-foreground">Upvotes</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="flex items-center gap-1 text-lg font-semibold tabular-nums">
+            <span className="flex items-center gap-1 font-mono text-lg font-semibold tabular-nums">
               <Star className="size-4" />
               {totalRatings}
             </span>
             <span className="text-xs text-muted-foreground">Ratings</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="flex items-center gap-1 text-lg font-semibold tabular-nums">
+            <span className="flex items-center gap-1 font-mono text-lg font-semibold tabular-nums">
               <Users className="size-4" />
               {followerCount}
             </span>
@@ -104,7 +104,7 @@ export function ProfileView({
       </Card>
 
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-xl font-semibold tracking-tight">
+        <h2 className="font-display text-xl font-semibold tracking-tight">
           {isOwnProfile ? "Your Setups" : `${displayName}'s Setups`}
         </h2>
         {isOwnProfile && (

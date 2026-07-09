@@ -42,7 +42,7 @@ export function SiteHeader({
           <span className="flex size-8 items-center justify-center rounded-md bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30">
             <LogoMark className="size-4" />
           </span>
-          <span className="text-lg">
+          <span className="font-display text-lg font-semibold uppercase tracking-wide">
             Setup<span className="text-racing-green">Sheet</span>
           </span>
         </Link>
@@ -91,7 +91,7 @@ export function SiteHeader({
               </SheetTrigger>
               <SheetContent side="right" className="w-4/5">
                 <SheetHeader>
-                  <SheetTitle className="flex items-center gap-2">
+                  <SheetTitle className="flex items-center gap-2 font-display uppercase tracking-wide">
                     <LogoMark className="size-4 text-racing-green" />
                     Setup<span className="text-racing-green">Sheet</span>
                   </SheetTitle>

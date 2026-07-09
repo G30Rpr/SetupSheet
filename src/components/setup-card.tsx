@@ -203,7 +203,7 @@ export function SetupCard({ setup }: { setup: Setup }) {
 
         {/* Car + Track */}
         <div>
-          <h3 className="text-lg font-semibold leading-tight tracking-tight text-foreground">
+          <h3 className="font-display text-lg font-semibold leading-tight tracking-tight text-foreground">
             {setup.car}
           </h3>
           <p className="text-sm text-muted-foreground">{setup.track}</p>
@@ -264,7 +264,9 @@ export function SetupCard({ setup }: { setup: Setup }) {
                         {rows.map((field) => (
                           <div key={field.key} className="col-span-2 flex items-center justify-between gap-2 sm:col-span-1">
                             <dt className="text-muted-foreground">{field.label}</dt>
-                            <dd className="font-medium text-foreground">{v[field.key]}</dd>
+                            <dd className="font-mono font-medium tabular-nums text-foreground">
+                              {v[field.key]}
+                            </dd>
                           </div>
                         ))}
                       </dl>
@@ -293,7 +295,8 @@ export function SetupCard({ setup }: { setup: Setup }) {
               </span>
             </span>
             <span className="shrink-0 text-xs font-normal text-racing-green/70">
-              {downloads} {downloads === 1 ? "download" : "downloads"}
+              <span className="font-mono tabular-nums">{downloads}</span>{" "}
+              {downloads === 1 ? "download" : "downloads"}
             </span>
           </button>
         )}
@@ -376,7 +379,7 @@ export function SetupCard({ setup }: { setup: Setup }) {
             )}
           >
             <TrendingUp className="size-3.5" />
-            {upvotes}
+            <span className="font-mono tabular-nums">{upvotes}</span>
           </button>
         </div>
 
