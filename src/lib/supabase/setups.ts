@@ -216,6 +216,29 @@ export async function getSetupCount(): Promise<number> {
   return count ?? 0;
 }
 
+/**
+ * Id + timestamp only, for the sitemap -- no viewer/author joins, since
+ * search engines don't need per-visitor upvote/rating state. Capped well
+ * under the 50,000-URL sitemap limit as a defensive bound, same reasoning
+ * as the landing page's featured-setups query.
+ */
+export async function getSetupSitemapEntries(): Promise<{ id: string; updatedAt: string }[]> {
+  const supabase = await createClient();
+
+  const { data: rows, error } = await supabase
+    .from("setups")
+    .select("id, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5000);
+
+  if (error || !rows) {
+    console.error("getSetupSitemapEntries: failed to load setups", error);
+    return [];
+  }
+
+  return rows.map((row) => ({ id: row.id as string, updatedAt: row.created_at as string }));
+}
+
 /** Fetches every setup uploaded by a given user, newest first. */
 export async function getSetupsByUser(userId: string): Promise<Setup[]> {
   const supabase = await createClient();
