@@ -3,15 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
-import {
-  MAX_CAR_LENGTH,
-  MAX_DESCRIPTION_LENGTH,
-  MAX_TRACK_LENGTH,
-  conditions,
-  games,
-  rigProfiles,
-  setupTags,
-} from "@/lib/data";
+import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import {
   ALLOWED_SETUP_FILE_EXTENSIONS,
@@ -19,52 +11,7 @@ import {
   SETUP_FILES_BUCKET,
 } from "@/lib/storage";
 import type { SetupValues } from "@/lib/types";
-
-/**
- * The database's own check constraints are the real backstop against a
- * bad game/condition/tag/rig value, but letting that be the ONLY layer
- * means a direct call to these actions gets back a raw Postgres error
- * (constraint names, column names) instead of a clean message. Checked
- * against the same arrays the upload form itself renders its pickers
- * from, so there's one source of truth either way.
- *
- * car/track/description have no enum to check against (car and track fall
- * back to free text when a game's list doesn't have the entry), so they're
- * only bounded by length here -- otherwise the only limit is whatever
- * Next.js's default Server Action body-size cap allows.
- */
-function validateSetupFields(input: {
-  game: string;
-  car: string;
-  track: string;
-  condition: string;
-  description: string;
-  rigProfile: string;
-  tags: string[];
-}): string | null {
-  if (!games.includes(input.game as (typeof games)[number])) {
-    return "Unknown game.";
-  }
-  if (!conditions.includes(input.condition as (typeof conditions)[number])) {
-    return "Unknown condition.";
-  }
-  if (!rigProfiles.includes(input.rigProfile as (typeof rigProfiles)[number])) {
-    return "Unknown rig profile.";
-  }
-  if (!input.tags.every((tag) => setupTags.includes(tag as (typeof setupTags)[number]))) {
-    return "Unknown tag.";
-  }
-  if (input.car.length > MAX_CAR_LENGTH) {
-    return `Car name is too long — max ${MAX_CAR_LENGTH} characters.`;
-  }
-  if (input.track.length > MAX_TRACK_LENGTH) {
-    return `Track name is too long — max ${MAX_TRACK_LENGTH} characters.`;
-  }
-  if (input.description.length > MAX_DESCRIPTION_LENGTH) {
-    return `Description is too long — max ${MAX_DESCRIPTION_LENGTH} characters.`;
-  }
-  return null;
-}
+import { validateSetupFields } from "@/lib/validate-setup-fields";
 
 export interface CreateSetupInput {
   game: string;
@@ -144,7 +91,7 @@ export async function uploadSetupFile(
   const { error } = await supabase.storage.from(SETUP_FILES_BUCKET).upload(path, file);
 
   if (error) {
-    console.error("uploadSetupFile: upload failed", error);
+    logger.error("uploadSetupFile: upload failed", error);
     return { path: null, fileName: null, error: error.message };
   }
 
@@ -197,7 +144,7 @@ export async function createSetup(
     .single();
 
   if (error || !setup) {
-    console.error("createSetup: insert failed", error);
+    logger.error("createSetup: insert failed", error);
     return { error: error?.message ?? "Failed to create setup." };
   }
 
@@ -209,7 +156,7 @@ export async function createSetup(
   });
 
   if (ratingError) {
-    console.error("createSetup: initial rating insert failed", ratingError);
+    logger.error("createSetup: initial rating insert failed", ratingError);
   }
 
   revalidatePath("/setups");
@@ -270,7 +217,7 @@ export async function updateSetup(
     .eq("user_id", user.id);
 
   if (error) {
-    console.error("updateSetup: update failed", error);
+    logger.error("updateSetup: update failed", error);
     return { error: error.message };
   }
 
@@ -307,7 +254,7 @@ export async function deleteSetup(setupId: string): Promise<{ error: string | nu
     .eq("user_id", user.id);
 
   if (error) {
-    console.error("deleteSetup: delete failed", error);
+    logger.error("deleteSetup: delete failed", error);
     return { error: error.message };
   }
 
@@ -338,7 +285,7 @@ export async function toggleUpvote(
     : await supabase.from("setup_upvotes").insert({ user_id: user.id, setup_id: setupId });
 
   if (error) {
-    console.error("toggleUpvote: mutation failed", error);
+    logger.error("toggleUpvote: mutation failed", error);
     return { error: error.message };
   }
 
@@ -370,7 +317,7 @@ export async function rateSetup(
     );
 
   if (error) {
-    console.error("rateSetup: upsert failed", error);
+    logger.error("rateSetup: upsert failed", error);
     return { error: error.message };
   }
 
@@ -404,7 +351,7 @@ export async function downloadSetup(
   });
 
   if (rpcError) {
-    console.error("downloadSetup: increment_downloads failed", rpcError);
+    logger.error("downloadSetup: increment_downloads failed", rpcError);
   }
 
   const {
@@ -427,7 +374,7 @@ export async function recordSetupExport(setupId: string): Promise<{ error: strin
   const { error } = await supabase.rpc("increment_downloads", { setup_id: setupId });
 
   if (error) {
-    console.error("recordSetupExport: increment_downloads failed", error);
+    logger.error("recordSetupExport: increment_downloads failed", error);
     return { error: error.message };
   }
 
