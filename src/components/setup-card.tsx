@@ -50,7 +50,14 @@ const conditionVariant = {
   Mixed: "amber",
 } as const;
 
-export function SetupCard({ setup }: { setup: Setup }) {
+export function SetupCard({
+  setup,
+  linkTitle = true,
+}: {
+  setup: Setup;
+  /** False on the setup's own detail page, where linking to itself would be a no-op. */
+  linkTitle?: boolean;
+}) {
   const router = useRouter();
   const [showValues, setShowValues] = useState(false);
   const [showRateWidget, setShowRateWidget] = useState(false);
@@ -204,7 +211,13 @@ export function SetupCard({ setup }: { setup: Setup }) {
         {/* Car + Track */}
         <div>
           <h3 className="font-display text-lg font-semibold leading-tight tracking-tight text-foreground">
-            {setup.car}
+            {linkTitle ? (
+              <Link href={`/setups/${setup.id}`} className="transition-colors hover:text-racing-green">
+                {setup.car}
+              </Link>
+            ) : (
+              setup.car
+            )}
           </h3>
           <p className="text-sm text-muted-foreground">{setup.track}</p>
         </div>

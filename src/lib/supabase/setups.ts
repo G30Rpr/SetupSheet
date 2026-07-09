@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { createClient } from "@/lib/supabase/server";
 import { SETUP_FILES_BUCKET } from "@/lib/storage";
 import type { Condition, Game, RigProfile, Setup, SetupTag, SetupValues } from "@/lib/types";
@@ -241,8 +243,13 @@ export async function getSetupsByUser(userId: string): Promise<Setup[]> {
   return typedRows.map((row) => mapRow(row, viewer, authors, supabase));
 }
 
-/** Fetches a single setup by id, or null if it doesn't exist / the query fails. */
-export async function getSetupById(id: string): Promise<Setup | null> {
+/**
+ * Fetches a single setup by id, or null if it doesn't exist / the query
+ * fails. Wrapped in React's cache() because the /setups/[id] route calls
+ * this once from generateMetadata and again from the page component --
+ * without it that'd be two round trips for the same row on every request.
+ */
+export const getSetupById = cache(async (id: string): Promise<Setup | null> => {
   const supabase = await createClient();
 
   const { data: row, error } = await supabase
@@ -263,4 +270,4 @@ export async function getSetupById(id: string): Promise<Setup | null> {
   ]);
 
   return mapRow(typedRow, viewer, authors, supabase);
-}
+});

@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { createClient } from "@/lib/supabase/server";
 import { getNotifications, getUnreadNotificationCount } from "@/lib/supabase/notifications";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const oswald = Oswald({
   variable: "--font-oswald",
@@ -26,10 +27,26 @@ const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
 });
 
+const title = `${SITE_NAME} — Free Community Sim Racing Setups`;
+const description =
+  "Download and share free sim racing setups for iRacing, Assetto Corsa, Le Mans Ultimate, F1 25 and more. Built by the community, for the community.";
+
 export const metadata: Metadata = {
-  title: "SetupSheet — Free Community Sim Racing Setups",
-  description:
-    "Download and share free sim racing setups for iRacing, Assetto Corsa, Le Mans Ultimate, F1 25 and more. Built by the community, for the community.",
+  metadataBase: new URL(SITE_URL),
+  title,
+  description,
+  openGraph: {
+    siteName: SITE_NAME,
+    type: "website",
+    locale: "en_US",
+    title,
+    description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+  },
 };
 
 export default async function RootLayout({
