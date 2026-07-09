@@ -1,10 +1,13 @@
 import type { MetadataRoute } from "next";
 
-import { getSetupSitemapEntries } from "@/lib/supabase/setups";
+import { getProfileSitemapEntries, getSetupSitemapEntries } from "@/lib/supabase/setups";
 import { SITE_URL } from "@/lib/site";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const setups = await getSetupSitemapEntries();
+  const [setups, profiles] = await Promise.all([
+    getSetupSitemapEntries(),
+    getProfileSitemapEntries(),
+  ]);
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: SITE_URL, changeFrequency: "daily", priority: 1 },
@@ -20,5 +23,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...setupRoutes];
+  const profileRoutes: MetadataRoute.Sitemap = profiles.map((profile) => ({
+    url: `${SITE_URL}/profile/${profile.userId}`,
+    lastModified: profile.updatedAt,
+    changeFrequency: "weekly",
+    priority: 0.4,
+  }));
+
+  return [...staticRoutes, ...setupRoutes, ...profileRoutes];
 }

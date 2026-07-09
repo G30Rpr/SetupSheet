@@ -239,6 +239,37 @@ export async function getSetupSitemapEntries(): Promise<{ id: string; updatedAt:
   return rows.map((row) => ({ id: row.id as string, updatedAt: row.created_at as string }));
 }
 
+/**
+ * Distinct contributor ids for the sitemap -- the leaderboard/badge system
+ * exists specifically to drive traffic to these profile pages, so they
+ * belong in the sitemap the same way individual setups do. No dedicated
+ * view: dedupe client-side off the same bounded, newest-first setups
+ * query, keeping each user's most recent upload as their "last modified".
+ */
+export async function getProfileSitemapEntries(): Promise<{ userId: string; updatedAt: string }[]> {
+  const supabase = await createClient();
+
+  const { data: rows, error } = await supabase
+    .from("setups")
+    .select("user_id, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5000);
+
+  if (error || !rows) {
+    console.error("getProfileSitemapEntries: failed to load setups", error);
+    return [];
+  }
+
+  const seen = new Map<string, string>();
+  for (const row of rows as { user_id: string; created_at: string }[]) {
+    if (!seen.has(row.user_id)) {
+      seen.set(row.user_id, row.created_at);
+    }
+  }
+
+  return Array.from(seen, ([userId, updatedAt]) => ({ userId, updatedAt }));
+}
+
 /** Fetches every setup uploaded by a given user, newest first. */
 export async function getSetupsByUser(userId: string): Promise<Setup[]> {
   const supabase = await createClient();

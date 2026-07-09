@@ -42,12 +42,20 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     loadGoogleFont("IBM Plex Mono", 600),
   ]);
 
+  // Google Fonts can hiccup -- loadGoogleFont() returns null rather than
+  // throwing, so a failed font is just dropped and satori falls back to
+  // its default sans-serif for that role instead of failing the image.
   const fonts = [
-    { name: "Oswald", data: oswald700, weight: 700 as const, style: "normal" as const },
-    { name: "Oswald", data: oswald600, weight: 600 as const, style: "normal" as const },
-    { name: "IBM Plex Sans", data: plexSans400, weight: 400 as const, style: "normal" as const },
-    { name: "IBM Plex Mono", data: plexMono600, weight: 600 as const, style: "normal" as const },
-  ];
+    oswald700 && { name: "Oswald", data: oswald700, weight: 700 as const, style: "normal" as const },
+    oswald600 && { name: "Oswald", data: oswald600, weight: 600 as const, style: "normal" as const },
+    plexSans400 && { name: "IBM Plex Sans", data: plexSans400, weight: 400 as const, style: "normal" as const },
+    plexMono600 && { name: "IBM Plex Mono", data: plexMono600, weight: 600 as const, style: "normal" as const },
+  ].filter((font): font is Exclude<typeof font, null> => font !== null);
+
+  // satori has no built-in font when every custom font fails to load --
+  // passing an empty `fonts` array throws ("No fonts are loaded"), so
+  // the key has to be omitted entirely to fall back to its default.
+  const imageOptions = fonts.length > 0 ? { ...size, fonts } : size;
 
   if (!setup) {
     return new ImageResponse(
@@ -69,7 +77,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
           Setup not found — {SITE_NAME}
         </div>
       ),
-      { ...size, fonts }
+      imageOptions
     );
   }
 
@@ -186,6 +194,6 @@ export default async function Image({ params }: { params: Promise<{ id: string }
         </div>
       </div>
     ),
-    { ...size, fonts }
+    imageOptions
   );
 }
