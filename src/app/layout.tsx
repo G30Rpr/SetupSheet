@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/auth-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { getNotifications, getUnreadNotificationCount } from "@/lib/supabase/notifications";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
@@ -49,9 +50,20 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+
+  // A network-level failure (DNS, connection refused) throws here rather
+  // than resolving to a catchable { error } result -- without this, an
+  // unreachable Supabase project would crash the entire root layout on
+  // every page, not just degrade the data that depends on it.
+  let user = null;
+  try {
+    const {
+      data: { user: fetchedUser },
+    } = await supabase.auth.getUser();
+    user = fetchedUser;
+  } catch (error) {
+    logger.error("RootLayout: failed to fetch current user", error);
+  }
 
   const [initialNotifications, initialUnreadCount] = user
     ? await Promise.all([getNotifications(user.id, 10), getUnreadNotificationCount(user.id)])

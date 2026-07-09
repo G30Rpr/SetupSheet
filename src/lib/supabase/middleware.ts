@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { logger } from "@/lib/logger";
+
 /**
  * Refreshes the Supabase auth session on every request and keeps the
  * browser's cookies in sync. Without this, access tokens expire and
@@ -31,8 +33,15 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Do not remove: this refreshes the token and must run before any
-  // other logic that reads the user's session.
-  await supabase.auth.getUser();
+  // other logic that reads the user's session. Wrapped in try/catch since
+  // a network-level failure (DNS, connection refused) throws here rather
+  // than resolving to a catchable { error } result -- without this, an
+  // unreachable Supabase project would crash every single request.
+  try {
+    await supabase.auth.getUser();
+  } catch (error) {
+    logger.error("updateSession: failed to refresh auth session", error);
+  }
 
   return supabaseResponse;
 }
