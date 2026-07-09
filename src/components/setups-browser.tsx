@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -37,13 +38,45 @@ function lapTimeSeconds(lapTime: string): number {
   return Number(minutes) * 60 + Number(seconds);
 }
 
+const SORT_VALUES = sortOptions.map((option) => option.value);
+
 export function SetupsBrowser({ setups }: { setups: Setup[] }) {
-  const [search, setSearch] = useState("");
-  const [game, setGame] = useState<string>(ALL);
-  const [car, setCar] = useState<string>(ALL);
-  const [track, setTrack] = useState<string>(ALL);
-  const [condition, setCondition] = useState<string>(ALL);
-  const [sort, setSort] = useState<SortOption>("newest");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
+  const [game, setGame] = useState<string>(() => searchParams.get("game") ?? ALL);
+  const [car, setCar] = useState<string>(() => searchParams.get("car") ?? ALL);
+  const [track, setTrack] = useState<string>(() => searchParams.get("track") ?? ALL);
+  const [condition, setCondition] = useState<string>(() => searchParams.get("condition") ?? ALL);
+  const [sort, setSort] = useState<SortOption>(() => {
+    const fromUrl = searchParams.get("sort");
+    return (SORT_VALUES as string[]).includes(fromUrl ?? "") ? (fromUrl as SortOption) : "newest";
+  });
+
+  /**
+   * Keeps the URL in sync so a filtered view can be shared, bookmarked, or
+   * survive a refresh -- debounced on the text input so typing a search
+   * query doesn't rewrite the URL on every keystroke. Uses replace (not
+   * push) so adjusting filters doesn't spam browser history.
+   */
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (search.trim()) params.set("q", search.trim());
+      if (game !== ALL) params.set("game", game);
+      if (car !== ALL) params.set("car", car);
+      if (track !== ALL) params.set("track", track);
+      if (condition !== ALL) params.set("condition", condition);
+      if (sort !== "newest") params.set("sort", sort);
+
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    }, 300);
+
+    return () => clearTimeout(id);
+  }, [search, game, car, track, condition, sort, pathname, router]);
 
   const carOptions = useMemo(
     () => getCarsForGame(setups, game === ALL ? undefined : game),
