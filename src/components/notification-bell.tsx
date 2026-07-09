@@ -43,6 +43,11 @@ function RelativeTime({ dateStr }: { dateStr: string }) {
   const [label, setLabel] = useState<string | null>(null);
 
   useEffect(() => {
+    // The initial setState here is intentional, not derived state that
+    // belongs in render: it's what makes the client-only label swap in
+    // post-hydration (see the comment above), and it shares this effect
+    // with the interval subscription that keeps the label fresh afterward.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLabel(formatRelativeTime(dateStr));
     const id = setInterval(() => setLabel(formatRelativeTime(dateStr)), 60_000);
     return () => clearInterval(id);
@@ -72,13 +77,19 @@ export function NotificationBell({
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
   const [, startTransition] = useTransition();
 
-  useEffect(() => {
+  // Adjusting state during render (rather than in an effect) re-syncs from
+  // a fresh server render in the same pass, instead of committing the stale
+  // state first and correcting it a render later.
+  const [prevInitialNotifications, setPrevInitialNotifications] = useState(initialNotifications);
+  if (initialNotifications !== prevInitialNotifications) {
+    setPrevInitialNotifications(initialNotifications);
     setNotifications(initialNotifications);
-  }, [initialNotifications]);
-
-  useEffect(() => {
+  }
+  const [prevInitialUnreadCount, setPrevInitialUnreadCount] = useState(initialUnreadCount);
+  if (initialUnreadCount !== prevInitialUnreadCount) {
+    setPrevInitialUnreadCount(initialUnreadCount);
     setUnreadCount(initialUnreadCount);
-  }, [initialUnreadCount]);
+  }
 
   if (!user) return null;
 

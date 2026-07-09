@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { updateSession } from "@/lib/supabase/middleware";
+import { updateSession } from "@/lib/supabase/proxy";
 
 // Least-privilege CSP for what this app actually does: same-origin pages
 // and Server Actions, next/font self-hosted fonts, avatars/setup files
@@ -41,7 +41,7 @@ function buildCsp(nonce: string) {
   ].join("; ");
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
   // Supabase appends ?code=... to whichever URL it redirects the browser to

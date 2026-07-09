@@ -61,7 +61,7 @@ export default async function RootLayout({
   // The one hand-authored inline <script> in this app -- everything else
   // Next injects itself for hydration and picks up this same nonce
   // automatically once it's present on the CSP response header (set in
-  // src/middleware.ts).
+  // src/proxy.ts).
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   const supabase = await createClient();

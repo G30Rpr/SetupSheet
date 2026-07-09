@@ -60,7 +60,7 @@ src/
     supabase/
       client.ts           Browser Supabase client (Client Components)
       server.ts            Server Supabase client, memoized per-request via React's cache()
-      middleware.ts         Session-refresh helper used by src/middleware.ts
+      proxy.ts               Session-refresh helper used by src/proxy.ts
       setups.ts             getSetups(), getFeaturedSetups(), getSetupCount(), row mapping
       leaderboard.ts          getLeaderboard() — reads the public.leaderboard view
       follows.ts               isFollowing()
@@ -72,7 +72,7 @@ src/
       follows.ts              toggleFollow
       notifications.ts         markNotificationRead, markAllNotificationsRead,
                               clearReadNotifications
-  middleware.ts            Runs on every request, keeps the auth cookie fresh
+  proxy.ts                 Runs on every request, keeps the auth cookie fresh
   app/
     auth/callback/route.ts       Exchanges the OAuth ?code= for a session
     auth/auth-code-error/page.tsx Shown if the OAuth exchange fails
@@ -118,7 +118,7 @@ Router (it replaces the deprecated `auth-helpers-nextjs`). The flow:
 2. Supabase redirects the browser to `/auth/callback?code=...` on your site.
    `src/app/auth/callback/route.ts` exchanges that code for a session and
    sets the auth cookies, then redirects to `/`.
-3. `src/middleware.ts` runs on every request and refreshes the session
+3. `src/proxy.ts` runs on every request and refreshes the session
    cookie via `updateSession()`, so the token never silently expires.
 4. `AuthProvider` (wrapped around the app in `layout.tsx`) hydrates from the
    server-rendered user (no login flash) and then subscribes to
@@ -166,7 +166,7 @@ permit).
    means the `redirectTo` your app asked for wasn't on the allow-list above,
    so Supabase silently fell back to the bare Site URL instead of
    `/auth/callback` — check the exact entry exists (not just the bare
-   origin). `src/middleware.ts` will forward a stray `?code=` on any page to
+   origin). `src/proxy.ts` will forward a stray `?code=` on any page to
    `/auth/callback` as a safety net, but that only papers over the symptom;
    the actual fix is fixing the allow-list entry.
 

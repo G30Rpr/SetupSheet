@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-// The Content-Security-Policy header is set per-request in src/middleware.ts
+// The Content-Security-Policy header is set per-request in src/proxy.ts
 // instead of here, since script-src needs a fresh nonce on every request --
 // next.config.ts's headers() can only return a static value computed once at
 // build/server-start time. Everything below is genuinely static, so it stays
