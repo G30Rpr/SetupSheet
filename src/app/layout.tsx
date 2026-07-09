@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 
 import { AuthProvider } from "@/components/auth-provider";
@@ -44,11 +45,25 @@ export const metadata: Metadata = {
   },
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE_NAME,
+  url: SITE_URL,
+  description,
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // The one hand-authored inline <script> in this app -- everything else
+  // Next injects itself for hydration and picks up this same nonce
+  // automatically once it's present on the CSP response header (set in
+  // src/middleware.ts).
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   const supabase = await createClient();
 
   // A network-level failure (DNS, connection refused) throws here rather
@@ -74,6 +89,13 @@ export default async function RootLayout({
       lang="en"
       className={`dark ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          type="application/ld+json"
+          nonce={nonce}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className="flex min-h-full flex-col">
         <AuthProvider initialUser={user}>
           <SiteHeader
