@@ -10,7 +10,7 @@ export interface BadgeTier {
 }
 
 /** Ordered highest-threshold-first so getBadgeTier can return the first match. */
-export const badgeTiers: BadgeTier[] = [
+const badgeTiers: BadgeTier[] = [
   { name: "Gold Contributor", threshold: 200, variant: "amber" },
   { name: "Silver Contributor", threshold: 50, variant: "blue" },
   { name: "Bronze Contributor", threshold: 10, variant: "secondary" },

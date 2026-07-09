@@ -1,4 +1,4 @@
-import { logger } from "@/lib/logger";
+import { unwrapList } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
 
 export interface LeaderboardEntry {
@@ -19,16 +19,13 @@ export interface LeaderboardEntry {
 export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
   const supabase = await createClient();
 
-  const { data: rows, error } = await supabase
+  const result = await supabase
     .from("leaderboard")
     .select("user_id, username, avatar_url, setup_count, total_upvotes")
     .order("total_upvotes", { ascending: false })
     .limit(limit);
 
-  if (error || !rows) {
-    logger.error("getLeaderboard: failed to load leaderboard", error);
-    return [];
-  }
+  const rows = unwrapList(result, "getLeaderboard: failed to load leaderboard");
 
   return rows.map((row) => ({
     userId: row.user_id,

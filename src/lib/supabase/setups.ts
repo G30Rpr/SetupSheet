@@ -1,6 +1,7 @@
 import { cache } from "react";
 
 import { logger } from "@/lib/logger";
+import { unwrapCount, unwrapList, unwrapSingle } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
 import { SETUP_FILES_BUCKET } from "@/lib/storage";
 import type { Condition, Game, RigProfile, Setup, SetupTag, SetupValues } from "@/lib/types";
@@ -140,15 +141,12 @@ async function getAuthors(
 export async function getSetups(): Promise<Setup[]> {
   const supabase = await createClient();
 
-  const { data: rows, error } = await supabase
+  const result = await supabase
     .from("setups")
     .select(SETUP_COLUMNS)
     .order("created_at", { ascending: false });
 
-  if (error || !rows) {
-    logger.error("getSetups: failed to load setups", error);
-    return [];
-  }
+  const rows = unwrapList(result, "getSetups: failed to load setups");
 
   const typedRows = rows as unknown as SetupRow[];
   const [viewer, authors] = await Promise.all([
@@ -175,16 +173,13 @@ export async function getSetups(): Promise<Setup[]> {
 export async function getFeaturedSetups(limit: number): Promise<Setup[]> {
   const supabase = await createClient();
 
-  const { data: rows, error } = await supabase
+  const result = await supabase
     .from("setups")
     .select(SETUP_COLUMNS)
     .order("upvotes", { ascending: false })
     .limit(limit);
 
-  if (error || !rows) {
-    logger.error("getFeaturedSetups: failed to load setups", error);
-    return [];
-  }
+  const rows = unwrapList(result, "getFeaturedSetups: failed to load setups");
 
   const typedRows = rows as unknown as SetupRow[];
   const [viewer, authors] = await Promise.all([
@@ -205,16 +200,11 @@ export async function getFeaturedSetups(limit: number): Promise<Setup[]> {
 export async function getSetupCount(): Promise<number> {
   const supabase = await createClient();
 
-  const { count, error } = await supabase
+  const result = await supabase
     .from("setups")
     .select("id", { count: "exact", head: true });
 
-  if (error) {
-    logger.error("getSetupCount: failed to count setups", error);
-    return 0;
-  }
-
-  return count ?? 0;
+  return unwrapCount(result, "getSetupCount: failed to count setups");
 }
 
 /**
@@ -226,17 +216,13 @@ export async function getSetupCount(): Promise<number> {
 export async function getSetupSitemapEntries(): Promise<{ id: string; updatedAt: string }[]> {
   const supabase = await createClient();
 
-  const { data: rows, error } = await supabase
+  const result = await supabase
     .from("setups")
     .select("id, created_at")
     .order("created_at", { ascending: false })
     .limit(5000);
 
-  if (error || !rows) {
-    logger.error("getSetupSitemapEntries: failed to load setups", error);
-    return [];
-  }
-
+  const rows = unwrapList(result, "getSetupSitemapEntries: failed to load setups");
   return rows.map((row) => ({ id: row.id as string, updatedAt: row.created_at as string }));
 }
 
@@ -250,16 +236,13 @@ export async function getSetupSitemapEntries(): Promise<{ id: string; updatedAt:
 export async function getProfileSitemapEntries(): Promise<{ userId: string; updatedAt: string }[]> {
   const supabase = await createClient();
 
-  const { data: rows, error } = await supabase
+  const result = await supabase
     .from("setups")
     .select("user_id, created_at")
     .order("created_at", { ascending: false })
     .limit(5000);
 
-  if (error || !rows) {
-    logger.error("getProfileSitemapEntries: failed to load setups", error);
-    return [];
-  }
+  const rows = unwrapList(result, "getProfileSitemapEntries: failed to load setups");
 
   const seen = new Map<string, string>();
   for (const row of rows as { user_id: string; created_at: string }[]) {
@@ -275,16 +258,13 @@ export async function getProfileSitemapEntries(): Promise<{ userId: string; upda
 export async function getSetupsByUser(userId: string): Promise<Setup[]> {
   const supabase = await createClient();
 
-  const { data: rows, error } = await supabase
+  const result = await supabase
     .from("setups")
     .select(SETUP_COLUMNS)
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  if (error || !rows) {
-    logger.error("getSetupsByUser: failed to load setups", error);
-    return [];
-  }
+  const rows = unwrapList(result, "getSetupsByUser: failed to load setups");
 
   const typedRows = rows as unknown as SetupRow[];
   const [viewer, authors] = await Promise.all([
@@ -307,16 +287,14 @@ export async function getSetupsByUser(userId: string): Promise<Setup[]> {
 export const getSetupById = cache(async (id: string): Promise<Setup | null> => {
   const supabase = await createClient();
 
-  const { data: row, error } = await supabase
+  const result = await supabase
     .from("setups")
     .select(SETUP_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 
-  if (error || !row) {
-    if (error) logger.error("getSetupById: failed to load setup", error);
-    return null;
-  }
+  const row = unwrapSingle(result, "getSetupById: failed to load setup");
+  if (!row) return null;
 
   const typedRow = row as unknown as SetupRow;
   const [viewer, authors] = await Promise.all([

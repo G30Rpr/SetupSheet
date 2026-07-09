@@ -385,6 +385,7 @@ export function SetupCard({
             onClick={handleUpvoteClick}
             disabled={isPending}
             aria-pressed={hasUpvoted}
+            aria-label={hasUpvoted ? "Remove upvote" : "Upvote"}
             className={cn(
               "flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium transition-colors disabled:opacity-60",
               hasUpvoted
