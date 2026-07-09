@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SearchX, SlidersHorizontal, Upload, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/empty-state";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -227,25 +228,27 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
           ))}
         </div>
       ) : setups.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/80 py-16 text-center">
-          <p className="font-medium">No setups yet</p>
-          <p className="text-sm text-muted-foreground">
-            Be the first to share one with the community.
-          </p>
-          <Button asChild size="sm">
-            <Link href="/upload">Upload Your Setup</Link>
-          </Button>
-        </div>
+        <EmptyState
+          icon={Upload}
+          title="No setups yet"
+          description="Be the first to share one with the community."
+          action={
+            <Button asChild size="sm">
+              <Link href="/upload">Upload Your Setup</Link>
+            </Button>
+          }
+        />
       ) : (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/80 py-16 text-center">
-          <p className="font-medium">No setups match your filters</p>
-          <p className="text-sm text-muted-foreground">
-            Try clearing a filter or check back soon — new setups are added every day.
-          </p>
-          <Button variant="outline" size="sm" onClick={resetFilters}>
-            Clear filters
-          </Button>
-        </div>
+        <EmptyState
+          icon={SearchX}
+          title="No setups match your filters"
+          description="Try clearing a filter or check back soon — new setups are added every day."
+          action={
+            <Button variant="outline" size="sm" onClick={resetFilters}>
+              Clear filters
+            </Button>
+          }
+        />
       )}
     </div>
   );

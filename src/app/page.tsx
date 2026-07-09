@@ -10,6 +10,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/empty-state";
 import { SetupCard } from "@/components/setup-card";
 import { games } from "@/lib/data";
 import { getFeaturedSetups, getSetupCount } from "@/lib/supabase/setups";
@@ -141,18 +142,19 @@ export default async function Home() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/80 py-16 text-center">
-              <p className="font-medium">No setups yet</p>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                Be the first to share one — it&apos;ll show up here once it&apos;s uploaded.
-              </p>
-              <Button asChild size="sm">
-                <Link href="/upload">
-                  <Upload />
-                  Upload Your Setup
-                </Link>
-              </Button>
-            </div>
+            <EmptyState
+              icon={Upload}
+              title="No setups yet"
+              description="Be the first to share one — it'll show up here once it's uploaded."
+              action={
+                <Button asChild size="sm">
+                  <Link href="/upload">
+                    <Upload />
+                    Upload Your Setup
+                  </Link>
+                </Button>
+              }
+            />
           )}
         </div>
       </section>

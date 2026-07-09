@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ContributorBadge } from "@/components/contributor-badge";
+import { EmptyState } from "@/components/empty-state";
 import { FollowButton } from "@/components/follow-button";
 import { SetupCard } from "@/components/setup-card";
 import { getInitials } from "@/lib/utils";
@@ -124,23 +125,24 @@ export function ProfileView({
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/80 py-16 text-center">
-          <p className="font-medium">
-            {isOwnProfile
-              ? "You haven't shared any setups yet"
-              : `${displayName} hasn't shared any setups yet`}
-          </p>
-          {isOwnProfile && (
-            <>
-              <p className="text-sm text-muted-foreground">
-                Upload your first setup and it&apos;ll show up here.
-              </p>
+        <EmptyState
+          icon={Upload}
+          title={
+            isOwnProfile ? "You haven't shared any setups yet" : `${displayName} hasn't shared any setups yet`
+          }
+          description={
+            isOwnProfile
+              ? "Upload your first setup and it'll show up here."
+              : "Check back later — new setups show up here as soon as they're shared."
+          }
+          action={
+            isOwnProfile && (
               <Button asChild size="sm">
                 <Link href="/upload">Upload Your Setup</Link>
               </Button>
-            </>
-          )}
-        </div>
+            )
+          }
+        />
       )}
     </div>
   );

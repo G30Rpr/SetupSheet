@@ -3,8 +3,10 @@ import type { Metadata } from "next";
 import { Trophy, TrendingUp, Upload } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ContributorBadge } from "@/components/contributor-badge";
+import { EmptyState } from "@/components/empty-state";
 import { getLeaderboard } from "@/lib/supabase/leaderboard";
 import { cn, getInitials } from "@/lib/utils";
 
@@ -36,12 +38,19 @@ export default async function LeaderboardPage() {
       </div>
 
       {entries.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/80 py-16 text-center">
-          <p className="font-medium">No contributors yet</p>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            Be the first to upload a setup and claim the top spot.
-          </p>
-        </div>
+        <EmptyState
+          icon={Trophy}
+          title="No contributors yet"
+          description="Be the first to upload a setup and claim the top spot."
+          action={
+            <Button asChild size="sm">
+              <Link href="/upload">
+                <Upload />
+                Upload Your Setup
+              </Link>
+            </Button>
+          }
+        />
       ) : (
         <Card className="divide-y divide-border/80 p-0">
           {entries.map((entry, i) => {
