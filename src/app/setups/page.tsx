@@ -2,10 +2,17 @@ import type { Metadata } from "next";
 
 import { SetupsBrowser } from "@/components/setups-browser";
 import { getSetups } from "@/lib/supabase/setups";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
+
+const title = `Browse Setups — ${SITE_NAME}`;
+const description = "Browse free community sim racing setups by game, car, track and condition.";
 
 export const metadata: Metadata = {
-  title: "Browse Setups — SetupSheet",
-  description: "Browse free community sim racing setups by game, car, track and condition.",
+  title,
+  description,
+  alternates: { canonical: `${SITE_URL}/setups` },
+  openGraph: { title, description, url: "/setups", type: "website", siteName: SITE_NAME },
+  twitter: { card: "summary_large_image", title, description },
 };
 
 export default async function SetupsPage() {

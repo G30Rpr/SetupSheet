@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isFollowing } from "@/lib/supabase/follows";
 import { getProfile } from "@/lib/supabase/profiles";
 import { getSetupsByUser } from "@/lib/supabase/setups";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export async function generateMetadata({
   params,
@@ -17,7 +18,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { userId } = await params;
   const profile = await getProfile(userId);
-  return { title: profile ? `${profile.username} — SetupSheet` : "Profile — SetupSheet" };
+
+  if (!profile) {
+    return { title: `Profile — ${SITE_NAME}`, robots: { index: false } };
+  }
+
+  const title = `${profile.username} — ${SITE_NAME}`;
+  const url = `/profile/${userId}`;
+
+  return {
+    title,
+    alternates: { canonical: `${SITE_URL}${url}` },
+    openGraph: { title, url, type: "profile", siteName: SITE_NAME },
+    twitter: { card: "summary_large_image", title },
+  };
 }
 
 export default async function PublicProfilePage({

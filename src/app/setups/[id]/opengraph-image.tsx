@@ -6,6 +6,7 @@ import { SITE_NAME } from "@/lib/site";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+export const alt = `Sim racing setup — ${SITE_NAME}`;
 
 const conditionStyle: Record<string, { color: string; border: string }> = {
   Dry: { color: "#c4c9d0", border: "rgba(255,255,255,0.16)" },

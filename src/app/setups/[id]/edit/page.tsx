@@ -6,9 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { UploadForm } from "@/components/upload-form";
 import { getSetupById } from "@/lib/supabase/setups";
+import { SITE_NAME } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Edit Setup — SetupSheet",
+  title: `Edit Setup — ${SITE_NAME}`,
+  // Already disallowed in robots.ts -- an edit form is never meant to be
+  // indexed or unfurled as a social-share preview.
+  robots: { index: false },
 };
 
 export default async function EditSetupPage({

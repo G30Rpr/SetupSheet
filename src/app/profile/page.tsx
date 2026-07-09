@@ -7,9 +7,15 @@ import { ProfileView } from "@/components/profile-view";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/supabase/profiles";
 import { getSetupsByUser } from "@/lib/supabase/setups";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
+
+const title = `My Profile — ${SITE_NAME}`;
 
 export const metadata: Metadata = {
-  title: "My Profile — SetupSheet",
+  title,
+  alternates: { canonical: `${SITE_URL}/profile` },
+  openGraph: { title, url: "/profile", type: "website", siteName: SITE_NAME },
+  twitter: { card: "summary_large_image", title },
 };
 
 export default async function ProfilePage() {

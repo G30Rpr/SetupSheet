@@ -8,11 +8,18 @@ import { Card } from "@/components/ui/card";
 import { ContributorBadge } from "@/components/contributor-badge";
 import { EmptyState } from "@/components/empty-state";
 import { getLeaderboard } from "@/lib/supabase/leaderboard";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { cn, getInitials } from "@/lib/utils";
 
+const title = `Leaderboard — ${SITE_NAME}`;
+const description = "The community's top setup contributors, ranked by total upvotes.";
+
 export const metadata: Metadata = {
-  title: "Leaderboard — SetupSheet",
-  description: "The community's top setup contributors, ranked by total upvotes.",
+  title,
+  description,
+  alternates: { canonical: `${SITE_URL}/leaderboard` },
+  openGraph: { title, description, url: "/leaderboard", type: "website", siteName: SITE_NAME },
+  twitter: { card: "summary_large_image", title, description },
 };
 
 const rankMedalClass: Record<number, string> = {

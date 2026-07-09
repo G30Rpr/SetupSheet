@@ -17,7 +17,7 @@ export async function generateMetadata({
   const setup = await getSetupById(id);
 
   if (!setup) {
-    return { title: `Setup not found — ${SITE_NAME}` };
+    return { title: `Setup not found — ${SITE_NAME}`, robots: { index: false } };
   }
 
   const title = `${setup.car} @ ${setup.track} — ${SITE_NAME}`;

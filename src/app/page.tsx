@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   ArrowRight,
   Gauge,
@@ -14,6 +15,11 @@ import { EmptyState } from "@/components/empty-state";
 import { SetupCard } from "@/components/setup-card";
 import { games, rigProfiles } from "@/lib/data";
 import { getFeaturedSetups, getSetupCount } from "@/lib/supabase/setups";
+import { SITE_URL } from "@/lib/site";
+
+export const metadata: Metadata = {
+  alternates: { canonical: SITE_URL },
+};
 
 const colorClasses = {
   coral: {
