@@ -27,7 +27,7 @@ export default async function LeaderboardPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
       <div className="mb-8">
-        <h1 className="font-display flex items-center gap-2 text-3xl font-bold tracking-tight sm:text-4xl">
+        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight sm:text-4xl">
           <Trophy className="size-8 text-racing-amber" />
           Top Contributors
         </h1>
@@ -72,7 +72,7 @@ export default async function LeaderboardPage() {
 
                 <Avatar className="size-10 shrink-0 ring-1 ring-border">
                   <AvatarImage src={entry.avatarUrl ?? undefined} alt={entry.username} />
-                  <AvatarFallback className="bg-racing-green/15 text-sm text-racing-green">
+                  <AvatarFallback className="bg-racing-coral/15 text-sm text-racing-coral">
                     {getInitials(entry.username)}
                   </AvatarFallback>
                 </Avatar>
@@ -87,7 +87,7 @@ export default async function LeaderboardPage() {
 
                 <ContributorBadge totalUpvotes={entry.totalUpvotes} />
 
-                <span className="flex shrink-0 items-center gap-1 font-mono text-lg font-semibold tabular-nums text-racing-green">
+                <span className="flex shrink-0 items-center gap-1 font-mono text-lg font-semibold tabular-nums text-racing-coral">
                   <TrendingUp className="size-4" />
                   {entry.totalUpvotes}
                 </span>

@@ -50,11 +50,11 @@ export function FileDropzone({
           className={cn(
             "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors",
             isDragging
-              ? "border-racing-green bg-racing-green/10"
-              : "border-border hover:border-racing-green/50 hover:bg-accent/40"
+              ? "border-racing-coral bg-racing-coral/10"
+              : "border-border hover:border-racing-coral/50 hover:bg-accent/40"
           )}
         >
-          <span className="flex size-12 items-center justify-center rounded-full bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30">
+          <span className="flex size-12 items-center justify-center rounded-full bg-racing-coral/15 text-racing-coral ring-1 ring-inset ring-racing-coral/30">
             <UploadCloud className="size-6" />
           </span>
           <div>
@@ -79,7 +79,7 @@ export function FileDropzone({
       {file && (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/40 px-3 py-2 text-sm">
           <div className="flex min-w-0 items-center gap-2">
-            <File className="size-4 shrink-0 text-racing-green" />
+            <File className="size-4 shrink-0 text-racing-coral" />
             <span className="truncate">{file.name}</span>
             <span className="shrink-0 text-xs text-muted-foreground">
               {formatBytes(file.size)}

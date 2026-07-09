@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, Oswald } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 import { AuthProvider } from "@/components/auth-provider";
@@ -9,20 +9,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getNotifications, getUnreadNotificationCount } from "@/lib/supabase/notifications";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
-const oswald = Oswald({
-  variable: "--font-oswald",
-  weight: ["600", "700"],
-  subsets: ["latin"],
-});
-
-const plexSans = IBM_Plex_Sans({
-  variable: "--font-plex-sans",
+const inter = Inter({
+  variable: "--font-inter",
   weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
 });
 
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
 });
@@ -66,7 +60,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`dark ${oswald.variable} ${plexSans.variable} ${plexMono.variable} h-full antialiased`}
+      className={`dark ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <AuthProvider initialUser={user}>

@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Menu, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
+import { Menu, Search, Upload } from "lucide-react";
 
 import { AuthNav, DiscordLoginButton, UserMenu } from "@/components/auth-nav";
 import { useAuth } from "@/components/auth-provider";
 import { LogoMark } from "@/components/icons/logo-mark";
 import { NotificationBell } from "@/components/notification-bell";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetClose,
@@ -33,31 +35,50 @@ export function SiteHeader({
   initialNotifications: NotificationItem[];
   initialUnreadCount: number;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  function handleSearchSubmit(e: FormEvent) {
+    e.preventDefault();
+    const trimmed = query.trim();
+    router.push(trimmed ? `/setups?q=${encodeURIComponent(trimmed)}` : "/setups");
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/85 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-          <span className="flex size-8 items-center justify-center rounded-md bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30">
+          <span className="flex size-8 items-center justify-center rounded-md bg-racing-coral/15 text-racing-coral ring-1 ring-inset ring-racing-coral/30">
             <LogoMark className="size-4" />
           </span>
-          <span className="font-display text-lg font-semibold uppercase tracking-wide">
-            Setup<span className="text-racing-green">Sheet</span>
+          <span className="text-lg font-semibold uppercase tracking-wide">
+            Setup<span className="text-racing-coral">Sheet</span>
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-6 md:flex">
+        <nav className="hidden shrink-0 items-center gap-6 md:flex">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground"
             >
               {link.label}
             </Link>
           ))}
         </nav>
+
+        <form onSubmit={handleSearchSubmit} className="relative hidden min-w-0 flex-1 max-w-[220px] xl:block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search track or car"
+            className="h-9 pl-9"
+            aria-label="Search setups"
+          />
+        </form>
 
         <div className="flex items-center gap-2">
           <div className="hidden md:block">
@@ -88,9 +109,9 @@ export function SiteHeader({
               </SheetTrigger>
               <SheetContent side="right" className="w-4/5">
                 <SheetHeader>
-                  <SheetTitle className="flex items-center gap-2 font-display uppercase tracking-wide">
-                    <LogoMark className="size-4 text-racing-green" />
-                    Setup<span className="text-racing-green">Sheet</span>
+                  <SheetTitle className="flex items-center gap-2 uppercase tracking-wide">
+                    <LogoMark className="size-4 text-racing-coral" />
+                    Setup<span className="text-racing-coral">Sheet</span>
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="flex flex-col gap-1 px-4">

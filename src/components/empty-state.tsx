@@ -25,7 +25,7 @@ export function EmptyState({
         <Icon className="size-6" />
       </span>
       <div className="flex flex-col gap-1">
-        <p className="font-display text-lg font-semibold">{title}</p>
+        <p className="text-lg font-semibold">{title}</p>
         <p className="max-w-sm text-sm text-muted-foreground">{description}</p>
       </div>
       {action}

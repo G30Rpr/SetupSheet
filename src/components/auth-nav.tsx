@@ -75,9 +75,9 @@ export function UserMenu() {
           className="rounded-full ring-offset-background transition-shadow outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           aria-label="Account menu"
         >
-          <Avatar className="ring-1 ring-border transition-colors hover:ring-racing-green/50">
+          <Avatar className="ring-1 ring-border transition-colors hover:ring-racing-coral/50">
             <AvatarImage src={avatarUrl} alt={displayName} />
-            <AvatarFallback className="bg-racing-green/15 text-racing-green">
+            <AvatarFallback className="bg-racing-coral/15 text-racing-coral">
               {getInitials(displayName)}
             </AvatarFallback>
           </Avatar>

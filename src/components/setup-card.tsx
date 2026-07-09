@@ -22,6 +22,7 @@ import { useAuth } from "@/components/auth-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { RatingBar } from "@/components/rating-bar";
 import { StarRating } from "@/components/star-rating";
 import { TagBadge } from "@/components/tag-badge";
 import {
@@ -161,7 +162,7 @@ export function SetupCard({
   }
 
   return (
-    <Card className="group relative overflow-hidden border-border/80 py-0 transition-all duration-200 hover:-translate-y-1 hover:border-racing-green/40 hover:shadow-[0_8px_30px_-8px_oklch(0.72_0.19_149/25%)]">
+    <Card className="group relative overflow-hidden border-border/80 py-0 transition-all duration-200 hover:-translate-y-1 hover:border-racing-coral/40 hover:shadow-[0_8px_30px_-8px_oklch(0.62_0.19_25/25%)]">
       <div className="flex flex-col gap-3 p-5">
         {/* Top row: game + condition + owner controls */}
         <div className="flex items-center justify-between gap-2">
@@ -201,7 +202,7 @@ export function SetupCard({
         >
           <Avatar className="size-5">
             <AvatarImage src={setup.authorAvatarUrl ?? undefined} alt={setup.author} />
-            <AvatarFallback className="bg-racing-green/15 text-[9px] text-racing-green">
+            <AvatarFallback className="bg-racing-coral/15 text-[9px] text-racing-coral">
               {getInitials(setup.author)}
             </AvatarFallback>
           </Avatar>
@@ -210,9 +211,9 @@ export function SetupCard({
 
         {/* Car + Track */}
         <div>
-          <h3 className="font-display text-lg font-semibold leading-tight tracking-tight text-foreground">
+          <h3 className="text-lg font-semibold leading-tight tracking-tight text-foreground">
             {linkTitle ? (
-              <Link href={`/setups/${setup.id}`} className="transition-colors hover:text-racing-green">
+              <Link href={`/setups/${setup.id}`} className="transition-colors hover:text-racing-coral">
                 {setup.car}
               </Link>
             ) : (
@@ -224,8 +225,8 @@ export function SetupCard({
 
         {/* Lap time */}
         <div className="flex items-center gap-2 rounded-md bg-secondary/60 px-3 py-2.5">
-          <Timer className="size-5 shrink-0 text-racing-green" />
-          <span className="font-mono text-2xl font-bold tabular-nums text-racing-green">
+          <Timer className="size-5 shrink-0 text-racing-cyan" />
+          <span className="font-mono text-2xl font-bold tabular-nums text-racing-cyan">
             {setup.lapTime}
           </span>
           <span className="text-xs text-muted-foreground">lap time</span>
@@ -299,7 +300,7 @@ export function SetupCard({
             onClick={handleDownload}
             disabled={isDownloading}
             title={setup.fileName ?? undefined}
-            className="flex w-full items-center justify-between gap-2 rounded-md bg-racing-green/10 px-3 py-2.5 text-sm font-semibold text-racing-green ring-1 ring-inset ring-racing-green/30 transition-colors hover:bg-racing-green/15 disabled:opacity-60"
+            className="flex w-full items-center justify-between gap-2 rounded-md bg-racing-coral/10 px-3 py-2.5 text-sm font-semibold text-racing-coral ring-1 ring-inset ring-racing-coral/30 transition-colors hover:bg-racing-coral/15 disabled:opacity-60"
           >
             <span className="flex min-w-0 items-center gap-2">
               <FileDown className="size-4 shrink-0" />
@@ -307,7 +308,7 @@ export function SetupCard({
                 {isDownloading ? "Preparing download..." : "Download Setup"}
               </span>
             </span>
-            <span className="shrink-0 text-xs font-normal text-racing-green/70">
+            <span className="shrink-0 text-xs font-normal text-racing-coral/70">
               <span className="font-mono tabular-nums">{downloads}</span>{" "}
               {downloads === 1 ? "download" : "downloads"}
             </span>
@@ -359,19 +360,19 @@ export function SetupCard({
         </div>
 
         {/* Pace & Predictability (community average) + upvotes */}
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="w-24 text-[11px] uppercase tracking-wide text-muted-foreground">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <div className="flex w-full items-center gap-2">
+              <span className="w-24 shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
                 Pace
               </span>
-              <StarRating value={Math.round(setup.pace)} />
+              <RatingBar value={setup.pace} color="coral" className="max-w-[150px]" />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="w-24 text-[11px] uppercase tracking-wide text-muted-foreground">
+            <div className="flex w-full items-center gap-2">
+              <span className="w-24 shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
                 Predictability
               </span>
-              <StarRating value={Math.round(setup.predictability)} />
+              <RatingBar value={setup.predictability} color="cyan" className="max-w-[150px]" />
             </div>
             <p className="pl-[102px] text-[11px] text-muted-foreground/70">
               {setup.ratingCount === 0
@@ -387,8 +388,8 @@ export function SetupCard({
             className={cn(
               "flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium transition-colors disabled:opacity-60",
               hasUpvoted
-                ? "bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/40"
-                : "bg-secondary text-foreground hover:bg-racing-green/10 hover:text-racing-green"
+                ? "bg-racing-coral/15 text-racing-coral ring-1 ring-inset ring-racing-coral/40"
+                : "bg-secondary text-foreground hover:bg-racing-coral/10 hover:text-racing-coral"
             )}
           >
             <TrendingUp className="size-3.5" />

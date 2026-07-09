@@ -420,7 +420,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                   className={cn(
                     "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                     entryMode === "file"
-                      ? "bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30"
+                      ? "bg-racing-coral/15 text-racing-coral ring-1 ring-inset ring-racing-coral/30"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -433,7 +433,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                   className={cn(
                     "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                     entryMode === "manual"
-                      ? "bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30"
+                      ? "bg-racing-coral/15 text-racing-coral ring-1 ring-inset ring-racing-coral/30"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -448,7 +448,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                 {isEditing && keepExistingFile && !file ? (
                   <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/40 px-3 py-2 text-sm">
                     <div className="flex min-w-0 items-center gap-2">
-                      <FileIcon className="size-4 shrink-0 text-racing-green" />
+                      <FileIcon className="size-4 shrink-0 text-racing-coral" />
                       <span className="truncate">{existingSetup?.fileName}</span>
                       <span className="shrink-0 text-xs text-muted-foreground">
                         current file
@@ -566,7 +566,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
               {setupTags.map((tag) => (
                 <label
                   key={tag}
-                  className="flex items-center gap-2 rounded-lg border border-border/80 px-3 py-2.5 text-sm has-[[data-state=checked]]:border-racing-green/50 has-[[data-state=checked]]:bg-racing-green/10"
+                  className="flex items-center gap-2 rounded-lg border border-border/80 px-3 py-2.5 text-sm has-[[data-state=checked]]:border-racing-coral/50 has-[[data-state=checked]]:bg-racing-coral/10"
                 >
                   <Checkbox
                     checked={tags.includes(tag)}

@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SetupCard } from "@/components/setup-card";
-import { conditions, games, getCarsForGame, getTracksForGame } from "@/lib/data";
+import { conditions, games, getCarsForGame, getTracksForGame, rigProfiles } from "@/lib/data";
 import type { Setup } from "@/lib/types";
 
 const ALL = "all";
@@ -51,6 +51,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
   const [car, setCar] = useState<string>(() => searchParams.get("car") ?? ALL);
   const [track, setTrack] = useState<string>(() => searchParams.get("track") ?? ALL);
   const [condition, setCondition] = useState<string>(() => searchParams.get("condition") ?? ALL);
+  const [rig, setRig] = useState<string>(() => searchParams.get("rig") ?? ALL);
   const [sort, setSort] = useState<SortOption>(() => {
     const fromUrl = searchParams.get("sort");
     return (SORT_VALUES as string[]).includes(fromUrl ?? "") ? (fromUrl as SortOption) : "newest";
@@ -70,6 +71,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
       if (car !== ALL) params.set("car", car);
       if (track !== ALL) params.set("track", track);
       if (condition !== ALL) params.set("condition", condition);
+      if (rig !== ALL) params.set("rig", rig);
       if (sort !== "newest") params.set("sort", sort);
 
       const query = params.toString();
@@ -77,7 +79,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
     }, 300);
 
     return () => clearTimeout(id);
-  }, [search, game, car, track, condition, sort, pathname, router]);
+  }, [search, game, car, track, condition, rig, sort, pathname, router]);
 
   const carOptions = useMemo(
     () => getCarsForGame(setups, game === ALL ? undefined : game),
@@ -95,6 +97,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
       if (car !== ALL && s.car !== car) return false;
       if (track !== ALL && s.track !== track) return false;
       if (condition !== ALL && s.condition !== condition) return false;
+      if (rig !== ALL && s.rigProfile !== rig) return false;
       if (query) {
         const haystack = [s.game, s.car, s.track, s.author, s.description, ...s.tags]
           .join(" ")
@@ -118,10 +121,10 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
       default:
         return results;
     }
-  }, [setups, search, game, car, track, condition, sort]);
+  }, [setups, search, game, car, track, condition, rig, sort]);
 
   const hasActiveFilters =
-    search !== "" || game !== ALL || car !== ALL || track !== ALL || condition !== ALL;
+    search !== "" || game !== ALL || car !== ALL || track !== ALL || condition !== ALL || rig !== ALL;
 
   function resetFilters() {
     setSearch("");
@@ -129,6 +132,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
     setCar(ALL);
     setTrack(ALL);
     setCondition(ALL);
+    setRig(ALL);
   }
 
   function handleGameChange(value: string) {
@@ -156,7 +160,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
           Filter setups
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <FilterSelect
             label="Game"
             value={game}
@@ -184,6 +188,13 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
             onChange={setCondition}
             options={conditions}
             placeholder="All conditions"
+          />
+          <FilterSelect
+            label="Rig"
+            value={rig}
+            onChange={setRig}
+            options={rigProfiles}
+            placeholder="All rigs"
           />
         </div>
 

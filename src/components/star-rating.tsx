@@ -28,8 +28,8 @@ export function StarRating({
               className={cn(
                 "size-4 transition-colors",
                 i < value
-                  ? "fill-racing-green text-racing-green"
-                  : "fill-transparent text-muted-foreground/40 hover:text-racing-green/60"
+                  ? "fill-racing-coral text-racing-coral"
+                  : "fill-transparent text-muted-foreground/40 hover:text-racing-coral/60"
               )}
             />
           </button>
@@ -46,7 +46,7 @@ export function StarRating({
           className={cn(
             "size-3.5",
             i < value
-              ? "fill-racing-green text-racing-green"
+              ? "fill-racing-coral text-racing-coral"
               : "fill-transparent text-muted-foreground/40"
           )}
         />

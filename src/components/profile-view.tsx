@@ -53,14 +53,14 @@ export function ProfileView({
       <Card className="mb-8 flex-row flex-wrap items-center gap-5 px-5 py-6 sm:px-8">
         <Avatar className="size-16 ring-1 ring-border">
           <AvatarImage src={avatarUrl} alt={displayName} />
-          <AvatarFallback className="bg-racing-green/15 text-lg text-racing-green">
+          <AvatarFallback className="bg-racing-coral/15 text-lg text-racing-coral">
             {getInitials(displayName)}
           </AvatarFallback>
         </Avatar>
 
         <div className="flex flex-1 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-display text-2xl font-bold tracking-tight">{displayName}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{displayName}</h1>
             <ContributorBadge totalUpvotes={totalUpvotes} />
           </div>
           {memberSince && (
@@ -81,7 +81,7 @@ export function ProfileView({
             <span className="text-xs text-muted-foreground">Setups</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="flex items-center gap-1 font-mono text-lg font-semibold tabular-nums text-racing-green">
+            <span className="flex items-center gap-1 font-mono text-lg font-semibold tabular-nums text-racing-coral">
               <TrendingUp className="size-4" />
               {totalUpvotes}
             </span>
@@ -105,7 +105,7 @@ export function ProfileView({
       </Card>
 
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="font-display text-xl font-semibold tracking-tight">
+        <h2 className="text-xl font-semibold tracking-tight">
           {isOwnProfile ? "Your Setups" : `${displayName}'s Setups`}
         </h2>
         {isOwnProfile && (

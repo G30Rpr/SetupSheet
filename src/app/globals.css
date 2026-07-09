@@ -6,7 +6,7 @@
 :root {
   --radius: 0.75rem;
 
-  /* Sim-racing dark theme: carbon black, racing green, alert red */
+  /* Sim-racing dark theme: carbon black, coral primary, cyan data accent */
   --background: oklch(0.145 0.004 260);
   --foreground: oklch(0.96 0.004 260);
 
@@ -16,8 +16,8 @@
   --popover: oklch(0.19 0.006 260);
   --popover-foreground: oklch(0.96 0.004 260);
 
-  --primary: oklch(0.72 0.19 149);
-  --primary-foreground: oklch(0.145 0.03 149);
+  --primary: oklch(0.62 0.19 25);
+  --primary-foreground: oklch(0.98 0.01 25);
 
   --secondary: oklch(0.24 0.008 260);
   --secondary-foreground: oklch(0.94 0.004 260);
@@ -33,14 +33,16 @@
 
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.72 0.19 149 / 55%);
+  --ring: oklch(0.62 0.19 25 / 55%);
 
   --racing-red: oklch(0.58 0.22 27);
   --racing-red-foreground: oklch(0.97 0.01 27);
   --racing-green: oklch(0.72 0.19 149);
   --racing-amber: oklch(0.79 0.16 80);
+  --racing-coral: oklch(0.62 0.19 25);
+  --racing-cyan: oklch(0.62 0.19 200);
 
-  --chart-1: oklch(0.72 0.19 149);
+  --chart-1: oklch(0.62 0.19 25);
   --chart-2: oklch(0.58 0.22 27);
   --chart-3: oklch(0.79 0.16 80);
   --chart-4: oklch(0.7 0.13 220);
@@ -76,15 +78,16 @@
   --color-racing-red-foreground: var(--racing-red-foreground);
   --color-racing-green: var(--racing-green);
   --color-racing-amber: var(--racing-amber);
+  --color-racing-coral: var(--racing-coral);
+  --color-racing-cyan: var(--racing-cyan);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
-  --font-display: var(--font-oswald);
-  --font-sans: var(--font-plex-sans);
-  --font-mono: var(--font-plex-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -102,8 +105,8 @@
   body {
     @apply bg-background text-foreground;
     background-image:
-      radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.72 0.19 149 / 12%), transparent),
-      radial-gradient(ellipse 60% 40% at 100% 0%, oklch(0.58 0.22 27 / 8%), transparent);
+      radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.62 0.19 25 / 12%), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 0%, oklch(0.62 0.19 200 / 8%), transparent);
     background-attachment: fixed;
   }
 }
