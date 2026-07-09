@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  # Public/client-exposed by design (anon key + RLS is the whole security
+  # model), so these are safe placeholders -- no real Supabase project or
+  # GitHub repo secret is required for lint/test/build/E2E to run. A
+  # loopback address with nothing listening: no DNS lookup involved, so
+  # every connection attempt fails instantly and deterministically with
+  # ECONNREFUSED, rather than depending on how fast (or slow) a given
+  # network resolves/rejects a nonexistent public hostname.
+  NEXT_PUBLIC_SUPABASE_URL: https://127.0.0.1:54321
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiJ9.placeholder-ci-key
+
+jobs:
+  lint-test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: lint-test-build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npx playwright test
