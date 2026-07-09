@@ -63,7 +63,7 @@ export default async function Home() {
       <section className="relative overflow-hidden border-b border-border/80 bg-grid">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
         <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-8 px-4 py-20 text-center sm:px-6 sm:py-28">
-          <Badge variant="green" className="gap-2 px-3 py-1 text-xs">
+          <Badge variant="outline" className="gap-2 border-border/80 bg-secondary/50 px-3 py-1 text-xs text-muted-foreground">
             <span className="relative flex size-2">
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-racing-green opacity-75" />
               <span className="relative inline-flex size-2 rounded-full bg-racing-green" />
