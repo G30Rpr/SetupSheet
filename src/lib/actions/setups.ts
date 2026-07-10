@@ -24,7 +24,7 @@ export interface CreateSetupInput {
   rigProfile: string;
   pace: number;
   predictability: number;
-  setupValues?: SetupValues;
+  setupValues?: SetupValues | null;
   filePath?: string | null;
   fileName?: string | null;
 }
@@ -38,7 +38,12 @@ export interface UpdateSetupInput {
   description: string;
   tags: string[];
   rigProfile: string;
-  setupValues?: SetupValues;
+  /**
+   * Undefined = leave setup_values as whatever's already stored (e.g. an
+   * ACC file re-upload's auto-parsed values from a previous edit, when this
+   * edit doesn't touch the file). Null = clear it. An object = replace it.
+   */
+  setupValues?: SetupValues | null;
   /**
    * Undefined = leave the attached file as-is. A string = replace it with
    * this newly-uploaded path. Null = remove the file entirely. Either of
@@ -191,8 +196,11 @@ export async function updateSetup(
     description: input.description,
     tags: input.tags,
     rig_profile: input.rigProfile,
-    setup_values: input.setupValues ?? null,
   };
+
+  if (input.setupValues !== undefined) {
+    updates.setup_values = input.setupValues;
+  }
 
   if (input.filePath !== undefined) {
     const { data: existing } = await supabase

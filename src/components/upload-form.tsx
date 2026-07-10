@@ -34,6 +34,7 @@ import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
 import { createSetup, updateSetup, uploadSetupFile } from "@/lib/actions/setups";
 import { parseAccSetupFile } from "@/lib/acc-setup-parser";
+import { resolveEffectiveSetupValues } from "@/lib/resolve-effective-setup-values";
 import { isKnownOption, type SelectOptionGroup } from "@/lib/select-options";
 import { cn } from "@/lib/utils";
 import {
@@ -53,8 +54,12 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const isEditing = Boolean(existingSetup);
+  // A file takes priority over setupValues when both are present -- that
+  // only happens for an ACC setup whose file was auto-parsed for tuning
+  // values (see handleFileChange), where the file is still the source of
+  // truth the player actually imports, and the values are supplementary.
   const [entryMode, setEntryMode] = useState<EntryMode>(
-    existingSetup?.setupValues ? "manual" : "file"
+    existingSetup?.fileName ? "file" : existingSetup?.setupValues ? "manual" : "file"
   );
   const [game, setGame] = useState<Game | "">(existingSetup?.game ?? "");
   // Both are plain per-game data modules (not components, so next/dynamic
@@ -67,6 +72,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   const [useManualTrackInput, setUseManualTrackInput] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [detectedCar, setDetectedCar] = useState<string | null>(null);
+  const [detectedSetupValues, setDetectedSetupValues] = useState<SetupValues>({});
   const [keepExistingFile, setKeepExistingFile] = useState(Boolean(existingSetup?.fileName));
   const [setupValues, setSetupValues] = useState<SetupValues>(existingSetup?.setupValues ?? {});
   const [tags, setTags] = useState<SetupTag[]>(existingSetup?.tags ?? []);
@@ -119,6 +125,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     setUseManualCarInput(false);
     setUseManualTrackInput(false);
     setDetectedCar(null);
+    setDetectedSetupValues({});
   }
 
   function updateSetupValue(key: string, value: string) {
@@ -127,16 +134,21 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
 
   /**
    * When a file is dropped for ACC (or no game picked yet -- we can infer
-   * it's ACC from the file's own shape), tries to extract just the car
-   * (see acc-setup-parser.ts) so it's pre-filled below -- everything else
-   * still gets entered by hand, so a dropped file is never blocked on
-   * having every setup field filled in. Silently does nothing for files
-   * that don't parse -- no error shown for what might just be a different
-   * game's file.
+   * it's ACC from the file's own shape), extracts the car (so it's
+   * pre-filled below) and whatever tuning values the file's own fields
+   * translate to real units (see acc-setup-parser.ts) -- these get attached
+   * alongside the file itself, not instead of it, so the file stays the
+   * thing a player actually imports into the game while the values power
+   * the "Setup values" panel and the comparison tool. A car ACC exports
+   * that isn't on this site's roster yet still gets its tuning values
+   * captured, just without the Car field auto-filling. Silently does
+   * nothing for files that don't parse at all -- no error shown for what
+   * might just be a different game's file.
    */
   async function handleFileChange(newFile: File | null) {
     setFile(newFile);
     setDetectedCar(null);
+    setDetectedSetupValues({});
 
     if (!newFile || (game !== "" && game !== "Assetto Corsa Competizione")) {
       return;
@@ -144,15 +156,19 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
 
     const text = await newFile.text();
     const result = parseAccSetupFile(text);
-    if (!result || !result.car) return;
+    if (!result) return;
 
     const targetGame: Game = "Assetto Corsa Competizione";
     if (game !== targetGame) {
       setGame(targetGame);
       setUseManualTrackInput(false);
     }
-    setUseManualCarInput(false);
-    setDetectedCar(result.car);
+    setDetectedSetupValues(result.setupValues);
+
+    if (result.car) {
+      setUseManualCarInput(false);
+      setDetectedCar(result.car);
+    }
   }
 
   /**
@@ -201,6 +217,15 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     const rigProfile = String(formData.get("rig") ?? "");
     const description = String(formData.get("description") ?? "");
 
+    const effectiveSetupValues = resolveEffectiveSetupValues({
+      entryMode,
+      manualSetupValues: setupValues,
+      detectedSetupValues,
+      isEditing,
+      keepExistingFile,
+      hasNewFile: Boolean(file),
+    });
+
     startTransition(async () => {
       const fileFields = await resolveFileFields();
       if (fileFields.error) {
@@ -218,7 +243,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           description,
           tags,
           rigProfile,
-          setupValues: entryMode === "manual" ? setupValues : undefined,
+          setupValues: effectiveSetupValues,
           filePath: fileFields.filePath,
           fileName: fileFields.fileName,
         });
@@ -242,7 +267,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
         rigProfile,
         pace,
         predictability,
-        setupValues: entryMode === "manual" ? setupValues : undefined,
+        setupValues: effectiveSetupValues,
         filePath: fileFields.filePath,
         fileName: fileFields.fileName,
       });
@@ -260,6 +285,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     setGame("");
     setFile(null);
     setDetectedCar(null);
+    setDetectedSetupValues({});
     setKeepExistingFile(false);
     setSetupValues({});
     setTags([]);
@@ -416,10 +442,16 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                   setup card.
                 </p>
 
-                {detectedCar ? (
+                {detectedCar || Object.keys(detectedSetupValues).length > 0 ? (
                   <div className="flex items-center gap-2 rounded-md border border-racing-green/30 bg-racing-green/10 px-3 py-2.5 text-xs text-racing-green">
                     <CheckCircle2 className="size-4 shrink-0" />
-                    <span>Detected {detectedCar} — car field pre-filled below.</span>
+                    <span>
+                      {detectedCar && "Detected " + detectedCar + " — car field pre-filled below. "}
+                      {Object.keys(detectedSetupValues).length > 0 &&
+                        `${Object.keys(detectedSetupValues).length} tuning value${
+                          Object.keys(detectedSetupValues).length === 1 ? "" : "s"
+                        } extracted for the Setup values panel and comparison tool.`}
+                    </span>
                   </div>
                 ) : null}
               </div>
