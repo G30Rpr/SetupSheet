@@ -103,7 +103,14 @@ export function NotificationBell({
         await markNotificationRead(notification.id);
       });
     }
-    router.push(`/profile/${notification.actorId}`);
+    // A new-setup notification is about the actor -- go see who they are.
+    // A fulfilled-request notification is about the setup they shared --
+    // go see that instead.
+    router.push(
+      notification.type === "request_fulfilled" && notification.setupId
+        ? `/setups/${notification.setupId}`
+        : `/profile/${notification.actorId}`
+    );
   }
 
   function handleMarkAllRead() {
@@ -171,7 +178,8 @@ export function NotificationBell({
               </Avatar>
               <div className="flex min-w-0 flex-col gap-0.5">
                 <p className="text-sm leading-snug">
-                  <span className="font-semibold">{n.actorUsername}</span> uploaded a new setup
+                  <span className="font-semibold">{n.actorUsername}</span>{" "}
+                  {n.type === "request_fulfilled" ? "fulfilled your request" : "uploaded a new setup"}
                   {n.car ? (
                     <>
                       {" "}

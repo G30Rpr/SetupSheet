@@ -63,3 +63,52 @@ export interface Setup {
   /** Public download URL for the uploaded setup file, if any. */
   fileUrl: string | null;
 }
+
+/**
+ * A snapshot of a setup's fields captured immediately before an edit that
+ * changed them -- see the on_setup_update_snapshot trigger in
+ * 0012_setup_versions.sql. `editedBy` is always the setup's own current
+ * author under today's RLS (only owners can edit), so callers already have
+ * that name from the parent Setup rather than needing a join here.
+ */
+export interface SetupVersion {
+  id: string;
+  createdAt: string;
+  game: Game;
+  car: string;
+  track: string;
+  condition: Condition;
+  lapTime: string;
+  description: string;
+  tags: SetupTag[];
+  rigProfile: RigProfile;
+  setupValues: SetupValues | null;
+  fileName: string | null;
+}
+
+export interface SetupRequest {
+  id: string;
+  requesterId: string;
+  requesterUsername: string;
+  requesterAvatarUrl: string | null;
+  game: Game;
+  car: string;
+  track: string;
+  notes: string;
+  createdAt: string;
+  fulfilledSetupId: string | null;
+  fulfilledCar: string | null;
+  fulfilledTrack: string | null;
+  fulfilledByUsername: string | null;
+  fulfilledAt: string | null;
+}
+
+/** One row of the "Most wanted" gap-finder -- an open (game, car, track)
+ * combo grouped across every request asking for it. */
+export interface MostWantedEntry {
+  game: Game;
+  car: string;
+  track: string;
+  requestCount: number;
+  oldestRequestAt: string;
+}

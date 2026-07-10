@@ -1,6 +1,6 @@
 # SetupSheet
 
-A free, community-driven sim racing setups site. Built with Next.js 15 (App
+A free, community-driven sim racing setups site. Built with Next.js 16 (App
 Router), TypeScript, Tailwind CSS v4, and shadcn/ui-style components on a
 dark, sim-racing themed UI (carbon black, racing green, alert red).
 
@@ -17,6 +17,12 @@ dark, sim-racing themed UI (carbon black, racing green, alert red).
 - `/profile` — Your own profile: avatar, badge, stats, your uploaded setups.
 - `/profile/[userId]` — Anyone's public profile (same layout as `/profile`),
   with a Follow button when you're viewing someone else's.
+- `/requests` — Setup requests board: a "Most wanted" section grouping open
+  requests by (game, car, track), a post-a-request form, and the full open
+  + fulfilled request list.
+- `/setups/compare` — Side-by-side tuning-value diff for two setups of the
+  same game, reached by turning on "Compare setups" on `/setups` and
+  picking two cards.
 
 ## Project structure
 
@@ -335,6 +341,22 @@ the schema changes — only `src/lib/setup-schemas.ts` and the seed data.
   delete their own read notifications (via the "Clear read notifications"
   action) and close the same row-vs-column RLS gap `0009` fixed for
   `setups`/`profiles`.
+- **Version history** — migration `0012` adds a `setup_versions` table,
+  populated by a `before update` trigger on `setups` that snapshots the
+  pre-edit row whenever a user-meaningful column actually changes (not on
+  the upvote/download counter bumps that also update that row). The
+  "Version history" panel on `SetupCard` renders each snapshot's changed
+  fields, reusing the same tuning-value diff view as `/setups/compare`
+  (`lib/diff-setup-values.ts`).
+- **Setup requests** — migration `0013` adds a `setup_requests` table.
+  Posting a request is a normal owner-scoped insert; *fulfilling* someone
+  else's request goes through a `fulfill_setup_request()` RPC instead of a
+  plain update, since the fulfiller (not the requester) needs to write
+  `fulfilled_setup_id`/`fulfilled_by` — the RPC checks the offered setup is
+  actually theirs and the request isn't already fulfilled, then fires a
+  `request_fulfilled` notification at the requester (the same
+  `notifications` table `0008` introduced, with its `type` check
+  constraint widened to allow the new kind).
 
 ## Deploying to Vercel
 

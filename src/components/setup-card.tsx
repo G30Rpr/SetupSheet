@@ -12,6 +12,7 @@ import {
   FileDown,
   Gamepad2,
   Gauge,
+  History,
   Pencil,
   Star,
   Timer,
@@ -23,6 +24,7 @@ import { useAuth } from "@/components/auth-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RatingBar } from "@/components/rating-bar";
 import { StarRating } from "@/components/star-rating";
 import { TagBadge } from "@/components/tag-badge";
@@ -37,11 +39,12 @@ import { buildSetupExportFilename, buildSetupExportText } from "@/lib/setup-expo
 import { cn, getInitials } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
-// Both panels only render once a viewer expands them -- deferring the code
-// (and the per-game setupSchemas/installGuides data each one imports) until
-// then keeps that data out of every SetupCard's initial bundle.
+// All three panels only render once a viewer expands them -- deferring the
+// code (and the per-game setupSchemas/installGuides data each one imports)
+// until then keeps that data out of every SetupCard's initial bundle.
 const SetupCardValues = dynamic(() => import("@/components/setup-card-values"));
 const SetupCardInstallGuide = dynamic(() => import("@/components/setup-card-install-guide"));
+const SetupCardHistory = dynamic(() => import("@/components/setup-card-history"));
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -59,15 +62,22 @@ const conditionVariant = {
 export function SetupCard({
   setup,
   linkTitle = true,
+  compareSelected = false,
+  onToggleCompare,
 }: {
   setup: Setup;
   /** False on the setup's own detail page, where linking to itself would be a no-op. */
   linkTitle?: boolean;
+  /** Whether this card is one of the (up to 2) setups picked for the comparison tool. */
+  compareSelected?: boolean;
+  /** Presence of this prop is what turns on the compare-mode checkbox -- omit it entirely on the detail/profile call sites. */
+  onToggleCompare?: () => void;
 }) {
   const router = useRouter();
   const [showValues, setShowValues] = useState(false);
   const [showRateWidget, setShowRateWidget] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [upvotes, setUpvotes] = useState(setup.upvotes);
   const [hasUpvoted, setHasUpvoted] = useState(setup.hasUpvoted);
   const [myRating, setMyRating] = useState(setup.myRating);
@@ -175,6 +185,16 @@ export function SetupCard({
             {setup.game}
           </div>
           <div className="flex items-center gap-2">
+            {onToggleCompare && (
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Checkbox
+                  checked={compareSelected}
+                  onCheckedChange={() => onToggleCompare()}
+                  aria-label={compareSelected ? "Remove from comparison" : "Select for comparison"}
+                />
+                Compare
+              </label>
+            )}
             {setup.isOwner && (
               <div className="flex items-center gap-1">
                 <Link
@@ -312,6 +332,25 @@ export function SetupCard({
           </button>
 
           {showInstallGuide && <SetupCardInstallGuide setup={setup} />}
+        </div>
+
+        {/* Version history (expandable) */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowHistory((s) => !s)}
+            className="flex w-full items-center justify-between rounded-md border border-border/80 bg-secondary/30 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <span className="flex items-center gap-1.5">
+              <History className="size-3.5" />
+              Version history
+            </span>
+            <ChevronDown
+              className={cn("size-3.5 transition-transform", showHistory && "rotate-180")}
+            />
+          </button>
+
+          {showHistory && <SetupCardHistory setup={setup} />}
         </div>
       </div>
 

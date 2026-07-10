@@ -254,6 +254,36 @@ export async function getProfileSitemapEntries(): Promise<{ userId: string; upda
   return Array.from(seen, ([userId, updatedAt]) => ({ userId, updatedAt }));
 }
 
+/**
+ * Fetches a specific set of setups by id (order not guaranteed to match
+ * `ids`), for the comparison tool -- picks up any of the requested ids that
+ * exist rather than requiring all of them, so a stale/deleted id in the
+ * URL just quietly drops out instead of failing the whole page.
+ */
+export async function getSetupsByIds(ids: string[]): Promise<Setup[]> {
+  if (ids.length === 0) return [];
+
+  const supabase = await createClient();
+
+  const result = await supabase.from("setups").select(SETUP_COLUMNS).in("id", ids);
+
+  const rows = unwrapList(result, "getSetupsByIds: failed to load setups");
+
+  const typedRows = rows as unknown as SetupRow[];
+  const [viewer, authors] = await Promise.all([
+    getViewer(
+      supabase,
+      typedRows.map((r) => r.id)
+    ),
+    getAuthors(
+      supabase,
+      typedRows.map((r) => r.user_id)
+    ),
+  ]);
+
+  return typedRows.map((row) => mapRow(row, viewer, authors, supabase));
+}
+
 /** Fetches every setup uploaded by a given user, newest first. */
 export async function getSetupsByUser(userId: string): Promise<Setup[]> {
   const supabase = await createClient();

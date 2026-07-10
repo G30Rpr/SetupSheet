@@ -1,8 +1,11 @@
 import { unwrapCount, unwrapList } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
 
+export type NotificationType = "new_setup" | "request_fulfilled";
+
 export interface NotificationItem {
   id: string;
+  type: NotificationType;
   actorId: string;
   actorUsername: string;
   actorAvatarUrl: string | null;
@@ -15,6 +18,7 @@ export interface NotificationItem {
 
 interface NotificationRow {
   id: string;
+  type: string;
   actor_id: string;
   setup_id: string | null;
   read: boolean;
@@ -32,7 +36,7 @@ export async function getNotifications(userId: string, limit = 20): Promise<Noti
 
   const result = await supabase
     .from("notifications")
-    .select("id, actor_id, setup_id, read, created_at")
+    .select("id, type, actor_id, setup_id, read, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -60,6 +64,7 @@ export async function getNotifications(userId: string, limit = 20): Promise<Noti
     const setup = row.setup_id ? setupById.get(row.setup_id) : undefined;
     return {
       id: row.id,
+      type: row.type as NotificationType,
       actorId: row.actor_id,
       actorUsername: actor?.username ?? "Racer",
       actorAvatarUrl: actor?.avatar_url ?? null,

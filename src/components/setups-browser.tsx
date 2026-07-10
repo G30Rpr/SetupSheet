@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Search, SearchX, SlidersHorizontal, Upload, X } from "lucide-react";
+import { GitCompare, Search, SearchX, SlidersHorizontal, Upload, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
@@ -45,6 +45,18 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
     const fromUrl = searchParams.get("sort");
     return (SORT_VALUES as string[]).includes(fromUrl ?? "") ? (fromUrl as SortOption) : "newest";
   });
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+
+  function toggleCompareSelect(id: string) {
+    setCompareIds((prev) => {
+      if (prev.includes(id)) return prev.filter((existing) => existing !== id);
+      // Cap at 2 -- picking a third swaps out the first one picked rather
+      // than doing nothing, so the checkboxes always reflect the two most
+      // recently clicked.
+      return prev.length >= 2 ? [prev[1], id] : [...prev, id];
+    });
+  }
 
   /**
    * Keeps the URL in sync so a filtered view can be shared, bookmarked, or
@@ -175,6 +187,17 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
         </p>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant={compareMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => {
+              setCompareMode((m) => !m);
+              setCompareIds([]);
+            }}
+          >
+            <GitCompare />
+            Compare setups
+          </Button>
           <label htmlFor="sort" className="text-xs font-medium text-muted-foreground">
             Sort by
           </label>
@@ -193,10 +216,32 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
         </div>
       </div>
 
+      {compareMode && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-racing-coral/30 bg-racing-coral/10 px-4 py-2.5 text-sm">
+          <span className="text-racing-coral">
+            {compareIds.length === 0
+              ? "Pick two setups to compare"
+              : compareIds.length === 1
+                ? "Pick one more setup to compare"
+                : "Ready to compare"}
+          </span>
+          {compareIds.length === 2 && (
+            <Button asChild size="sm">
+              <Link href={`/setups/compare?a=${compareIds[0]}&b=${compareIds[1]}`}>Compare selected</Link>
+            </Button>
+          )}
+        </div>
+      )}
+
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((setup) => (
-            <SetupCard key={setup.id} setup={setup} />
+            <SetupCard
+              key={setup.id}
+              setup={setup}
+              compareSelected={compareIds.includes(setup.id)}
+              onToggleCompare={compareMode ? () => toggleCompareSelect(setup.id) : undefined}
+            />
           ))}
         </div>
       ) : setups.length === 0 ? (
