@@ -69,13 +69,16 @@ export default async function ComparePage({
         />
       ) : (
         <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {[setupA, setupB].map((setup) => (
               <Card key={setup.id} className="gap-1.5 px-4 py-3">
-                <Link href={`/setups/${setup.id}`} className="font-semibold hover:text-racing-coral">
+                <Link
+                  href={`/setups/${setup.id}`}
+                  className="truncate font-semibold hover:text-racing-coral"
+                >
                   {setup.car}
                 </Link>
-                <p className="text-sm text-muted-foreground">{setup.track}</p>
+                <p className="truncate text-sm text-muted-foreground">{setup.track}</p>
                 <p className="text-xs text-muted-foreground">
                   {setup.condition} · {setup.lapTime || "no lap time"}
                 </p>

@@ -181,12 +181,12 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
           {filtered.length} {filtered.length === 1 ? "setup" : "setups"} found
         </p>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={compareMode ? "default" : "outline"}
             size="sm"
@@ -217,7 +217,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
       </div>
 
       {compareMode && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-racing-coral/30 bg-racing-coral/10 px-4 py-2.5 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-racing-coral/30 bg-racing-coral/10 px-4 py-2.5 text-sm">
           <span className="text-racing-coral">
             {compareIds.length === 0
               ? "Pick two setups to compare"
