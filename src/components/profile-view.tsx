@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Calendar, Star, TrendingUp, Upload, Users } from "lucide-react";
+import { Bookmark, Calendar, Star, TrendingUp, Upload, Users } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ export function ProfileView({
   follow,
   setups,
   isOwnProfile,
+  favoritedSetups,
 }: {
   displayName: string;
   avatarUrl?: string;
@@ -44,6 +45,8 @@ export function ProfileView({
   follow?: { targetUserId: string; initialIsFollowing: boolean };
   setups: Setup[];
   isOwnProfile: boolean;
+  /** Present only on your own profile -- favorites are private, so a public visitor never sees this section. */
+  favoritedSetups?: Setup[];
 }) {
   const totalUpvotes = setups.reduce((sum, s) => sum + s.upvotes, 0);
   const totalRatings = setups.reduce((sum, s) => sum + s.ratingCount, 0);
@@ -143,6 +146,20 @@ export function ProfileView({
             )
           }
         />
+      )}
+
+      {favoritedSetups && favoritedSetups.length > 0 && (
+        <div className="mt-10">
+          <h2 className="mb-5 flex items-center gap-1.5 text-xl font-semibold tracking-tight">
+            <Bookmark className="size-4.5 fill-current text-racing-cyan" />
+            Saved Setups
+          </h2>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {favoritedSetups.map((setup) => (
+              <SetupCard key={setup.id} setup={setup} />
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

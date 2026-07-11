@@ -34,6 +34,7 @@ const SETUP_COLUMNS =
 interface Viewer {
   userId: string | null;
   upvotedSetupIds: Set<string>;
+  favoritedSetupIds: Set<string>;
   myRatings: Map<string, { pace: number; predictability: number }>;
 }
 
@@ -46,11 +47,17 @@ async function getViewer(
   } = await supabase.auth.getUser();
 
   if (!user || setupIds.length === 0) {
-    return { userId: user?.id ?? null, upvotedSetupIds: new Set(), myRatings: new Map() };
+    return {
+      userId: user?.id ?? null,
+      upvotedSetupIds: new Set(),
+      favoritedSetupIds: new Set(),
+      myRatings: new Map(),
+    };
   }
 
-  const [{ data: upvotes }, { data: ratings }] = await Promise.all([
+  const [{ data: upvotes }, { data: favorites }, { data: ratings }] = await Promise.all([
     supabase.from("setup_upvotes").select("setup_id").eq("user_id", user.id).in("setup_id", setupIds),
+    supabase.from("setup_favorites").select("setup_id").eq("user_id", user.id).in("setup_id", setupIds),
     supabase
       .from("setup_ratings")
       .select("setup_id, pace, predictability")
@@ -59,11 +66,12 @@ async function getViewer(
   ]);
 
   const upvotedSetupIds = new Set((upvotes ?? []).map((row) => row.setup_id));
+  const favoritedSetupIds = new Set((favorites ?? []).map((row) => row.setup_id));
   const myRatings = new Map(
     (ratings ?? []).map((row) => [row.setup_id, { pace: row.pace, predictability: row.predictability }])
   );
 
-  return { userId: user.id, upvotedSetupIds, myRatings };
+  return { userId: user.id, upvotedSetupIds, favoritedSetupIds, myRatings };
 }
 
 function mapRow(
@@ -89,6 +97,7 @@ function mapRow(
     uploadedAt: row.created_at,
     upvotes: row.upvotes,
     hasUpvoted: viewer.upvotedSetupIds.has(row.id),
+    hasFavorited: viewer.favoritedSetupIds.has(row.id),
     pace: row.pace,
     predictability: row.predictability,
     ratingCount: row.rating_count,

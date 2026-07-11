@@ -48,6 +48,8 @@ export interface Setup {
   uploadedAt: string;
   upvotes: number;
   hasUpvoted: boolean;
+  /** Whether the current viewer has saved this setup to their private favorites list. */
+  hasFavorited: boolean;
   /** Community average (1-5, one decimal), not a fixed uploader rating. */
   pace: number;
   predictability: number;
@@ -62,6 +64,18 @@ export interface Setup {
   fileName: string | null;
   /** Public download URL for the uploaded setup file, if any. */
   fileUrl: string | null;
+}
+
+export interface SetupComment {
+  id: string;
+  setupId: string;
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+  body: string;
+  createdAt: string;
+  /** Whether the current viewer posted this comment (can delete it). */
+  isOwner: boolean;
 }
 
 /**

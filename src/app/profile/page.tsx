@@ -6,6 +6,7 @@ import { DiscordLoginButton } from "@/components/auth-nav";
 import { ProfileView } from "@/components/profile-view";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/supabase/profiles";
+import { getFavoritedSetups } from "@/lib/supabase/setup-favorites";
 import { getSetupsByUser } from "@/lib/supabase/setups";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
@@ -44,9 +45,10 @@ export default async function ProfilePage() {
     );
   }
 
-  const [profile, setups] = await Promise.all([
+  const [profile, setups, favoritedSetups] = await Promise.all([
     getProfile(user.id),
     getSetupsByUser(user.id),
+    getFavoritedSetups(user.id),
   ]);
 
   const displayName =
@@ -64,6 +66,7 @@ export default async function ProfilePage() {
       memberSince={profile?.memberSince}
       followerCount={profile?.followerCount ?? 0}
       setups={setups}
+      favoritedSetups={favoritedSetups}
       isOwnProfile
     />
   );

@@ -1,7 +1,7 @@
 import { unwrapCount, unwrapList } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
 
-export type NotificationType = "new_setup" | "request_fulfilled";
+export type NotificationType = "new_setup" | "request_fulfilled" | "new_comment";
 
 export interface NotificationItem {
   id: string;

@@ -357,6 +357,19 @@ the schema changes — only `src/lib/setup-schemas.ts` and the seed data.
   `request_fulfilled` notification at the requester (the same
   `notifications` table `0008` introduced, with its `type` check
   constraint widened to allow the new kind).
+- **Favorites** — migration `0014` adds a `setup_favorites` table, same
+  one-row-per-`(user, setup)` shape as `setup_upvotes`/`follows`, but
+  private (select restricted to your own rows) rather than public --
+  it's a personal "saved for later" list, not a signal like an upvote.
+  The bookmark toggle lives on `SetupCard` next to the upvote button;
+  saved setups show up in a "Saved Setups" section on your own `/profile`
+  only (never on someone else's, since the list itself is private).
+- **Comments** — migration `0015` adds a `setup_comments` table (public
+  read, post/delete-your-own, no edit-in-place). A trigger notifies a
+  setup's owner when someone else comments (no self-notification for
+  commenting on your own setup), reusing the same `notifications` table
+  with another widened `type`. Rendered as a fourth expandable panel on
+  `SetupCard`, alongside Setup values/How to install/Version history.
 
 ## Deploying to Vercel
 

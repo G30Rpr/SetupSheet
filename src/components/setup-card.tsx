@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   BadgeCheck,
+  Bookmark,
   BookOpen,
   Calendar,
   ChevronDown,
@@ -13,6 +14,7 @@ import {
   Gamepad2,
   Gauge,
   History,
+  MessageSquare,
   Pencil,
   Star,
   Timer,
@@ -35,16 +37,18 @@ import {
   recordSetupExport,
   toggleUpvote,
 } from "@/lib/actions/setups";
+import { toggleFavorite } from "@/lib/actions/setup-favorites";
 import { buildSetupExportFilename, buildSetupExportText } from "@/lib/setup-export";
 import { cn, getInitials } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
-// All three panels only render once a viewer expands them -- deferring the
+// All these panels only render once a viewer expands them -- deferring the
 // code (and the per-game setupSchemas/installGuides data each one imports)
 // until then keeps that data out of every SetupCard's initial bundle.
 const SetupCardValues = dynamic(() => import("@/components/setup-card-values"));
 const SetupCardInstallGuide = dynamic(() => import("@/components/setup-card-install-guide"));
 const SetupCardHistory = dynamic(() => import("@/components/setup-card-history"));
+const SetupCardComments = dynamic(() => import("@/components/setup-card-comments"));
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -78,8 +82,11 @@ export function SetupCard({
   const [showRateWidget, setShowRateWidget] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const [upvotes, setUpvotes] = useState(setup.upvotes);
   const [hasUpvoted, setHasUpvoted] = useState(setup.hasUpvoted);
+  const [hasFavorited, setHasFavorited] = useState(setup.hasFavorited);
+  const [isFavoritePending, startFavoriteTransition] = useTransition();
   const [myRating, setMyRating] = useState(setup.myRating);
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
@@ -103,6 +110,23 @@ export function SetupCard({
       if (result.error) {
         setHasUpvoted(wasUpvoted);
         setUpvotes((n) => n + (wasUpvoted ? 1 : -1));
+      }
+    });
+  }
+
+  function handleFavoriteClick() {
+    if (!user) {
+      void signInWithDiscord();
+      return;
+    }
+
+    const wasFavorited = hasFavorited;
+    setHasFavorited(!wasFavorited);
+
+    startFavoriteTransition(async () => {
+      const result = await toggleFavorite(setup.id, wasFavorited);
+      if (result.error) {
+        setHasFavorited(wasFavorited);
       }
     });
   }
@@ -352,6 +376,25 @@ export function SetupCard({
 
           {showHistory && <SetupCardHistory setup={setup} />}
         </div>
+
+        {/* Comments (expandable) */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowComments((s) => !s)}
+            className="flex w-full items-center justify-between rounded-md border border-border/80 bg-secondary/30 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <span className="flex items-center gap-1.5">
+              <MessageSquare className="size-3.5" />
+              Comments
+            </span>
+            <ChevronDown
+              className={cn("size-3.5 transition-transform", showComments && "rotate-180")}
+            />
+          </button>
+
+          {showComments && <SetupCardComments setup={setup} />}
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 border-t border-border/80 bg-black/15 px-5 py-3">
@@ -388,22 +431,39 @@ export function SetupCard({
                 : `${setup.ratingCount} ${setup.ratingCount === 1 ? "rating" : "ratings"}`}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleUpvoteClick}
-            disabled={isPending}
-            aria-pressed={hasUpvoted}
-            aria-label={hasUpvoted ? "Remove upvote" : "Upvote"}
-            className={cn(
-              "flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium transition-colors disabled:opacity-60",
-              hasUpvoted
-                ? "bg-racing-coral/15 text-racing-coral ring-1 ring-inset ring-racing-coral/40"
-                : "bg-secondary text-foreground hover:bg-racing-coral/10 hover:text-racing-coral"
-            )}
-          >
-            <TrendingUp className="size-3.5" />
-            <span className="font-mono tabular-nums">{upvotes}</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleFavoriteClick}
+              disabled={isFavoritePending}
+              aria-pressed={hasFavorited}
+              aria-label={hasFavorited ? "Remove from saved setups" : "Save setup"}
+              className={cn(
+                "flex items-center rounded-full p-1.5 transition-colors disabled:opacity-60",
+                hasFavorited
+                  ? "bg-racing-cyan/15 text-racing-cyan ring-1 ring-inset ring-racing-cyan/40"
+                  : "bg-secondary text-foreground hover:bg-racing-cyan/10 hover:text-racing-cyan"
+              )}
+            >
+              <Bookmark className={cn("size-3.5", hasFavorited && "fill-current")} />
+            </button>
+            <button
+              type="button"
+              onClick={handleUpvoteClick}
+              disabled={isPending}
+              aria-pressed={hasUpvoted}
+              aria-label={hasUpvoted ? "Remove upvote" : "Upvote"}
+              className={cn(
+                "flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium transition-colors disabled:opacity-60",
+                hasUpvoted
+                  ? "bg-racing-coral/15 text-racing-coral ring-1 ring-inset ring-racing-coral/40"
+                  : "bg-secondary text-foreground hover:bg-racing-coral/10 hover:text-racing-coral"
+              )}
+            >
+              <TrendingUp className="size-3.5" />
+              <span className="font-mono tabular-nums">{upvotes}</span>
+            </button>
+          </div>
         </div>
 
         {/* Rate this setup (expandable) */}

@@ -1,0 +1,129 @@
+"use client";
+
+import { useEffect, useState, useTransition } from "react";
+import { Send, Trash2 } from "lucide-react";
+
+import { useAuth } from "@/components/auth-provider";
+import { DiscordLoginButton } from "@/components/auth-nav";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { createComment, deleteComment, getSetupCommentsAction } from "@/lib/actions/setup-comments";
+import { MAX_COMMENT_LENGTH } from "@/lib/data";
+import { getInitials } from "@/lib/utils";
+import type { Setup, SetupComment } from "@/lib/types";
+
+function formatTimestamp(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/**
+ * The expandable "Comments" panel on a SetupCard -- split out and
+ * lazy-loaded via next/dynamic() like the other panels, fetched (and
+ * refetched after posting/deleting) on demand rather than eagerly for
+ * every card.
+ */
+export default function SetupCardComments({ setup }: { setup: Setup }) {
+  const { user, signInWithDiscord } = useAuth();
+  const [comments, setComments] = useState<SetupComment[] | null>(null);
+  const [body, setBody] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function refetch() {
+    getSetupCommentsAction(setup.id).then(setComments);
+  }
+
+  useEffect(refetch, [setup.id]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!user) {
+      void signInWithDiscord();
+      return;
+    }
+    setError(null);
+    startTransition(async () => {
+      const result = await createComment(setup.id, body);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setBody("");
+      refetch();
+    });
+  }
+
+  function handleDelete(commentId: string) {
+    startTransition(async () => {
+      await deleteComment(commentId, setup.id);
+      refetch();
+    });
+  }
+
+  return (
+    <div className="mt-2 flex flex-col gap-3 text-xs">
+      {comments === null ? (
+        <p className="text-muted-foreground">Loading comments...</p>
+      ) : comments.length === 0 ? (
+        <p className="text-muted-foreground">No comments yet.</p>
+      ) : (
+        <ul className="flex flex-col gap-2.5">
+          {comments.map((comment) => (
+            <li key={comment.id} className="flex items-start gap-2">
+              <Avatar className="size-6 shrink-0 ring-1 ring-border">
+                <AvatarImage src={comment.avatarUrl ?? undefined} alt={comment.username} />
+                <AvatarFallback className="bg-racing-green/15 text-[9px] text-racing-green">
+                  {getInitials(comment.username)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-foreground">{comment.username}</span>
+                  <span className="text-[10px] text-muted-foreground/70">
+                    {formatTimestamp(comment.createdAt)}
+                  </span>
+                </div>
+                <p className="whitespace-pre-wrap text-muted-foreground">{comment.body}</p>
+              </div>
+              {comment.isOwner && (
+                <button
+                  type="button"
+                  onClick={() => handleDelete(comment.id)}
+                  disabled={isPending}
+                  aria-label="Delete comment"
+                  className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-red-400 disabled:opacity-60"
+                >
+                  <Trash2 className="size-3" />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {user ? (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-1.5">
+          <Textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="Add a comment..."
+            maxLength={MAX_COMMENT_LENGTH}
+            rows={2}
+            className="text-xs"
+          />
+          {error && <p className="text-red-400">{error}</p>}
+          <Button type="submit" size="sm" disabled={isPending || !body.trim()} className="self-end">
+            <Send className="size-3.5" />
+            {isPending ? "Posting..." : "Post"}
+          </Button>
+        </form>
+      ) : (
+        <div className="flex items-center justify-between gap-2 rounded-md border border-border/60 px-3 py-2">
+          <span className="text-muted-foreground">Log in to join the conversation.</span>
+          <DiscordLoginButton />
+        </div>
+      )}
+    </div>
+  );
+}

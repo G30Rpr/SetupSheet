@@ -18,6 +18,7 @@ export function makeSetup(overrides: Partial<Setup> = {}): Setup {
     uploadedAt: "2026-01-01T00:00:00.000Z",
     upvotes: 0,
     hasUpvoted: false,
+    hasFavorited: false,
     pace: 0,
     predictability: 0,
     ratingCount: 0,

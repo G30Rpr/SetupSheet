@@ -104,10 +104,11 @@ export function NotificationBell({
       });
     }
     // A new-setup notification is about the actor -- go see who they are.
-    // A fulfilled-request notification is about the setup they shared --
-    // go see that instead.
+    // A fulfilled-request or new-comment notification is about the setup
+    // itself -- go see that instead.
     router.push(
-      notification.type === "request_fulfilled" && notification.setupId
+      (notification.type === "request_fulfilled" || notification.type === "new_comment") &&
+        notification.setupId
         ? `/setups/${notification.setupId}`
         : `/profile/${notification.actorId}`
     );
@@ -179,7 +180,11 @@ export function NotificationBell({
               <div className="flex min-w-0 flex-col gap-0.5">
                 <p className="text-sm leading-snug">
                   <span className="font-semibold">{n.actorUsername}</span>{" "}
-                  {n.type === "request_fulfilled" ? "fulfilled your request" : "uploaded a new setup"}
+                  {n.type === "request_fulfilled"
+                    ? "fulfilled your request"
+                    : n.type === "new_comment"
+                      ? "commented on your setup"
+                      : "uploaded a new setup"}
                   {n.car ? (
                     <>
                       {" "}
