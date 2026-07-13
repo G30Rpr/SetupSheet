@@ -12,6 +12,7 @@ import {
   Send,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/components/auth-provider";
 import { DiscordLoginButton } from "@/components/auth-nav";
@@ -230,6 +231,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
       const fileFields = await resolveFileFields();
       if (fileFields.error) {
         setError(fileFields.error);
+        toast.error(fileFields.error);
         return;
       }
 
@@ -250,7 +252,9 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
 
         if (result.error) {
           setError(result.error);
+          toast.error(result.error);
         } else {
+          toast.success("Setup updated");
           router.push("/setups");
         }
         return;
@@ -274,6 +278,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
 
       if (result.error) {
         setError(result.error);
+        toast.error(result.error);
       } else {
         setStatus("success");
       }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { headers } from "next/headers";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 import { AuthProvider } from "@/components/auth-provider";
@@ -105,6 +106,17 @@ export default async function RootLayout({
           <main className="flex-1">{children}</main>
           <SiteFooter />
         </AuthProvider>
+        <Toaster
+          theme="dark"
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: "var(--color-card)",
+              color: "var(--color-foreground)",
+              border: "1px solid var(--color-border)",
+            },
+          }}
+        />
       </body>
     </html>
   );

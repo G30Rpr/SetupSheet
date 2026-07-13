@@ -4,6 +4,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import {
   BadgeCheck,
   Bookmark,
@@ -110,6 +111,7 @@ export function SetupCard({
       if (result.error) {
         setHasUpvoted(wasUpvoted);
         setUpvotes((n) => n + (wasUpvoted ? 1 : -1));
+        toast.error(result.error);
       }
     });
   }
@@ -127,6 +129,7 @@ export function SetupCard({
       const result = await toggleFavorite(setup.id, wasFavorited);
       if (result.error) {
         setHasFavorited(wasFavorited);
+        toast.error(result.error);
       }
     });
   }
@@ -144,7 +147,8 @@ export function SetupCard({
     setMyRating(next);
 
     startTransition(async () => {
-      await rateSetup(setup.id, next.pace, next.predictability);
+      const result = await rateSetup(setup.id, next.pace, next.predictability);
+      if (result.error) toast.error(result.error);
       router.refresh();
     });
   }
@@ -154,7 +158,12 @@ export function SetupCard({
       return;
     }
     startDeleteTransition(async () => {
-      await deleteSetup(setup.id);
+      const result = await deleteSetup(setup.id);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Setup deleted");
       router.refresh();
     });
   }
@@ -185,7 +194,10 @@ export function SetupCard({
       }
 
       const result = await downloadSetup(setup.id);
-      if (result.error || !result.url) return;
+      if (result.error || !result.url) {
+        toast.error(result.error ?? "Failed to download setup.");
+        return;
+      }
 
       setDownloads((n) => n + 1);
 

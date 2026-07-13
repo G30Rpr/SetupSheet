@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { Send, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/components/auth-provider";
 import { DiscordLoginButton } from "@/components/auth-nav";
@@ -56,7 +57,11 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
 
   function handleDelete(commentId: string) {
     startTransition(async () => {
-      await deleteComment(commentId, setup.id);
+      const result = await deleteComment(commentId, setup.id);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
       refetch();
     });
   }

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { UserCheck, UserPlus } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,10 @@ export function FollowButton({
 
     startTransition(async () => {
       const result = await toggleFollow(targetUserId, wasFollowing);
-      if (result.error) setIsFollowing(wasFollowing);
+      if (result.error) {
+        setIsFollowing(wasFollowing);
+        toast.error(result.error);
+      }
     });
   }
 

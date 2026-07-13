@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { AlertCircle, Send } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/components/auth-provider";
 import { DiscordLoginButton } from "@/components/auth-nav";
@@ -45,6 +46,7 @@ export function SetupRequestForm() {
       }
       setGame("");
       e.currentTarget.reset();
+      toast.success("Request posted");
       router.refresh();
     });
   }

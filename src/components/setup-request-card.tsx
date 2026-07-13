@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { CheckCircle2, Gamepad2, Trash2, Wrench } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/components/auth-provider";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +47,12 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
       return;
     }
     startDeleteTransition(async () => {
-      await deleteSetupRequest(request.id);
+      const result = await deleteSetupRequest(request.id);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Request cancelled");
       router.refresh();
     });
   }
@@ -71,6 +77,7 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
         return;
       }
       setShowPicker(false);
+      toast.success("Request fulfilled — thanks for sharing!");
       router.refresh();
     });
   }
