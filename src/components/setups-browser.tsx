@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GitCompare, Search, SearchX, SlidersHorizontal, Upload, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,11 @@ const sortOptions: { value: SortOption; label: string }[] = [
 
 const SORT_VALUES = sortOptions.map((option) => option.value);
 
+// Caps how many SetupCards (each with its own lazy-loaded panels) mount at
+// once -- without this, a large/filtered-open result set renders every
+// match in one giant grid.
+const PAGE_SIZE = 24;
+
 export function SetupsBrowser({ setups }: { setups: Setup[] }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -47,6 +52,10 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
   });
   const [compareMode, setCompareMode] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [page, setPage] = useState(() => {
+    const fromUrl = Number(searchParams.get("page"));
+    return Number.isInteger(fromUrl) && fromUrl > 1 ? fromUrl : 1;
+  });
 
   function toggleCompareSelect(id: string) {
     setCompareIds((prev) => {
@@ -74,13 +83,26 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
       if (condition !== ALL) params.set("condition", condition);
       if (rig !== ALL) params.set("rig", rig);
       if (sort !== "newest") params.set("sort", sort);
+      if (page > 1) params.set("page", String(page));
 
       const query = params.toString();
       router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
     }, 300);
 
     return () => clearTimeout(id);
-  }, [search, game, car, track, condition, rig, sort, pathname, router]);
+  }, [search, game, car, track, condition, rig, sort, page, pathname, router]);
+
+  // Jump back to page 1 whenever a filter/search/sort actually changes --
+  // skipped on mount so restoring ?page=N from a shared/bookmarked URL
+  // doesn't immediately reset itself.
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    setPage(1);
+  }, [search, game, car, track, condition, rig, sort]);
 
   const carOptions = useMemo(
     () => getCarsForGame(setups, game === ALL ? undefined : game),
@@ -95,6 +117,9 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
     () => filterAndSortSetups(setups, { search, game, car, track, condition, rig }, sort),
     [setups, search, game, car, track, condition, rig, sort]
   );
+
+  const visibleSetups = filtered.slice(0, page * PAGE_SIZE);
+  const hasMore = filtered.length > visibleSetups.length;
 
   const hasActiveFilters =
     search !== "" || game !== ALL || car !== ALL || track !== ALL || condition !== ALL || rig !== ALL;
@@ -183,7 +208,9 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
-          {filtered.length} {filtered.length === 1 ? "setup" : "setups"} found
+          {hasMore
+            ? `Showing ${visibleSetups.length} of ${filtered.length} setups`
+            : `${filtered.length} ${filtered.length === 1 ? "setup" : "setups"} found`}
         </p>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -234,16 +261,26 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
       )}
 
       {filtered.length > 0 ? (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((setup) => (
-            <SetupCard
-              key={setup.id}
-              setup={setup}
-              compareSelected={compareIds.includes(setup.id)}
-              onToggleCompare={compareMode ? () => toggleCompareSelect(setup.id) : undefined}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {visibleSetups.map((setup) => (
+              <SetupCard
+                key={setup.id}
+                setup={setup}
+                compareSelected={compareIds.includes(setup.id)}
+                onToggleCompare={compareMode ? () => toggleCompareSelect(setup.id) : undefined}
+              />
+            ))}
+          </div>
+
+          {hasMore && (
+            <div className="flex justify-center">
+              <Button variant="outline" onClick={() => setPage((p) => p + 1)}>
+                Load {Math.min(PAGE_SIZE, filtered.length - visibleSetups.length)} more
+              </Button>
+            </div>
+          )}
+        </>
       ) : setups.length === 0 ? (
         <EmptyState
           icon={Upload}
