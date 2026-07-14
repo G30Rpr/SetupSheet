@@ -1,13 +1,7 @@
 <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-  <rect x="1" y="1" width="30" height="30" rx="7" fill="#111315" stroke="#2ac45c" stroke-opacity="0.35" stroke-width="1.5" />
+  <rect x="1" y="1" width="30" height="30" rx="7" fill="#111315" stroke="#e24947" stroke-opacity="0.35" stroke-width="1.5" />
   <g transform="translate(6,6) scale(0.833)">
-    <path d="M9 4H6a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3" fill="none" stroke="#2ac45c" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" />
-    <rect x="9" y="2" width="6" height="3" rx="1" fill="none" stroke="#2ac45c" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" />
-    <line x1="7" y1="10.5" x2="17" y2="10.5" stroke="#2ac45c" stroke-width="1.5" stroke-linecap="round" />
-    <circle cx="10" cy="10.5" r="1.4" fill="#2ac45c" />
-    <line x1="7" y1="14.5" x2="17" y2="14.5" stroke="#2ac45c" stroke-width="1.5" stroke-linecap="round" />
-    <circle cx="14.5" cy="14.5" r="1.4" fill="#2ac45c" />
-    <line x1="7" y1="18.2" x2="17" y2="18.2" stroke="#2ac45c" stroke-width="1.5" stroke-linecap="round" />
-    <circle cx="12" cy="18.2" r="1.4" fill="#2ac45c" />
+    <polygon points="17.5,5 17.5,10.5 3.4,19 3.4,13.7" fill="#e24947" fill-opacity="0.55" transform="translate(3.2,2.8)" />
+    <polygon points="17.5,5 17.5,10.5 3.4,19 3.4,13.7" fill="#e24947" />
   </g>
 </svg>
