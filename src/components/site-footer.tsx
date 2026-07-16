@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { LogoMark } from "@/components/icons/logo-mark";
+import { navLinks } from "@/lib/nav-links";
 
 export function SiteFooter() {
   return (
@@ -19,15 +20,11 @@ export function SiteFooter() {
         </div>
 
         <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">
-            Home
-          </Link>
-          <Link href="/setups" className="hover:text-foreground transition-colors">
-            Browse Setups
-          </Link>
-          <Link href="/upload" className="hover:text-foreground transition-colors">
-            Upload
-          </Link>
+          {navLinks.map((link) => (
+            <Link key={link.href} href={link.href} className="hover:text-foreground transition-colors">
+              {link.label}
+            </Link>
+          ))}
         </nav>
 
         <p className="text-xs text-muted-foreground">

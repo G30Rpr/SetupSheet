@@ -19,15 +19,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { navLinks } from "@/lib/nav-links";
 import type { NotificationItem } from "@/lib/supabase/notifications";
-
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/setups", label: "Browse Setups" },
-  { href: "/requests", label: "Requests" },
-  { href: "/leaderboard", label: "Leaderboard" },
-  { href: "/upload", label: "Upload" },
-];
 
 export function SiteHeader({
   initialNotifications,
