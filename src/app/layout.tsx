@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { headers } from "next/headers";
-import { Toaster } from "sonner";
 import "./globals.css";
 
+import { AppToaster } from "@/components/app-toaster";
 import { AuthProvider } from "@/components/auth-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { ThemeProvider } from "@/components/theme-provider";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { getNotifications, getUnreadNotificationCount } from "@/lib/supabase/notifications";
@@ -88,7 +89,8 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`dark ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <head>
         <script
@@ -98,25 +100,17 @@ export default async function RootLayout({
         />
       </head>
       <body className="flex min-h-full flex-col">
-        <AuthProvider initialUser={user}>
-          <SiteHeader
-            initialNotifications={initialNotifications}
-            initialUnreadCount={initialUnreadCount}
-          />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
-        </AuthProvider>
-        <Toaster
-          theme="dark"
-          position="bottom-right"
-          toastOptions={{
-            style: {
-              background: "var(--color-card)",
-              color: "var(--color-foreground)",
-              border: "1px solid var(--color-border)",
-            },
-          }}
-        />
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} nonce={nonce}>
+          <AuthProvider initialUser={user}>
+            <SiteHeader
+              initialNotifications={initialNotifications}
+              initialUnreadCount={initialUnreadCount}
+            />
+            <main className="flex-1">{children}</main>
+            <SiteFooter />
+          </AuthProvider>
+          <AppToaster />
+        </ThemeProvider>
       </body>
     </html>
   );

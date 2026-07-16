@@ -93,3 +93,23 @@ export function filterAndSortSetups(
       return results;
   }
 }
+
+/**
+ * Distinct car/track/game names (in that priority order) that contain
+ * `query` as a substring, for the search box's autocomplete dropdown --
+ * simple substring matching rather than filterAndSortSetups' fuzzy
+ * tolerance, since these are meant to be exact, clickable completions.
+ */
+export function getSearchSuggestions(setups: Setup[], query: string, limit = 6): string[] {
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed) return [];
+
+  const matches = new Set<string>();
+  for (const s of setups) {
+    if (s.car.toLowerCase().includes(trimmed)) matches.add(s.car);
+    if (s.track.toLowerCase().includes(trimmed)) matches.add(s.track);
+    if (s.game.toLowerCase().includes(trimmed)) matches.add(s.game);
+    if (matches.size >= limit) break;
+  }
+  return [...matches].slice(0, limit);
+}

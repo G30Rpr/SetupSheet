@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { createComment, deleteComment, getSetupCommentsAction } from "@/lib/actions/setup-comments";
 import { MAX_COMMENT_LENGTH } from "@/lib/data";
+import { useUndoableDelete } from "@/lib/use-undoable-delete";
 import { getInitials } from "@/lib/utils";
 import type { Setup, SetupComment } from "@/lib/types";
 
@@ -30,6 +31,8 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
+  const runUndoableDelete = useUndoableDelete();
 
   function refetch() {
     getSetupCommentsAction(setup.id).then(setComments);
@@ -56,25 +59,44 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
   }
 
   function handleDelete(commentId: string) {
-    startTransition(async () => {
-      const result = await deleteComment(commentId, setup.id);
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      refetch();
+    setPendingDeleteIds((prev) => new Set(prev).add(commentId));
+    runUndoableDelete({
+      key: commentId,
+      message: "Comment deleted",
+      onUndo: () => {
+        setPendingDeleteIds((prev) => {
+          const next = new Set(prev);
+          next.delete(commentId);
+          return next;
+        });
+      },
+      commit: async () => {
+        const result = await deleteComment(commentId, setup.id);
+        if (result.error) {
+          setPendingDeleteIds((prev) => {
+            const next = new Set(prev);
+            next.delete(commentId);
+            return next;
+          });
+          toast.error(result.error);
+          return;
+        }
+        refetch();
+      },
     });
   }
 
+  const visibleComments = comments?.filter((c) => !pendingDeleteIds.has(c.id)) ?? null;
+
   return (
     <div className="mt-2 flex flex-col gap-3 text-xs">
-      {comments === null ? (
+      {visibleComments === null ? (
         <p className="text-muted-foreground">Loading comments...</p>
-      ) : comments.length === 0 ? (
+      ) : visibleComments.length === 0 ? (
         <p className="text-muted-foreground">No comments yet.</p>
       ) : (
         <ul className="flex flex-col gap-2.5">
-          {comments.map((comment) => (
+          {visibleComments.map((comment) => (
             <li key={comment.id} className="flex items-start gap-2">
               <Avatar className="size-6 shrink-0 ring-1 ring-border">
                 <AvatarImage src={comment.avatarUrl ?? undefined} alt={comment.username} />
@@ -95,7 +117,6 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
                 <button
                   type="button"
                   onClick={() => handleDelete(comment.id)}
-                  disabled={isPending}
                   aria-label="Delete comment"
                   className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-red-400 disabled:opacity-60"
                 >

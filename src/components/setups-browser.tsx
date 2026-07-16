@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/select";
 import { SetupCard } from "@/components/setup-card";
 import { conditions, games, getCarsForGame, getTracksForGame, rigProfiles } from "@/lib/data";
-import { ALL, filterAndSortSetups, type SortOption } from "@/lib/filter-setups";
+import { ALL, filterAndSortSetups, getSearchSuggestions, type SortOption } from "@/lib/filter-setups";
+import { isTypingTarget } from "@/lib/is-typing-target";
 import type { Setup } from "@/lib/types";
 
 const sortOptions: { value: SortOption; label: string }[] = [
@@ -34,6 +35,11 @@ const SORT_VALUES = sortOptions.map((option) => option.value);
 // once -- without this, a large/filtered-open result set renders every
 // match in one giant grid.
 const PAGE_SIZE = 24;
+
+// Only the filters/sort, never page -- restoring an old page number without
+// the matching result set to scroll through would be more confusing than
+// useful.
+const LAST_FILTERS_KEY = "setupsheet:last-filters";
 
 export function SetupsBrowser({ setups }: { setups: Setup[] }) {
   const router = useRouter();
@@ -56,6 +62,19 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
     const fromUrl = Number(searchParams.get("page"));
     return Number.isInteger(fromUrl) && fromUrl > 1 ? fromUrl : 1;
   });
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // "/" focuses this search box -- the always-visible one on this page,
+  // unlike the header's which only renders at the xl breakpoint.
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return;
+      e.preventDefault();
+      searchInputRef.current?.focus();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   function toggleCompareSelect(id: string) {
     setCompareIds((prev) => {
@@ -87,6 +106,11 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
 
       const query = params.toString();
       router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+
+      localStorage.setItem(
+        LAST_FILTERS_KEY,
+        JSON.stringify({ search, game, car, track, condition, rig, sort })
+      );
     }, 300);
 
     return () => clearTimeout(id);
@@ -104,6 +128,39 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
     setPage(1);
   }, [search, game, car, track, condition, rig, sort]);
 
+  // Restores the last-used filters from a previous visit -- but only on a
+  // bare /setups nav with no query string at all, so an explicit URL (a
+  // shared link, or even just ?sort=fastest) always wins over local history.
+  // Runs once client-side after mount rather than in the state initializers
+  // above, since localStorage isn't available during SSR and reading it
+  // there would produce a hydration mismatch.
+  useEffect(() => {
+    if (searchParams.toString() !== "") return;
+    const saved = localStorage.getItem(LAST_FILTERS_KEY);
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved) as Partial<Record<string, string>>;
+      // Hydrating from localStorage (an external system) on mount, not
+      // deriving from props/state -- the one legitimate case this lint
+      // rule can't tell apart from a render-loop risk.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (parsed.search) setSearch(parsed.search);
+      if (parsed.game) setGame(parsed.game);
+      if (parsed.car) setCar(parsed.car);
+      if (parsed.track) setTrack(parsed.track);
+      if (parsed.condition) setCondition(parsed.condition);
+      if (parsed.rig) setRig(parsed.rig);
+      if (parsed.sort && (SORT_VALUES as string[]).includes(parsed.sort)) {
+        setSort(parsed.sort as SortOption);
+      }
+    } catch {
+      // Malformed localStorage value -- ignore and keep the defaults.
+    }
+    // Intentionally runs once on mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const carOptions = useMemo(
     () => getCarsForGame(setups, game === ALL ? undefined : game),
     [setups, game]
@@ -112,6 +169,9 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
     () => getTracksForGame(setups, game === ALL ? undefined : game),
     [setups, game]
   );
+
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestions = useMemo(() => getSearchSuggestions(setups, search), [setups, search]);
 
   const filtered = useMemo(
     () => filterAndSortSetups(setups, { search, game, car, track, condition, rig }, sort),
@@ -145,12 +205,47 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
         <div className="relative mb-4">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            ref={searchInputRef}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setShowSuggestions(false)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") e.currentTarget.blur();
+            }}
             placeholder="Search by car, track, game, or tag..."
-            className="pl-9"
+            className="pl-9 pr-9"
             aria-label="Search setups"
           />
+          {!search && (
+            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border/80 bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+              /
+            </kbd>
+          )}
+
+          {showSuggestions && suggestions.length > 0 && (
+            <ul className="absolute z-10 mt-1.5 w-full overflow-hidden rounded-md border border-border/80 bg-popover shadow-lg">
+              {suggestions.map((suggestion) => (
+                <li key={suggestion}>
+                  <button
+                    type="button"
+                    // onMouseDown (not onClick) fires before the input's
+                    // onBlur, and preventDefault stops that blur from
+                    // happening at all -- otherwise the dropdown would
+                    // close itself before the click could register.
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setSearch(suggestion);
+                      setShowSuggestions(false);
+                    }}
+                    className="w-full truncate px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-accent"
+                  >
+                    {suggestion}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">

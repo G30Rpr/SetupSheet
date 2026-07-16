@@ -22,6 +22,7 @@ import {
   fulfillSetupRequest,
   getMyMatchingSetupsAction,
 } from "@/lib/actions/setup-requests";
+import { useUndoableDelete } from "@/lib/use-undoable-delete";
 import { cn } from "@/lib/utils";
 import type { SetupRequest } from "@/lib/types";
 
@@ -37,23 +38,27 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
   const [selectedSetupId, setSelectedSetupId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [isDeleting, startDeleteTransition] = useTransition();
+  const [isCancelled, setIsCancelled] = useState(false);
+  const runUndoableDelete = useUndoableDelete();
 
   const isFulfilled = Boolean(request.fulfilledSetupId);
   const isOwnRequest = user?.id === request.requesterId;
 
   function handleDelete() {
-    if (!window.confirm(`Cancel your request for a ${request.car} @ ${request.track} setup?`)) {
-      return;
-    }
-    startDeleteTransition(async () => {
-      const result = await deleteSetupRequest(request.id);
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("Request cancelled");
-      router.refresh();
+    setIsCancelled(true);
+    runUndoableDelete({
+      key: request.id,
+      message: `Cancelled request for ${request.car} @ ${request.track}`,
+      onUndo: () => setIsCancelled(false),
+      commit: async () => {
+        const result = await deleteSetupRequest(request.id);
+        if (result.error) {
+          setIsCancelled(false);
+          toast.error(result.error);
+          return;
+        }
+        router.refresh();
+      },
     });
   }
 
@@ -82,6 +87,8 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
     });
   }
 
+  if (isCancelled) return null;
+
   return (
     <Card className={cn("gap-2.5 px-4 py-3.5", isFulfilled && "opacity-70")}>
       <div className="flex items-start justify-between gap-3">
@@ -102,7 +109,6 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
           <button
             type="button"
             onClick={handleDelete}
-            disabled={isDeleting}
             aria-label="Cancel request"
             className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-red-400 disabled:opacity-60"
           >

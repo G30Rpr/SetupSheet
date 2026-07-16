@@ -51,6 +51,15 @@ import type { Game, Setup, SetupTag } from "@/lib/types";
 
 type EntryMode = "file" | "manual";
 
+// Only in create mode -- edit mode's existingSetup is already the
+// persisted source of truth, so drafting it separately would just risk
+// resurrecting a stale abandoned edit later. Car/track are deliberately
+// left out of the draft: they're driven by GroupedSelectField, which can
+// switch between a Radix Select and a plain input depending on whether the
+// value matches a known option, and there's no safe way to restore into
+// that from outside without reaching into its internals.
+const DRAFT_KEY = "setupsheet:upload-draft";
+
 export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
@@ -77,6 +86,10 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   const [keepExistingFile, setKeepExistingFile] = useState(Boolean(existingSetup?.fileName));
   const [setupValues, setSetupValues] = useState<SetupValues>(existingSetup?.setupValues ?? {});
   const [tags, setTags] = useState<SetupTag[]>(existingSetup?.tags ?? []);
+  const [condition, setCondition] = useState(existingSetup?.condition ?? "");
+  const [lapTime, setLapTime] = useState(existingSetup?.lapTime ?? "");
+  const [rig, setRig] = useState(existingSetup?.rigProfile ?? "");
+  const [description, setDescription] = useState(existingSetup?.description ?? "");
   const [pace, setPace] = useState(3);
   const [predictability, setPredictability] = useState(3);
   const [error, setError] = useState<string | null>(null);
@@ -112,6 +125,58 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     // its initial value matters here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Restores a saved draft (if any) on first mount -- localStorage isn't
+  // available during SSR, so this has to be an effect rather than a lazy
+  // state initializer (which would also produce a hydration mismatch).
+  useEffect(() => {
+    if (isEditing) return;
+    const saved = localStorage.getItem(DRAFT_KEY);
+    if (!saved) return;
+
+    try {
+      const draft = JSON.parse(saved);
+      // Hydrating from localStorage on mount, not deriving from props/state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (draft.game) setGame(draft.game);
+      if (draft.condition) setCondition(draft.condition);
+      if (draft.lapTime) setLapTime(draft.lapTime);
+      if (draft.rig) setRig(draft.rig);
+      if (draft.description) setDescription(draft.description);
+      if (Array.isArray(draft.tags)) setTags(draft.tags);
+      if (draft.setupValues && typeof draft.setupValues === "object") setSetupValues(draft.setupValues);
+      if (typeof draft.pace === "number") setPace(draft.pace);
+      if (typeof draft.predictability === "number") setPredictability(draft.predictability);
+      if (draft.entryMode === "file" || draft.entryMode === "manual") setEntryMode(draft.entryMode);
+
+      toast("Restored your unsaved draft", {
+        action: {
+          label: "Discard",
+          onClick: () => {
+            localStorage.removeItem(DRAFT_KEY);
+            resetForm();
+          },
+        },
+      });
+    } catch {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+    // Intentionally runs once on mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Autosaves the draft, debounced, so an accidental navigation or crash
+  // doesn't lose a half-filled form.
+  useEffect(() => {
+    if (isEditing) return;
+    const id = setTimeout(() => {
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({ game, condition, lapTime, rig, description, tags, setupValues, pace, predictability, entryMode })
+      );
+    }, 500);
+    return () => clearTimeout(id);
+  }, [isEditing, game, condition, lapTime, rig, description, tags, setupValues, pace, predictability, entryMode]);
 
   function toggleTag(tag: SetupTag) {
     setTags((prev) =>
@@ -211,12 +276,8 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     setError(null);
 
     const formData = new FormData(e.currentTarget);
-    const condition = String(formData.get("condition") ?? "");
     const car = String(formData.get("car") ?? "");
     const track = String(formData.get("track") ?? "");
-    const lapTime = String(formData.get("lapTime") ?? "");
-    const rigProfile = String(formData.get("rig") ?? "");
-    const description = String(formData.get("description") ?? "");
 
     const effectiveSetupValues = resolveEffectiveSetupValues({
       entryMode,
@@ -244,7 +305,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           lapTime,
           description,
           tags,
-          rigProfile,
+          rigProfile: rig,
           setupValues: effectiveSetupValues,
           filePath: fileFields.filePath,
           fileName: fileFields.fileName,
@@ -268,7 +329,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
         lapTime,
         description,
         tags,
-        rigProfile,
+        rigProfile: rig,
         pace,
         predictability,
         setupValues: effectiveSetupValues,
@@ -280,6 +341,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
         setError(result.error);
         toast.error(result.error);
       } else {
+        localStorage.removeItem(DRAFT_KEY);
         setStatus("success");
       }
     });
@@ -288,6 +350,10 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   function resetForm() {
     setEntryMode("file");
     setGame("");
+    setCondition("");
+    setLapTime("");
+    setRig("");
+    setDescription("");
     setFile(null);
     setDetectedCar(null);
     setDetectedSetupValues({});
@@ -369,7 +435,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="condition">Condition</Label>
-              <Select name="condition" required defaultValue={existingSetup?.condition}>
+              <Select name="condition" required value={condition} onValueChange={setCondition}>
                 <SelectTrigger id="condition" className="w-full">
                   <SelectValue placeholder="Select condition" />
                 </SelectTrigger>
@@ -504,20 +570,21 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                 id="lapTime"
                 name="lapTime"
                 placeholder="e.g. 2:16.482"
-                defaultValue={existingSetup?.lapTime}
+                value={lapTime}
+                onChange={(e) => setLapTime(e.target.value)}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="rig">Rig profile</Label>
-              <Select name="rig" required defaultValue={existingSetup?.rigProfile}>
+              <Select name="rig" required value={rig} onValueChange={setRig}>
                 <SelectTrigger id="rig" className="w-full">
                   <SelectValue placeholder="Select your rig" />
                 </SelectTrigger>
                 <SelectContent>
-                  {rigProfiles.map((rig) => (
-                    <SelectItem key={rig} value={rig}>
-                      {rig}
+                  {rigProfiles.map((profile) => (
+                    <SelectItem key={profile} value={profile}>
+                      {profile}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -566,7 +633,8 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
               id="description"
               name="description"
               placeholder="What makes this setup fast or safe? Any tips for using it?"
-              defaultValue={existingSetup?.description}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               maxLength={MAX_DESCRIPTION_LENGTH}
               rows={4}
             />

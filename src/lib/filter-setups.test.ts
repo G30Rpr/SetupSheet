@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ALL, filterAndSortSetups } from "@/lib/filter-setups";
+import { ALL, filterAndSortSetups, getSearchSuggestions } from "@/lib/filter-setups";
 import { makeSetup } from "@/lib/test-helpers/make-setup";
 
 const noFilters = { search: "", game: ALL, car: ALL, track: ALL, condition: ALL, rig: ALL };
@@ -96,5 +96,38 @@ describe("filterAndSortSetups — sorting", () => {
   it("leaves order untouched for 'newest' (caller is expected to have already sorted by date)", () => {
     const setups = [makeSetup({ id: "1" }), makeSetup({ id: "2" }), makeSetup({ id: "3" })];
     expect(filterAndSortSetups(setups, noFilters, "newest").map((s) => s.id)).toEqual(["1", "2", "3"]);
+  });
+});
+
+describe("getSearchSuggestions", () => {
+  it("returns nothing for an empty or whitespace-only query", () => {
+    const setups = [makeSetup({ id: "1", car: "BMW M4 GT3" })];
+    expect(getSearchSuggestions(setups, "")).toEqual([]);
+    expect(getSearchSuggestions(setups, "   ")).toEqual([]);
+  });
+
+  it("matches car, track, and game as substrings, case-insensitively", () => {
+    const setups = [makeSetup({ id: "1", game: "Assetto Corsa Competizione", car: "BMW M4 GT3", track: "Spa-Francorchamps" })];
+    expect(getSearchSuggestions(setups, "bmw")).toEqual(["BMW M4 GT3"]);
+    expect(getSearchSuggestions(setups, "SPA")).toEqual(["Spa-Francorchamps"]);
+    expect(getSearchSuggestions(setups, "competizione")).toEqual(["Assetto Corsa Competizione"]);
+  });
+
+  it("de-duplicates a name shared by multiple setups", () => {
+    const setups = [
+      makeSetup({ id: "1", car: "BMW M4 GT3", track: "Spa" }),
+      makeSetup({ id: "2", car: "BMW M4 GT3", track: "Monza" }),
+    ];
+    expect(getSearchSuggestions(setups, "bmw")).toEqual(["BMW M4 GT3"]);
+  });
+
+  it("does not fuzzy-match a typo (unlike filterAndSortSetups' search)", () => {
+    const setups = [makeSetup({ id: "1", car: "Porsche 911 GT3 R" })];
+    expect(getSearchSuggestions(setups, "porshe")).toEqual([]);
+  });
+
+  it("caps results at the given limit", () => {
+    const setups = Array.from({ length: 10 }, (_, i) => makeSetup({ id: String(i), car: `Car ${i}` }));
+    expect(getSearchSuggestions(setups, "car", 3)).toHaveLength(3);
   });
 });

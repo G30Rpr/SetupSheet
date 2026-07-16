@@ -5,8 +5,16 @@
 
 :root {
   --radius: 0.75rem;
+}
 
-  /* Sim-racing dark theme: carbon black, coral primary, cyan data accent */
+/*
+ * Sim-racing dark theme (default): carbon black, coral primary, cyan data
+ * accent. Also serves as :root's fallback so anything rendered before
+ * next-themes' class lands still gets a coherent (dark) palette rather
+ * than unstyled black-on-black.
+ */
+:root,
+.dark {
   --background: oklch(0.145 0.004 260);
   --foreground: oklch(0.96 0.004 260);
 
@@ -49,9 +57,52 @@
   --chart-5: oklch(0.75 0.08 300);
 }
 
-.dark {
-  --background: oklch(0.145 0.004 260);
-  --foreground: oklch(0.96 0.004 260);
+/*
+ * Light theme: not an inversion of the dark one -- accent lightness values
+ * are independently tuned (deepened) so coral/cyan/green/amber still clear
+ * AA contrast against a white ground instead of reading as washed out.
+ */
+.light {
+  --background: oklch(0.98 0.004 260);
+  --foreground: oklch(0.18 0.01 260);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.01 260);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.01 260);
+
+  --primary: oklch(0.56 0.2 25);
+  --primary-foreground: oklch(0.99 0.005 25);
+
+  --secondary: oklch(0.95 0.006 260);
+  --secondary-foreground: oklch(0.22 0.01 260);
+
+  --muted: oklch(0.95 0.006 260);
+  --muted-foreground: oklch(0.46 0.016 260);
+
+  --accent: oklch(0.93 0.012 260);
+  --accent-foreground: oklch(0.18 0.01 260);
+
+  --destructive: oklch(0.54 0.22 27);
+  --destructive-foreground: oklch(0.99 0.01 27);
+
+  --border: oklch(0 0 0 / 10%);
+  --input: oklch(0 0 0 / 14%);
+  --ring: oklch(0.56 0.2 25 / 45%);
+
+  --racing-red: oklch(0.54 0.22 27);
+  --racing-red-foreground: oklch(0.99 0.01 27);
+  --racing-green: oklch(0.52 0.16 149);
+  --racing-amber: oklch(0.58 0.15 80);
+  --racing-coral: oklch(0.56 0.2 25);
+  --racing-cyan: oklch(0.48 0.13 200);
+
+  --chart-1: oklch(0.56 0.2 25);
+  --chart-2: oklch(0.54 0.22 27);
+  --chart-3: oklch(0.58 0.15 80);
+  --chart-4: oklch(0.5 0.13 220);
+  --chart-5: oklch(0.55 0.09 300);
 }
 
 @theme inline {
@@ -101,6 +152,9 @@
   }
   html {
     color-scheme: dark;
+  }
+  .light {
+    color-scheme: light;
   }
   body {
     @apply bg-background text-foreground;

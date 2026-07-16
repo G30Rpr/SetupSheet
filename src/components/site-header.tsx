@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Menu, Search, Upload } from "lucide-react";
 
 import { AuthNav, DiscordLoginButton, UserMenu } from "@/components/auth-nav";
 import { useAuth } from "@/components/auth-provider";
 import { LogoMark } from "@/components/icons/logo-mark";
 import { NotificationBell } from "@/components/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,6 +20,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { isTypingTarget } from "@/lib/is-typing-target";
 import { navLinks } from "@/lib/nav-links";
 import type { NotificationItem } from "@/lib/supabase/notifications";
 
@@ -32,12 +34,25 @@ export function SiteHeader({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   function handleSearchSubmit(e: FormEvent) {
     e.preventDefault();
     const trimmed = query.trim();
     router.push(trimmed ? `/setups?q=${encodeURIComponent(trimmed)}` : "/setups");
   }
+
+  // "/" focuses this search box from anywhere on the site, same convention
+  // as GitHub/Slack -- skipped while already typing somewhere else.
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return;
+      e.preventDefault();
+      searchInputRef.current?.focus();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/85 backdrop-blur-md">
@@ -66,12 +81,18 @@ export function SiteHeader({
         <form onSubmit={handleSearchSubmit} className="relative hidden min-w-0 flex-1 max-w-[220px] xl:block">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            ref={searchInputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search track or car"
-            className="h-9 pl-9"
+            className="h-9 pl-9 pr-8"
             aria-label="Search setups"
           />
+          {!query && (
+            <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-border/80 bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+              /
+            </kbd>
+          )}
         </form>
 
         <div className="flex items-center gap-2">
@@ -87,6 +108,7 @@ export function SiteHeader({
           {/* Mounted once regardless of viewport -- previously duplicated
               (one copy per breakpoint), doubling their hydration cost. */}
           <div className="flex items-center gap-1 md:ml-1 md:border-l md:border-border/80 md:pl-3">
+            <ThemeToggle className="hidden md:inline-flex" />
             <NotificationBell
               initialNotifications={initialNotifications}
               initialUnreadCount={initialUnreadCount}
@@ -121,6 +143,10 @@ export function SiteHeader({
                   ))}
                 </nav>
                 <div className="mt-auto flex flex-col gap-2 px-4 pb-6">
+                  <div className="flex items-center justify-between rounded-md border border-border/80 px-3 py-2.5">
+                    <span className="text-sm font-medium">Theme</span>
+                    <ThemeToggle />
+                  </div>
                   <MobileAuthRow />
                   <SheetClose asChild>
                     <Button asChild size="lg" className="w-full">

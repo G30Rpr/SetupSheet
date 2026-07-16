@@ -11,12 +11,14 @@ import {
   BookOpen,
   Calendar,
   ChevronDown,
+  Clipboard,
   FileDown,
   Gamepad2,
   Gauge,
   History,
   MessageSquare,
   Pencil,
+  Share2,
   Star,
   Timer,
   Trash2,
@@ -40,6 +42,8 @@ import {
 } from "@/lib/actions/setups";
 import { toggleFavorite } from "@/lib/actions/setup-favorites";
 import { buildSetupExportFilename, buildSetupExportText } from "@/lib/setup-export";
+import { SITE_URL } from "@/lib/site";
+import { useUndoableDelete } from "@/lib/use-undoable-delete";
 import { cn, getInitials } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
@@ -90,9 +94,10 @@ export function SetupCard({
   const [isFavoritePending, startFavoriteTransition] = useTransition();
   const [myRating, setMyRating] = useState(setup.myRating);
   const [isPending, startTransition] = useTransition();
-  const [isDeleting, startDeleteTransition] = useTransition();
   const [isDownloading, startDownloadTransition] = useTransition();
   const [downloads, setDownloads] = useState(setup.downloads);
+  const [isDeleted, setIsDeleted] = useState(false);
+  const runUndoableDelete = useUndoableDelete();
   const { user, signInWithDiscord } = useAuth();
   const v = setup.setupValues;
 
@@ -154,17 +159,20 @@ export function SetupCard({
   }
 
   function handleDelete() {
-    if (!window.confirm(`Delete your setup "${setup.car} @ ${setup.track}"? This can't be undone.`)) {
-      return;
-    }
-    startDeleteTransition(async () => {
-      const result = await deleteSetup(setup.id);
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("Setup deleted");
-      router.refresh();
+    setIsDeleted(true);
+    runUndoableDelete({
+      key: setup.id,
+      message: `Deleted "${setup.car} @ ${setup.track}"`,
+      onUndo: () => setIsDeleted(false),
+      commit: async () => {
+        const result = await deleteSetup(setup.id);
+        if (result.error) {
+          setIsDeleted(false);
+          toast.error(result.error);
+          return;
+        }
+        router.refresh();
+      },
     });
   }
 
@@ -211,6 +219,35 @@ export function SetupCard({
     });
   }
 
+  async function handleCopyValues() {
+    try {
+      await navigator.clipboard.writeText(buildSetupExportText(setup));
+      toast.success("Setup values copied to clipboard");
+    } catch {
+      toast.error("Couldn't copy to clipboard");
+    }
+  }
+
+  async function handleShare() {
+    const url = `${SITE_URL}/setups/${setup.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `${setup.car} @ ${setup.track}`, url });
+      } catch {
+        // User cancelled the native share sheet -- not an error.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied to clipboard");
+    } catch {
+      toast.error("Couldn't copy link");
+    }
+  }
+
+  if (isDeleted) return null;
+
   return (
     <Card className="group relative overflow-hidden border-border/80 py-0 transition-all duration-200 hover:-translate-y-1 hover:border-racing-coral/40 hover:shadow-[0_8px_30px_-8px_oklch(0.62_0.19_25/25%)]">
       <div className="flex flex-col gap-3 p-5">
@@ -243,7 +280,6 @@ export function SetupCard({
                 <button
                   type="button"
                   onClick={handleDelete}
-                  disabled={isDeleting}
                   aria-label="Delete setup"
                   className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-red-400 disabled:opacity-60"
                 >
@@ -251,6 +287,14 @@ export function SetupCard({
                 </button>
               </div>
             )}
+            <button
+              type="button"
+              onClick={handleShare}
+              aria-label="Share setup"
+              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <Share2 className="size-3.5" />
+            </button>
             <Badge variant={conditionVariant[setup.condition]}>{setup.condition}</Badge>
           </div>
         </div>
@@ -331,24 +375,37 @@ export function SetupCard({
         {/* Download: the original uploaded file if there is one, otherwise
             a generated text export of the manually-entered values */}
         {(setup.fileUrl || setup.setupValues) && (
-          <button
-            type="button"
-            onClick={handleDownload}
-            disabled={isDownloading}
-            title={setup.fileName ?? undefined}
-            className="flex w-full items-center justify-between gap-2 rounded-md bg-racing-coral/10 px-3 py-2.5 text-sm font-semibold text-racing-coral ring-1 ring-inset ring-racing-coral/30 transition-colors hover:bg-racing-coral/15 disabled:opacity-60"
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <FileDown className="size-4 shrink-0" />
-              <span className="truncate">
-                {isDownloading ? "Preparing download..." : "Download Setup"}
+          <div className="flex items-stretch gap-1.5">
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={isDownloading}
+              title={setup.fileName ?? undefined}
+              className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-md bg-racing-coral/10 px-3 py-2.5 text-sm font-semibold text-racing-coral ring-1 ring-inset ring-racing-coral/30 transition-colors hover:bg-racing-coral/15 disabled:opacity-60"
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <FileDown className="size-4 shrink-0" />
+                <span className="truncate">
+                  {isDownloading ? "Preparing download..." : "Download Setup"}
+                </span>
               </span>
-            </span>
-            <span className="shrink-0 text-xs font-normal text-racing-coral/70">
-              <span className="font-mono tabular-nums">{downloads}</span>{" "}
-              {downloads === 1 ? "download" : "downloads"}
-            </span>
-          </button>
+              <span className="shrink-0 text-xs font-normal text-racing-coral/70">
+                <span className="font-mono tabular-nums">{downloads}</span>{" "}
+                {downloads === 1 ? "download" : "downloads"}
+              </span>
+            </button>
+            {setup.setupValues && (
+              <button
+                type="button"
+                onClick={handleCopyValues}
+                aria-label="Copy setup values to clipboard"
+                title="Copy setup values"
+                className="flex shrink-0 items-center justify-center rounded-md bg-racing-coral/10 px-3 text-racing-coral ring-1 ring-inset ring-racing-coral/30 transition-colors hover:bg-racing-coral/15"
+              >
+                <Clipboard className="size-4" />
+              </button>
+            )}
+          </div>
         )}
 
         {/* How to install (expandable) */}
