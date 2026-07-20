@@ -31,6 +31,16 @@ interface SetupRow {
 const SETUP_COLUMNS =
   "id, user_id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, file_path, file_name, pace, predictability, rating_count, upvotes, downloads, created_at";
 
+/**
+ * getSetups() feeds /setups' client-side fuzzy search and filtering, which
+ * needs the full matching set in memory to work correctly -- unlike
+ * getFeaturedSetups()/the sitemap queries, it can't just take a small
+ * fixed-size slice. This caps the pathological case (an unbounded table
+ * scan once the community grows into the thousands) while still being far
+ * larger than any realistic filtered/browsed result set today.
+ */
+export const SETUPS_BROWSE_LIMIT = 500;
+
 interface Viewer {
   userId: string | null;
   upvotedSetupIds: Set<string>;
@@ -153,7 +163,8 @@ export async function getSetups(): Promise<Setup[]> {
   const result = await supabase
     .from("setups")
     .select(SETUP_COLUMNS)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(SETUPS_BROWSE_LIMIT);
 
   const rows = unwrapList(result, "getSetups: failed to load setups");
 

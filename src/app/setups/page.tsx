@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { SetupsBrowser } from "@/components/setups-browser";
-import { getSetups } from "@/lib/supabase/setups";
+import { SETUPS_BROWSE_LIMIT, getSetupCount, getSetups } from "@/lib/supabase/setups";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const title = `Browse Setups — ${SITE_NAME}`;
@@ -16,7 +16,12 @@ export const metadata: Metadata = {
 };
 
 export default async function SetupsPage() {
-  const setups = await getSetups();
+  const [setups, totalCount] = await Promise.all([getSetups(), getSetupCount()]);
+  // getSetups() caps at SETUPS_BROWSE_LIMIT -- search and filtering run
+  // client-side over whatever it fetched, so once the community actually
+  // grows past that cap, both stop covering the oldest setups too (not
+  // just the browse grid), which is worth being upfront about here.
+  const isCapped = setups.length === SETUPS_BROWSE_LIMIT && totalCount > SETUPS_BROWSE_LIMIT;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -25,9 +30,15 @@ export default async function SetupsPage() {
           Browse Setups
         </h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
-          {setups.length} setups shared by the community. Filter by game, car,
+          {totalCount} setups shared by the community. Filter by game, car,
           track, or track condition to find your next fast lap.
         </p>
+        {isCapped && (
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            Showing the {SETUPS_BROWSE_LIMIT} most recent setups — search and
+            filters only cover these for now, not the full {totalCount}.
+          </p>
+        )}
       </div>
 
       <SetupsBrowser setups={setups} />
