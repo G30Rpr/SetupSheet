@@ -46,7 +46,10 @@ export function SetupValuesDiff({
                   row.differs && "border-l-2 border-racing-amber bg-racing-amber/10"
                 )}
               >
-                <dt className="truncate text-muted-foreground">{row.label}</dt>
+                <dt className="truncate text-muted-foreground">
+                  {row.label}
+                  {row.differs && <span className="sr-only"> (changed)</span>}
+                </dt>
                 <dd className="truncate font-mono font-medium tabular-nums text-foreground">
                   {row.valueA ?? "—"}
                 </dd>
