@@ -222,6 +222,17 @@ order.)
 Turismo 7, and deletes any existing setups for the removed F1 years so the
 new `check` constraint doesn't reject on old data.
 
+**Testing the migrations locally:** `npm run test:db` applies every
+migration to a throwaway Postgres database (created and dropped by the
+script, so it's safe to run against a Postgres instance you use for other
+things) and runs the regression checks under `supabase/testing/*.test.sql`
+— currently covering `fulfill_setup_request()`'s game/car/track matching,
+its race-condition fix, the request-reopen trigger, and the comment length
+constraint. Needs a reachable Postgres (`PGHOST`/`PGPORT`/`PGUSER`/
+`PGPASSWORD` env vars, defaulting to `localhost:5432` as `postgres`) — CI
+runs this same script against a `postgres:16` service container on every
+push.
+
 **RLS policies**, scoped with `auth.uid()`:
 
 | Table | select | insert | update | delete |
