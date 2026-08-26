@@ -21,10 +21,13 @@ const SETUP_VERSION_COLUMNS =
   "id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, file_name, created_at";
 
 /**
- * Fetches a setup's edit history, newest first. No author join needed --
- * the trigger that writes these rows (0012_setup_versions.sql) only ever
- * fires on the owner's own edit, so `edited_by` is always the setup's
- * current author, already known to the caller from the parent Setup.
+ * Fetches a setup's edit history, newest first, capped at the most recent
+ * 200 versions -- nothing stops an owner from editing their own setup
+ * arbitrarily many times, and unlike every other list query in this data
+ * layer this one had no bound at all. No author join needed -- the trigger
+ * that writes these rows (0012_setup_versions.sql) only ever fires on the
+ * owner's own edit, so `edited_by` is always the setup's current author,
+ * already known to the caller from the parent Setup.
  */
 export async function getSetupVersions(setupId: string): Promise<SetupVersion[]> {
   const supabase = await createClient();
@@ -33,7 +36,8 @@ export async function getSetupVersions(setupId: string): Promise<SetupVersion[]>
     .from("setup_versions")
     .select(SETUP_VERSION_COLUMNS)
     .eq("setup_id", setupId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   const rows = unwrapList(result, "getSetupVersions: failed to load setup history");
 

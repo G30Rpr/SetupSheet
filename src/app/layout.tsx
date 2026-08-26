@@ -96,6 +96,11 @@ export default async function RootLayout({
         <script
           type="application/ld+json"
           nonce={nonce}
+          // Browsers intentionally blank a script's nonce attribute once
+          // applied (so it can't be read back and leaked), which reads as a
+          // hydration mismatch to React even though nothing is actually
+          // wrong -- this is expected for every nonce'd script, not a bug.
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>

@@ -96,13 +96,20 @@ export async function deleteSetupRequest(requestId: string): Promise<{ error: st
 }
 
 /**
- * The current user's own setups for a given game, for the "fulfill with one
- * of your setups" picker -- lightweight (id/car/track only) since it's just
- * populating a dropdown, not a full Setup. Empty (not an error) when logged
- * out, so the picker just renders with nothing to pick.
+ * The current user's own setups matching a request's game/car/track, for
+ * the "fulfill with one of your setups" picker -- lightweight (id/car/track
+ * only) since it's just populating a dropdown, not a full Setup. Empty (not
+ * an error) when logged out, so the picker just renders with nothing to
+ * pick. Filtered to car/track here too (case/whitespace-insensitively), not
+ * just game, so this only ever offers setups the fulfill_setup_request RPC
+ * (0016_fulfill_request_hardening.sql) will actually accept -- otherwise a
+ * user could pick a same-game-but-different-car candidate here and get a
+ * confusing rejection from the RPC after confirming.
  */
 export async function getMyMatchingSetupsAction(
-  game: string
+  game: string,
+  car: string,
+  track: string
 ): Promise<{ id: string; car: string; track: string }[]> {
   const supabase = await createClient();
   const {
@@ -123,7 +130,10 @@ export async function getMyMatchingSetupsAction(
     return [];
   }
 
-  return data;
+  const normalize = (s: string) => s.trim().toLowerCase();
+  return data.filter(
+    (setup) => normalize(setup.car) === normalize(car) && normalize(setup.track) === normalize(track)
+  );
 }
 
 /**

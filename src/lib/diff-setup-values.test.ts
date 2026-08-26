@@ -4,7 +4,7 @@ import { diffSetupValues, diffTopLevelFields } from "@/lib/diff-setup-values";
 
 describe("diffSetupValues", () => {
   it("flags no rows as differing when both sides are identical", () => {
-    const values = { frontTirePressure: "23.5 psi", rearTirePressure: "24.0 psi" };
+    const values = { lfTirePressure: "23.5 psi", rfTirePressure: "23.5 psi" };
     const groups = diffSetupValues("iRacing", values, { ...values });
     const rows = groups.flatMap((g) => g.rows);
     expect(rows.length).toBeGreaterThan(0);
@@ -14,10 +14,10 @@ describe("diffSetupValues", () => {
   it("flags rows where the two sides disagree", () => {
     const groups = diffSetupValues(
       "iRacing",
-      { frontTirePressure: "23.5 psi" },
-      { frontTirePressure: "24.0 psi" }
+      { lfTirePressure: "23.5 psi" },
+      { lfTirePressure: "24.0 psi" }
     );
-    const row = groups.flatMap((g) => g.rows).find((r) => r.key === "frontTirePressure");
+    const row = groups.flatMap((g) => g.rows).find((r) => r.key === "lfTirePressure");
     expect(row).toMatchObject({ valueA: "23.5 psi", valueB: "24.0 psi", differs: true });
   });
 
@@ -28,15 +28,15 @@ describe("diffSetupValues", () => {
   });
 
   it("omits fields that are blank on both sides", () => {
-    const groups = diffSetupValues("iRacing", { frontTirePressure: "23.5 psi" }, {});
+    const groups = diffSetupValues("iRacing", { lfTirePressure: "23.5 psi" }, {});
     const keys = groups.flatMap((g) => g.rows).map((r) => r.key);
-    expect(keys).toEqual(["frontTirePressure"]);
+    expect(keys).toEqual(["lfTirePressure"]);
   });
 
   it("omits groups left with no rows after filtering", () => {
-    const groups = diffSetupValues("iRacing", { frontTirePressure: "23.5 psi" }, {});
+    const groups = diffSetupValues("iRacing", { lfTirePressure: "23.5 psi" }, {});
     expect(groups).toHaveLength(1);
-    expect(groups[0].title).toBe("Tires & Chassis");
+    expect(groups[0].title).toBe("Tires & Alignment");
   });
 
   it("returns an empty result when both sides are null/undefined", () => {
@@ -44,9 +44,9 @@ describe("diffSetupValues", () => {
   });
 
   it("uses the schema for the given game, so unrelated games' fields never appear", () => {
-    const groups = diffSetupValues("Gran Turismo 7", { frontTirePressure: "23.5 psi" }, {});
+    const groups = diffSetupValues("Gran Turismo 7", { lfTirePressure: "23.5 psi" }, {});
     const keys = groups.flatMap((g) => g.rows).map((r) => r.key);
-    expect(keys).not.toContain("frontTirePressure");
+    expect(keys).not.toContain("lfTirePressure");
   });
 });
 

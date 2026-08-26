@@ -18,22 +18,22 @@ describe("buildSetupExportText", () => {
     const text = buildSetupExportText(
       makeSetup({
         game: "iRacing",
-        setupValues: { frontTirePressure: "23.5 psi" },
+        setupValues: { lfTirePressure: "23.5 psi" },
       })
     );
-    expect(text).toContain("Tires & Chassis");
-    expect(text).toContain("Front tire pressure: 23.5 psi");
+    expect(text).toContain("Tires & Alignment");
+    expect(text).toContain("Left front tire pressure: 23.5 psi");
     expect(text).not.toContain("Suspension");
   });
 
   it("emits no group sections when setupValues is empty", () => {
     const text = buildSetupExportText(makeSetup({ game: "iRacing", setupValues: {} }));
-    expect(text).not.toContain("Tires & Chassis");
+    expect(text).not.toContain("Tires & Alignment");
   });
 
   it("emits no group sections when setupValues is absent", () => {
     const text = buildSetupExportText(makeSetup({ game: "iRacing", setupValues: undefined }));
-    expect(text).not.toContain("Tires & Chassis");
+    expect(text).not.toContain("Tires & Alignment");
   });
 
   it("includes the description block only when non-empty", () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition, type FormEvent } from "react";
+import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -58,7 +58,13 @@ type EntryMode = "file" | "manual";
 // switch between a Radix Select and a plain input depending on whether the
 // value matches a known option, and there's no safe way to restore into
 // that from outside without reaching into its internals.
-const DRAFT_KEY = "setupsheet:upload-draft";
+// Namespaced by user id -- on a shared/library device, a bare global key
+// would let one user's autosaved in-progress draft silently repopulate a
+// different user's form the next time someone else logs in and opens
+// /upload.
+function draftKey(userId: string) {
+  return `setupsheet:upload-draft:${userId}`;
+}
 
 export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   const router = useRouter();
@@ -126,12 +132,18 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Restores a saved draft (if any) on first mount -- localStorage isn't
-  // available during SSR, so this has to be an effect rather than a lazy
-  // state initializer (which would also produce a hydration mismatch).
+  // Restores a saved draft (if any) once the current user is known --
+  // localStorage isn't available during SSR, so this has to be an effect
+  // rather than a lazy state initializer (which would also produce a
+  // hydration mismatch). Waits on isLoading/user rather than running
+  // unconditionally on mount so it reads the right user's key, and the ref
+  // guard keeps it a one-shot even though user/isLoading can each change.
+  const hasRestoredRef = useRef(false);
   useEffect(() => {
-    if (isEditing) return;
-    const saved = localStorage.getItem(DRAFT_KEY);
+    if (isEditing || isLoading || !user || hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
+
+    const saved = localStorage.getItem(draftKey(user.id));
     if (!saved) return;
 
     try {
@@ -153,30 +165,28 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
         action: {
           label: "Discard",
           onClick: () => {
-            localStorage.removeItem(DRAFT_KEY);
+            localStorage.removeItem(draftKey(user.id));
             resetForm();
           },
         },
       });
     } catch {
-      localStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem(draftKey(user.id));
     }
-    // Intentionally runs once on mount only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isEditing, isLoading, user]);
 
   // Autosaves the draft, debounced, so an accidental navigation or crash
   // doesn't lose a half-filled form.
   useEffect(() => {
-    if (isEditing) return;
+    if (isEditing || !user) return;
     const id = setTimeout(() => {
       localStorage.setItem(
-        DRAFT_KEY,
+        draftKey(user.id),
         JSON.stringify({ game, condition, lapTime, rig, description, tags, setupValues, pace, predictability, entryMode })
       );
     }, 500);
     return () => clearTimeout(id);
-  }, [isEditing, game, condition, lapTime, rig, description, tags, setupValues, pace, predictability, entryMode]);
+  }, [isEditing, user, game, condition, lapTime, rig, description, tags, setupValues, pace, predictability, entryMode]);
 
   function toggleTag(tag: SetupTag) {
     setTags((prev) =>
@@ -341,7 +351,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
         setError(result.error);
         toast.error(result.error);
       } else {
-        localStorage.removeItem(DRAFT_KEY);
+        if (user) localStorage.removeItem(draftKey(user.id));
         setStatus("success");
       }
     });

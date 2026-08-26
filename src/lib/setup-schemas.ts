@@ -25,13 +25,20 @@ export interface SetupFieldGroup {
 export const setupSchemas: Record<Game, SetupFieldGroup[]> = {
   iRacing: [
     {
-      title: "Tires & Chassis",
+      title: "Tires & Alignment",
       fields: [
-        { key: "frontTirePressure", label: "Front tire pressure", placeholder: "e.g. 23.5 psi" },
-        { key: "rearTirePressure", label: "Rear tire pressure", placeholder: "e.g. 24.0 psi" },
+        { key: "lfTirePressure", label: "Left front tire pressure", placeholder: "e.g. 23.5 psi" },
+        { key: "rfTirePressure", label: "Right front tire pressure", placeholder: "e.g. 23.5 psi" },
+        { key: "lrTirePressure", label: "Left rear tire pressure", placeholder: "e.g. 24.0 psi" },
+        { key: "rrTirePressure", label: "Right rear tire pressure", placeholder: "e.g. 24.0 psi" },
+        { key: "lfCamber", label: "Left front camber", placeholder: "e.g. -3.2°" },
+        { key: "rfCamber", label: "Right front camber", placeholder: "e.g. -3.2°" },
+        { key: "lrCamber", label: "Left rear camber", placeholder: "e.g. -2.7°" },
+        { key: "rrCamber", label: "Right rear camber", placeholder: "e.g. -2.7°" },
+        { key: "frontToe", label: "Front toe", placeholder: "e.g. 0.05° out" },
+        { key: "rearToe", label: "Rear toe", placeholder: "e.g. 0.10° in" },
+        { key: "caster", label: "Caster", placeholder: "e.g. 12.4°" },
         { key: "crossWeight", label: "Cross weight", placeholder: "e.g. 50.0%" },
-        { key: "frontCamber", label: "Front camber", placeholder: "e.g. -3.2°" },
-        { key: "rearCamber", label: "Rear camber", placeholder: "e.g. -2.7°" },
       ],
     },
     {
@@ -43,6 +50,10 @@ export const setupSchemas: Record<Game, SetupFieldGroup[]> = {
         { key: "rearArb", label: "Rear anti-roll bar", placeholder: "e.g. 4 clicks" },
         { key: "frontRideHeight", label: "Front ride height", placeholder: "e.g. 65 mm" },
         { key: "rearRideHeight", label: "Rear ride height", placeholder: "e.g. 72 mm" },
+        { key: "frontBump", label: "Front bump (compression)", placeholder: "e.g. 6 clicks" },
+        { key: "frontRebound", label: "Front rebound", placeholder: "e.g. 8 clicks" },
+        { key: "rearBump", label: "Rear bump (compression)", placeholder: "e.g. 5 clicks" },
+        { key: "rearRebound", label: "Rear rebound", placeholder: "e.g. 7 clicks" },
       ],
     },
     {

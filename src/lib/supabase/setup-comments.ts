@@ -13,7 +13,11 @@ interface SetupCommentRow {
 /**
  * A setup's comment thread, oldest first (chronological, like a real
  * conversation) -- flat query + in-memory profile join, same reasoning as
- * getNotifications.
+ * getNotifications. Fetched newest-first with a cap (unlike every other
+ * list query in this data layer, this had no bound at all -- a heavily
+ * discussed setup would otherwise render every comment on every page view)
+ * and then reversed, so a capped thread still shows its most recent
+ * activity rather than silently truncating to the oldest 200 comments.
  */
 export async function getSetupComments(setupId: string): Promise<SetupComment[]> {
   const supabase = await createClient();
@@ -24,11 +28,12 @@ export async function getSetupComments(setupId: string): Promise<SetupComment[]>
       .from("setup_comments")
       .select("id, setup_id, user_id, body, created_at")
       .eq("setup_id", setupId)
-      .order("created_at", { ascending: true }),
+      .order("created_at", { ascending: false })
+      .limit(200),
   ]);
 
   const rows = unwrapList(result, "getSetupComments: failed to load comments");
-  const typedRows = rows as unknown as SetupCommentRow[];
+  const typedRows = (rows as unknown as SetupCommentRow[]).slice().reverse();
 
   const userIds = Array.from(new Set(typedRows.map((r) => r.user_id)));
   const { data: profiles } =

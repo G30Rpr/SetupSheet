@@ -69,7 +69,7 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
     }
     setShowPicker(true);
     if (candidates === null) {
-      getMyMatchingSetupsAction(request.game).then(setCandidates);
+      getMyMatchingSetupsAction(request.game, request.car, request.track).then(setCandidates);
     }
   }
 
@@ -141,7 +141,7 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
             <p className="text-xs text-muted-foreground">Loading your setups...</p>
           ) : candidates.length === 0 ? (
             <p className="text-xs text-muted-foreground">
-              You don&apos;t have a {request.game} setup yet —{" "}
+              You don&apos;t have a matching {request.car} @ {request.track} setup yet —{" "}
               <Link href="/upload" className="text-racing-coral hover:underline">
                 upload one
               </Link>
