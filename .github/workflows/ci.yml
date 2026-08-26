@@ -42,3 +42,29 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run build
       - run: npx playwright test
+
+  db-migrations:
+    # Applies every migration under supabase/migrations/ to a real Postgres
+    # instance and runs supabase/testing/*.test.sql against it -- the app's
+    # own lint/test/build/e2e jobs above never touch a real database (the
+    # placeholder Supabase URL is unreachable by design), so this is the
+    # only job that would catch a migration that fails to apply or a
+    # regression in the SQL functions/triggers those tests cover.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v6
+      - run: npm run test:db
+        env:
+          PGPASSWORD: postgres

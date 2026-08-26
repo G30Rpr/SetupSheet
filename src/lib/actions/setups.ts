@@ -7,7 +7,9 @@ import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import {
   ALLOWED_SETUP_FILE_EXTENSIONS,
+  ALLOWED_TELEMETRY_FILE_EXTENSIONS,
   MAX_SETUP_FILE_BYTES,
+  MAX_TELEMETRY_FILE_BYTES,
   SETUP_FILES_BUCKET,
 } from "@/lib/storage";
 import type { SetupValues } from "@/lib/types";
@@ -27,6 +29,9 @@ export interface CreateSetupInput {
   setupValues?: SetupValues | null;
   filePath?: string | null;
   fileName?: string | null;
+  videoUrl?: string | null;
+  telemetryFilePath?: string | null;
+  telemetryFileName?: string | null;
 }
 
 export interface UpdateSetupInput {
@@ -38,19 +43,12 @@ export interface UpdateSetupInput {
   description: string;
   tags: string[];
   rigProfile: string;
-  /**
-   * Undefined = leave setup_values as whatever's already stored (e.g. an
-   * ACC file re-upload's auto-parsed values from a previous edit, when this
-   * edit doesn't touch the file). Null = clear it. An object = replace it.
-   */
   setupValues?: SetupValues | null;
-  /**
-   * Undefined = leave the attached file as-is. A string = replace it with
-   * this newly-uploaded path. Null = remove the file entirely. Either of
-   * the latter two triggers cleanup of the previous Storage object.
-   */
   filePath?: string | null;
   fileName?: string | null;
+  videoUrl?: string | null;
+  telemetryFilePath?: string | null;
+  telemetryFileName?: string | null;
 }
 
 function sanitizeFileName(name: string) {
@@ -103,6 +101,52 @@ export async function uploadSetupFile(
   return { path, fileName: file.name, error: null };
 }
 
+/** Uploads a telemetry/data file (.ld, .ibt, .vbo, etc.) to Storage under user folder. */
+export async function uploadTelemetryFile(
+  formData: FormData
+): Promise<{ path: string | null; fileName: string | null; error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      path: null,
+      fileName: null,
+      error: "You need to be logged in with Discord to upload telemetry.",
+    };
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { path: null, fileName: null, error: "No telemetry file selected." };
+  }
+
+  if (file.size > MAX_TELEMETRY_FILE_BYTES) {
+    return { path: null, fileName: null, error: "Telemetry file is too large — max 10 MB." };
+  }
+
+  const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+  if (!ALLOWED_TELEMETRY_FILE_EXTENSIONS.includes(extension)) {
+    return {
+      path: null,
+      fileName: null,
+      error: `Unsupported telemetry format. Allowed: ${ALLOWED_TELEMETRY_FILE_EXTENSIONS.join(", ")}`,
+    };
+  }
+
+  const path = `${user.id}/telemetry-${randomUUID()}-${sanitizeFileName(file.name)}`;
+  const { error } = await supabase.storage.from(SETUP_FILES_BUCKET).upload(path, file);
+
+  if (error) {
+    logger.error("uploadTelemetryFile: upload failed", error);
+    return { path: null, fileName: null, error: error.message };
+  }
+
+  return { path, fileName: file.name, error: null };
+}
+
 /**
  * Inserts the setup row, then seeds the community rating with the
  * uploader's own pace/predictability pick — that's the same star-picker UX
@@ -144,6 +188,9 @@ export async function createSetup(
       setup_values: input.setupValues ?? null,
       file_path: input.filePath ?? null,
       file_name: input.fileName ?? null,
+      video_url: input.videoUrl ?? null,
+      telemetry_file_path: input.telemetryFilePath ?? null,
+      telemetry_file_name: input.telemetryFileName ?? null,
     })
     .select("id")
     .single();
@@ -216,6 +263,26 @@ export async function updateSetup(
 
     updates.file_path = input.filePath;
     updates.file_name = input.fileName ?? null;
+  }
+
+  if (input.videoUrl !== undefined) {
+    updates.video_url = input.videoUrl;
+  }
+
+  if (input.telemetryFilePath !== undefined) {
+    const { data: existing } = await supabase
+      .from("setups")
+      .select("telemetry_file_path")
+      .eq("id", setupId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (existing?.telemetry_file_path && existing.telemetry_file_path !== input.telemetryFilePath) {
+      await supabase.storage.from(SETUP_FILES_BUCKET).remove([existing.telemetry_file_path]);
+    }
+
+    updates.telemetry_file_path = input.telemetryFilePath;
+    updates.telemetry_file_name = input.telemetryFileName ?? null;
   }
 
   const { error } = await supabase

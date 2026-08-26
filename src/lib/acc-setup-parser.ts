@@ -8,7 +8,7 @@ import type { SetupValues } from "@/lib/types";
  * "bmw_m2_cs_racing") are simply left unmapped -- parsing still succeeds,
  * the Car field just isn't auto-filled for those.
  */
-const ACC_CAR_NAME_MAP: Record<string, string> = {
+export const ACC_CAR_NAME_MAP: Record<string, string> = {
   alpine_a110_gt4: "Alpine A110 GT4 2018",
   amr_v12_vantage_gt3: "Aston Martin V12 Vantage GT3 2013",
   amr_v8_vantage_gt3: "Aston Martin V8 Vantage GT3 2019",
