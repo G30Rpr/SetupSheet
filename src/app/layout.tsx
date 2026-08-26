@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 
@@ -12,18 +11,6 @@ import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { getNotifications, getUnreadNotificationCount } from "@/lib/supabase/notifications";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
-
-const inter = Inter({
-  variable: "--font-inter",
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
-});
 
 const title = `${SITE_NAME} — Free Community Sim Racing Setups`;
 const description =
@@ -89,7 +76,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className="h-full antialiased font-sans"
       suppressHydrationWarning
     >
       <head>

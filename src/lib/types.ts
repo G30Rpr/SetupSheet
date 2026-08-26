@@ -64,6 +64,14 @@ export interface Setup {
   fileName: string | null;
   /** Public download URL for the uploaded setup file, if any. */
   fileUrl: string | null;
+  /** Optional hotlap video link (YouTube / Twitch) proving lap time. */
+  videoUrl?: string | null;
+  /** Original filename of the attached telemetry file, if any. */
+  telemetryFileName?: string | null;
+  /** Public download URL for the attached telemetry file, if any. */
+  telemetryFileUrl?: string | null;
+  /** Derived: true if either video proof or telemetry proof is attached. */
+  isVerifiedLap?: boolean;
 }
 
 export interface SetupComment {
@@ -98,6 +106,8 @@ export interface SetupVersion {
   rigProfile: RigProfile;
   setupValues: SetupValues | null;
   fileName: string | null;
+  videoUrl?: string | null;
+  telemetryFileName?: string | null;
 }
 
 export interface SetupRequest {

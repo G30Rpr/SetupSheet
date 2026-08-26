@@ -20,6 +20,9 @@ interface SetupRow {
   setup_values: SetupValues | null;
   file_path: string | null;
   file_name: string | null;
+  video_url?: string | null;
+  telemetry_file_path?: string | null;
+  telemetry_file_name?: string | null;
   pace: number;
   predictability: number;
   rating_count: number;
@@ -29,7 +32,7 @@ interface SetupRow {
 }
 
 const SETUP_COLUMNS =
-  "id, user_id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, file_path, file_name, pace, predictability, rating_count, upvotes, downloads, created_at";
+  "id, user_id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, file_path, file_name, video_url, telemetry_file_path, telemetry_file_name, pace, predictability, rating_count, upvotes, downloads, created_at";
 
 /**
  * getSetups() feeds /setups' client-side fuzzy search and filtering, which
@@ -91,6 +94,11 @@ function mapRow(
   supabase: Awaited<ReturnType<typeof createClient>>
 ): Setup {
   const author = authors.get(row.user_id);
+  const telemetryUrl = row.telemetry_file_path
+    ? supabase.storage.from(SETUP_FILES_BUCKET).getPublicUrl(row.telemetry_file_path).data.publicUrl
+    : null;
+  const isVerified = Boolean(row.video_url || telemetryUrl);
+
   return {
     id: row.id,
     game: row.game as Game,
@@ -119,6 +127,10 @@ function mapRow(
     fileUrl: row.file_path
       ? supabase.storage.from(SETUP_FILES_BUCKET).getPublicUrl(row.file_path).data.publicUrl
       : null,
+    videoUrl: row.video_url,
+    telemetryFileName: row.telemetry_file_name,
+    telemetryFileUrl: telemetryUrl,
+    isVerifiedLap: isVerified,
   };
 }
 

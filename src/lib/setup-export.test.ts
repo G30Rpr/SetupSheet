@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSetupExportFilename, buildSetupExportText } from "@/lib/setup-export";
+import {
+  buildAccSetupJson,
+  buildSetupExportFilename,
+  buildSetupExportText,
+  buildSetupIni,
+  getAvailableExportFormats,
+} from "@/lib/setup-export";
 import { makeSetup } from "@/lib/test-helpers/make-setup";
 
 describe("buildSetupExportText", () => {
@@ -51,6 +57,62 @@ describe("buildSetupExportText", () => {
   });
 });
 
+describe("buildAccSetupJson", () => {
+  it("converts ACC setup values into valid JSON with basicSetup and advancedSetup", () => {
+    const setup = makeSetup({
+      game: "Assetto Corsa Competizione",
+      car: "Porsche 992 GT3 R 2023",
+      setupValues: {
+        frontLeftCamber: "-3.20°",
+        tractionControl: "4",
+        abs: "2",
+        fuel: "30 L",
+      },
+    });
+
+    const jsonStr = buildAccSetupJson(setup);
+    const parsed = JSON.parse(jsonStr);
+
+    expect(parsed.carName).toBe("porsche_992_gt3_r");
+    expect(parsed.basicSetup.alignment.staticCamber[0]).toBe(-3.2);
+    expect(parsed.basicSetup.electronics.tC1).toBe(4);
+    expect(parsed.basicSetup.electronics.abs).toBe(2);
+    expect(parsed.basicSetup.strategy.fuel).toBe(30);
+  });
+});
+
+describe("buildSetupIni", () => {
+  it("generates INI headers and sections", () => {
+    const setup = makeSetup({
+      game: "Assetto Corsa",
+      car: "Ferrari 488 GT3",
+      track: "Monza",
+      setupValues: {
+        frontCamber: "-3.0",
+      },
+    });
+
+    const iniText = buildSetupIni(setup);
+    expect(iniText).toContain("[HEADER]");
+    expect(iniText).toContain("CAR=Ferrari 488 GT3");
+    expect(iniText).toContain("TRACK=Monza");
+  });
+});
+
+describe("getAvailableExportFormats", () => {
+  it("returns ACC json option for ACC games", () => {
+    const accSetup = makeSetup({ game: "Assetto Corsa Competizione" });
+    const formats = getAvailableExportFormats(accSetup);
+    expect(formats.some((f) => f.id === "acc-json")).toBe(true);
+  });
+
+  it("returns INI option for Assetto Corsa", () => {
+    const acSetup = makeSetup({ game: "Assetto Corsa" });
+    const formats = getAvailableExportFormats(acSetup);
+    expect(formats.some((f) => f.id === "ini")).toBe(true);
+  });
+});
+
 describe("buildSetupExportFilename", () => {
   it("sanitizes disallowed characters to underscores and collapses runs", () => {
     const filename = buildSetupExportFilename(
@@ -59,8 +121,8 @@ describe("buildSetupExportFilename", () => {
     expect(filename).toBe("BMW_M4_GT3_2021_-Spa-Francorchamps-setup.txt");
   });
 
-  it("always ends in .txt", () => {
-    const filename = buildSetupExportFilename(makeSetup());
-    expect(filename.endsWith(".txt")).toBe(true);
+  it("custom extension parameter is applied", () => {
+    const filename = buildSetupExportFilename(makeSetup(), ".json");
+    expect(filename.endsWith(".json")).toBe(true);
   });
 });

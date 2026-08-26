@@ -33,7 +33,7 @@ import {
 import { SetupValuesFields, type SetupValues } from "@/components/setup-values-fields";
 import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
-import { createSetup, updateSetup, uploadSetupFile } from "@/lib/actions/setups";
+import { createSetup, updateSetup, uploadSetupFile, uploadTelemetryFile } from "@/lib/actions/setups";
 import { parseAccSetupFile } from "@/lib/acc-setup-parser";
 import { resolveEffectiveSetupValues } from "@/lib/resolve-effective-setup-values";
 import { isKnownOption, type SelectOptionGroup } from "@/lib/select-options";
@@ -96,6 +96,9 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   const [lapTime, setLapTime] = useState(existingSetup?.lapTime ?? "");
   const [rig, setRig] = useState(existingSetup?.rigProfile ?? "");
   const [description, setDescription] = useState(existingSetup?.description ?? "");
+  const [videoUrl, setVideoUrl] = useState(existingSetup?.videoUrl ?? "");
+  const [telemetryFile, setTelemetryFile] = useState<File | null>(null);
+  const [keepExistingTelemetry, setKeepExistingTelemetry] = useState(Boolean(existingSetup?.telemetryFileName));
   const [pace, setPace] = useState(3);
   const [predictability, setPredictability] = useState(3);
   const [error, setError] = useState<string | null>(null);
@@ -281,6 +284,28 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     return { filePath: null, fileName: null };
   }
 
+  async function resolveTelemetryFields(): Promise<{
+    telemetryFilePath?: string | null;
+    telemetryFileName?: string | null;
+    error?: string;
+  }> {
+    if (telemetryFile) {
+      const fileFormData = new FormData();
+      fileFormData.append("file", telemetryFile);
+      const result = await uploadTelemetryFile(fileFormData);
+      if (result.error || !result.path) {
+        return { error: result.error ?? "Failed to upload telemetry file." };
+      }
+      return { telemetryFilePath: result.path, telemetryFileName: result.fileName };
+    }
+
+    if (isEditing && keepExistingTelemetry) {
+      return {};
+    }
+
+    return { telemetryFilePath: null, telemetryFileName: null };
+  }
+
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -299,10 +324,20 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     });
 
     startTransition(async () => {
-      const fileFields = await resolveFileFields();
+      const [fileFields, telemetryFields] = await Promise.all([
+        resolveFileFields(),
+        resolveTelemetryFields(),
+      ]);
+
       if (fileFields.error) {
         setError(fileFields.error);
         toast.error(fileFields.error);
+        return;
+      }
+
+      if (telemetryFields.error) {
+        setError(telemetryFields.error);
+        toast.error(telemetryFields.error);
         return;
       }
 
@@ -319,6 +354,9 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           setupValues: effectiveSetupValues,
           filePath: fileFields.filePath,
           fileName: fileFields.fileName,
+          videoUrl: videoUrl.trim() || null,
+          telemetryFilePath: telemetryFields.telemetryFilePath,
+          telemetryFileName: telemetryFields.telemetryFileName,
         });
 
         if (result.error) {
@@ -345,6 +383,9 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
         setupValues: effectiveSetupValues,
         filePath: fileFields.filePath,
         fileName: fileFields.fileName,
+        videoUrl: videoUrl.trim() || null,
+        telemetryFilePath: telemetryFields.telemetryFilePath,
+        telemetryFileName: telemetryFields.telemetryFileName,
       });
 
       if (result.error) {
@@ -599,6 +640,54 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </section>
+
+          {/* Lap Proof & Telemetry (Optional) */}
+          <section className="flex flex-col gap-4 rounded-xl border border-border/80 bg-secondary/20 p-4">
+            <div className="flex flex-col gap-1">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <CheckCircle2 className="size-4 text-racing-green" />
+                Verified Lap Proof &amp; Telemetry (Optional)
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Attaching a video link or telemetry file awards a &ldquo;Verified Lap&rdquo; badge to your setup card.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="videoUrl">Hotlap Video URL (YouTube / Twitch)</Label>
+              <Input
+                id="videoUrl"
+                name="videoUrl"
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>Telemetry / Data Logging File</Label>
+              {isEditing && keepExistingTelemetry && existingSetup?.telemetryFileName ? (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/40 px-3 py-2 text-sm">
+                  <span className="truncate text-xs font-medium text-racing-cyan">
+                    Telemetry attached: {existingSetup.telemetryFileName}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setKeepExistingTelemetry(false)}
+                    className="shrink-0 rounded-full p-1 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
+                    aria-label="Remove telemetry file"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              ) : (
+                <FileDropzone file={telemetryFile} onFileChange={setTelemetryFile} />
+              )}
+              <p className="text-xs text-muted-foreground">
+                Supports MoTeC (.ld, .ldx), iRacing (.ibt), VBOX (.vbo), CSV, or ZIP up to 10 MB.
+              </p>
             </div>
           </section>
 

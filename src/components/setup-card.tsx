@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  Activity,
   BadgeCheck,
   Bookmark,
   BookOpen,
   Calendar,
   ChevronDown,
   Clipboard,
+  ExternalLink,
   FileDown,
   Gamepad2,
   Gauge,
@@ -23,6 +25,7 @@ import {
   Timer,
   Trash2,
   TrendingUp,
+  Video,
 } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
@@ -41,7 +44,11 @@ import {
   toggleUpvote,
 } from "@/lib/actions/setups";
 import { toggleFavorite } from "@/lib/actions/setup-favorites";
-import { buildSetupExportFilename, buildSetupExportText } from "@/lib/setup-export";
+import {
+  buildSetupExportFilename,
+  buildSetupExportText,
+  getAvailableExportFormats,
+} from "@/lib/setup-export";
 import { SITE_URL } from "@/lib/site";
 import { useUndoableDelete } from "@/lib/use-undoable-delete";
 import { cn, getInitials } from "@/lib/utils";
@@ -60,6 +67,32 @@ function formatDate(dateStr: string) {
     month: "short",
     day: "numeric",
   });
+}
+
+function parseVideoEmbed(urlStr?: string | null) {
+  if (!urlStr) return null;
+  try {
+    const url = new URL(urlStr.startsWith("http") ? urlStr : `https://${urlStr}`);
+    if (url.hostname.includes("youtube.com") || url.hostname.includes("youtu.be")) {
+      let id = "";
+      if (url.hostname.includes("youtu.be")) {
+        id = url.pathname.slice(1);
+      } else if (url.pathname.includes("/embed/")) {
+        id = url.pathname.split("/embed/")[1];
+      } else if (url.pathname.includes("/shorts/")) {
+        id = url.pathname.split("/shorts/")[1];
+      } else {
+        id = url.searchParams.get("v") ?? "";
+      }
+      id = id.split("&")[0].split("?")[0];
+      if (id) {
+        return { type: "youtube", src: `https://www.youtube-nocookie.com/embed/${id}` };
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 const conditionVariant = {
@@ -84,6 +117,7 @@ export function SetupCard({
 }) {
   const router = useRouter();
   const [showValues, setShowValues] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
   const [showRateWidget, setShowRateWidget] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -258,6 +292,12 @@ export function SetupCard({
             {setup.game}
           </div>
           <div className="flex items-center gap-2">
+            {setup.isVerifiedLap && (
+              <Badge variant="green" className="gap-1 font-semibold">
+                <BadgeCheck className="size-3.5 text-racing-green" />
+                Verified Lap
+              </Badge>
+            )}
             {onToggleCompare && (
               <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Checkbox
@@ -354,6 +394,70 @@ export function SetupCard({
           ))}
         </div>
 
+        {/* Hotlap Video Proof */}
+        {setup.videoUrl && (
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowVideo((s) => !s)}
+              className="flex w-full items-center justify-between rounded-md border border-racing-green/30 bg-racing-green/10 px-3 py-2 text-xs font-medium text-racing-green transition-colors hover:bg-racing-green/15"
+            >
+              <span className="flex items-center gap-1.5">
+                <Video className="size-3.5" />
+                Watch Hotlap Proof Video
+              </span>
+              <ChevronDown
+                className={cn("size-3.5 transition-transform", showVideo && "rotate-180")}
+              />
+            </button>
+
+            {showVideo && (
+              <div className="mt-2.5 overflow-hidden rounded-lg border border-border bg-black/40 p-1">
+                {parseVideoEmbed(setup.videoUrl)?.src ? (
+                  <div className="relative aspect-video w-full overflow-hidden rounded-md">
+                    <iframe
+                      src={parseVideoEmbed(setup.videoUrl)?.src ?? ""}
+                      title={`Hotlap proof for ${setup.car} @ ${setup.track}`}
+                      className="absolute inset-0 size-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-3 text-xs">
+                    <span className="text-muted-foreground truncate">{setup.videoUrl}</span>
+                    <a
+                      href={setup.videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-medium text-racing-coral hover:underline shrink-0"
+                    >
+                      Open Video <ExternalLink className="size-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Telemetry File Attachment */}
+        {setup.telemetryFileUrl && (
+          <div className="flex items-center justify-between rounded-md border border-racing-cyan/30 bg-racing-cyan/10 px-3 py-2 text-xs text-racing-cyan">
+            <span className="flex items-center gap-1.5 min-w-0 font-medium">
+              <Activity className="size-3.5 shrink-0" />
+              <span className="truncate">Telemetry: {setup.telemetryFileName ?? "telemetry.ld"}</span>
+            </span>
+            <a
+              href={setup.telemetryFileUrl}
+              download={setup.telemetryFileName ?? "telemetry-data"}
+              className="inline-flex shrink-0 items-center gap-1 font-semibold hover:underline"
+            >
+              Download Telemetry <FileDown className="size-3" />
+            </a>
+          </div>
+        )}
+
         {/* Setup values (expandable) */}
         {v && (
           <div>
@@ -369,6 +473,33 @@ export function SetupCard({
             </button>
 
             {showValues && <SetupCardValues setup={setup} />}
+          </div>
+        )}
+
+        {/* Export formats for setups with values */}
+        {setup.setupValues && Object.keys(setup.setupValues).length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
+              Export format:
+            </span>
+            {getAvailableExportFormats(setup).map((fmt) => (
+              <button
+                key={fmt.id}
+                type="button"
+                onClick={() => {
+                  const content = fmt.generate(setup);
+                  triggerBlobDownload(
+                    new Blob([content], { type: fmt.mime }),
+                    buildSetupExportFilename(setup, fmt.ext)
+                  );
+                  toast.success(`Exported as ${fmt.ext}`);
+                }}
+                className="inline-flex items-center gap-1 rounded-md border border-border/80 bg-secondary/50 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-racing-coral/40 hover:text-foreground"
+              >
+                <FileDown className="size-3 text-racing-coral" />
+                {fmt.label}
+              </button>
+            ))}
           </div>
         )}
 
