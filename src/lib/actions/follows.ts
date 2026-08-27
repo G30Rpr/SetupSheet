@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getActionError } from "@/lib/actions/action-errors";
 import { logger } from "@/lib/logger";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -36,7 +37,7 @@ export async function toggleFollow(
 
   if (error) {
     logger.error("toggleFollow: mutation failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't update your follow status.") };
   }
 
   revalidatePath(`/profile/${targetUserId}`);

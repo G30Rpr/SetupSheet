@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { GitCompare, Search, SearchX, SlidersHorizontal, Upload, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SetupCard } from "@/components/setup-card";
+import { loadMoreSetups } from "@/lib/actions/setup-browse";
 import { conditions, games, getCarsForGame, getTracksForGame, rigProfiles } from "@/lib/data";
 import { ALL, filterAndSortSetups, getSearchSuggestions, type SortOption } from "@/lib/filter-setups";
 import { isTypingTarget } from "@/lib/is-typing-target";
 import { SETUP_CARD_PAGE_SIZE } from "@/lib/ui-constants";
+import type { SetupCursor } from "@/lib/supabase/setups";
 import { cn } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
@@ -42,8 +44,26 @@ const SORT_VALUES = sortOptions.map((option) => option.value);
 // useful.
 const LAST_FILTERS_KEY = "setupsheet:last-filters";
 
-export function SetupsBrowser({ setups }: { setups: Setup[] }) {
+export function SetupsBrowser({
+  setups,
+  totalCount,
+}: {
+  setups: Setup[];
+  totalCount: number;
+}) {
   const searchParams = useSearchParams();
+  const [additionalSetups, setAdditionalSetups] = useState<Setup[]>([]);
+  const [remoteCursor, setRemoteCursor] = useState<SetupCursor | null>(() => {
+    const lastSetup = setups.at(-1);
+    return lastSetup ? { createdAt: lastSetup.uploadedAt, id: lastSetup.id } : null;
+  });
+  const [remoteError, setRemoteError] = useState<string | null>(null);
+  const [isLoadingOlder, startLoadingOlder] = useTransition();
+  const loadedSetups = useMemo(
+    () => [...setups, ...additionalSetups],
+    [setups, additionalSetups]
+  );
+  const hasMoreRemote = Boolean(remoteCursor && loadedSetups.length < totalCount);
 
   const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
   const [game, setGame] = useState<string>(() => searchParams.get("game") ?? ALL);
@@ -168,21 +188,24 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
   }, []);
 
   const carOptions = useMemo(
-    () => getCarsForGame(setups, game === ALL ? undefined : game),
-    [setups, game]
+    () => getCarsForGame(loadedSetups, game === ALL ? undefined : game),
+    [loadedSetups, game]
   );
   const trackOptions = useMemo(
-    () => getTracksForGame(setups, game === ALL ? undefined : game),
-    [setups, game]
+    () => getTracksForGame(loadedSetups, game === ALL ? undefined : game),
+    [loadedSetups, game]
   );
 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
-  const suggestions = useMemo(() => getSearchSuggestions(setups, search), [setups, search]);
+  const suggestions = useMemo(
+    () => getSearchSuggestions(loadedSetups, search),
+    [loadedSetups, search]
+  );
 
   const filtered = useMemo(
-    () => filterAndSortSetups(setups, { search, game, car, track, condition, rig }, sort),
-    [setups, search, game, car, track, condition, rig, sort]
+    () => filterAndSortSetups(loadedSetups, { search, game, car, track, condition, rig }, sort),
+    [loadedSetups, search, game, car, track, condition, rig, sort]
   );
 
   const visibleSetups = filtered.slice(0, page * SETUP_CARD_PAGE_SIZE);
@@ -204,6 +227,39 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
     setGame(value);
     setCar(ALL);
     setTrack(ALL);
+  }
+
+  function handleLoadOlder() {
+    if (!remoteCursor || isLoadingOlder) return;
+    const cursor = remoteCursor;
+    setRemoteError(null);
+
+    startLoadingOlder(async () => {
+      try {
+        const result = await loadMoreSetups(cursor);
+        if (result.error) {
+          setRemoteError(result.error);
+          return;
+        }
+
+        setAdditionalSetups((previous) => {
+          const knownIds = new Set([...setups, ...previous].map((setup) => setup.id));
+          return [
+            ...previous,
+            ...result.setups.filter((setup) => !knownIds.has(setup.id)),
+          ];
+        });
+        const nextCursor = result.nextCursor;
+        setRemoteCursor(
+          nextCursor &&
+            (nextCursor.id !== cursor.id || nextCursor.createdAt !== cursor.createdAt)
+            ? nextCursor
+            : null
+        );
+      } catch {
+        setRemoteError("Couldn't load older setups right now.");
+      }
+    });
   }
 
   return (
@@ -425,7 +481,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
             </div>
           )}
         </>
-      ) : setups.length === 0 ? (
+      ) : loadedSetups.length === 0 ? (
         <EmptyState
           icon={Upload}
           title="No setups yet"
@@ -447,6 +503,19 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
             </Button>
           }
         />
+      )}
+
+      {hasMoreRemote && (
+        <div className="flex flex-col items-center gap-2">
+          <Button variant="outline" onClick={handleLoadOlder} disabled={isLoadingOlder}>
+            {isLoadingOlder ? "Loading older setups..." : "Load older setups"}
+          </Button>
+          {remoteError && (
+            <p role="alert" className="text-sm text-racing-red">
+              {remoteError}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

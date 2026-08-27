@@ -35,13 +35,17 @@ export default async function SetupsPage() {
         </p>
         {isCapped && (
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Showing the {SETUPS_BROWSE_LIMIT} most recent setups — search and
-            filters only cover these for now, not the full {totalCount}.
+            Showing the {SETUPS_BROWSE_LIMIT} most recent setups first. Use
+            “Load older setups” below to expand search and filters to all {totalCount}.
           </p>
         )}
       </div>
 
-      <SetupsBrowser setups={setups} />
+      <SetupsBrowser
+        key={setups[0]?.id ?? "no-setups"}
+        setups={setups}
+        totalCount={totalCount}
+      />
     </div>
   );
 }

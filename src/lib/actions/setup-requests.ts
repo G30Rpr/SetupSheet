@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getActionError } from "@/lib/actions/action-errors";
 import { MAX_CAR_LENGTH, MAX_DESCRIPTION_LENGTH, MAX_TRACK_LENGTH, games } from "@/lib/data";
 import { logger } from "@/lib/logger";
 import { getCurrentUser } from "@/lib/supabase/auth";
@@ -76,7 +77,7 @@ export async function createSetupRequest(
 
   if (error) {
     logger.error("createSetupRequest: insert failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't post the request right now.") };
   }
 
   revalidatePath("/requests");
@@ -106,7 +107,7 @@ export async function deleteSetupRequest(requestId: string): Promise<{ error: st
 
   if (error) {
     logger.error("deleteSetupRequest: delete failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't cancel the request right now.") };
   }
   if (!deleted) {
     return { error: "Request not found or already fulfilled." };
@@ -184,7 +185,14 @@ export async function fulfillSetupRequest(
 
   if (error) {
     logger.error("fulfillSetupRequest: rpc failed", error);
-    return { error: error.message };
+    return {
+      error: getActionError(error, "Couldn't fulfill the request right now.", [
+        "Request not found",
+        "This request has already been fulfilled",
+        "You can only fulfill a request with a setup you own",
+        "That setup does not match the request's game, car, and track",
+      ]),
+    };
   }
 
   revalidatePath("/requests");

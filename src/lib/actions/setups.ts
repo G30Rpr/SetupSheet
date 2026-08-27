@@ -3,9 +3,11 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
+import { getActionError } from "@/lib/actions/action-errors";
 import { logger } from "@/lib/logger";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
+import type { TablesUpdate } from "@/lib/supabase/database.types";
 import {
   ALLOWED_SETUP_FILE_EXTENSIONS,
   ALLOWED_TELEMETRY_FILE_EXTENSIONS,
@@ -133,7 +135,7 @@ export async function uploadSetupFile(
 
   if (error) {
     logger.error("uploadSetupFile: upload failed", error);
-    return { path: null, fileName: null, error: error.message };
+    return { path: null, fileName: null, error: "Setup file upload failed. Please try again." };
   }
 
   return { path, fileName: safeFileName, error: null };
@@ -178,20 +180,17 @@ export async function uploadTelemetryFile(
 
   if (error) {
     logger.error("uploadTelemetryFile: upload failed", error);
-    return { path: null, fileName: null, error: error.message };
+    return { path: null, fileName: null, error: "Telemetry file upload failed. Please try again." };
   }
 
   return { path, fileName: safeFileName, error: null };
 }
 
 /**
- * Inserts the setup row, then seeds the community rating with the
- * uploader's own pace/predictability pick — that's the same star-picker UX
- * as before, it just now becomes the first row in setup_ratings (and
- * therefore the starting average) rather than a fixed value nobody else
- * can ever change. If the rating insert fails after the setup succeeds,
- * the setup still exists with pace/predictability at their 0 default;
- * the uploader (or anyone) can rate it from the browse page afterward.
+ * Inserts the setup row and seeds the uploader's rating through one database
+ * function. The RPC is an invoker function: auth.uid(), RLS, and the schema
+ * constraints still authorize/validate the caller, while PostgreSQL makes
+ * the setup and rating all-or-nothing.
  */
 export async function createSetup(
   input: CreateSetupInput
@@ -233,44 +232,28 @@ export async function createSetup(
     return { error: "Pace and Predictability must be whole numbers from 1 to 5." };
   }
 
-  const normalizedSetupValues = normalizeSetupValues(input.setupValues);
-  const normalizedVideoUrl = normalizeVideoUrl(input.videoUrl);
-  const { data: setup, error } = await supabase
-    .from("setups")
-    .insert({
-      user_id: user.id,
-      game: input.game,
-      car: input.car.trim(),
-      track: input.track.trim(),
-      condition: input.condition,
-      lap_time: (typeof input.lapTime === "string" ? input.lapTime.trim() : "") || null,
-      description: input.description,
-      tags: input.tags,
-      rig_profile: input.rigProfile,
-      setup_values: normalizedSetupValues,
-      file_path: input.filePath ?? null,
-      file_name: input.fileName ?? null,
-      video_url: normalizedVideoUrl,
-      telemetry_file_path: input.telemetryFilePath ?? null,
-      telemetry_file_name: input.telemetryFileName ?? null,
-    })
-    .select("id")
-    .single();
-
-  if (error || !setup) {
-    logger.error("createSetup: insert failed", error);
-    return { error: error?.message ?? "Failed to create setup." };
-  }
-
-  const { error: ratingError } = await supabase.from("setup_ratings").insert({
-    user_id: user.id,
-    setup_id: setup.id,
-    pace: input.pace,
-    predictability: input.predictability,
+  const { data: setupId, error } = await supabase.rpc("create_setup_with_rating", {
+    p_game: input.game,
+    p_car: input.car.trim(),
+    p_track: input.track.trim(),
+    p_condition: input.condition,
+    p_lap_time: (typeof input.lapTime === "string" ? input.lapTime.trim() : "") || null,
+    p_description: input.description,
+    p_tags: input.tags,
+    p_rig_profile: input.rigProfile,
+    p_setup_values: normalizeSetupValues(input.setupValues),
+    p_file_path: input.filePath ?? null,
+    p_file_name: input.fileName ?? null,
+    p_video_url: normalizeVideoUrl(input.videoUrl),
+    p_telemetry_file_path: input.telemetryFilePath ?? null,
+    p_telemetry_file_name: input.telemetryFileName ?? null,
+    p_pace: input.pace,
+    p_predictability: input.predictability,
   });
 
-  if (ratingError) {
-    logger.error("createSetup: initial rating insert failed", ratingError);
+  if (error || !setupId) {
+    logger.error("createSetup: atomic insert failed", error);
+    return { error: getActionError(error, "Couldn't publish the setup right now.") };
   }
 
   revalidatePath("/setups");
@@ -338,7 +321,7 @@ export async function updateSetup(
     return { error: "Setup not found or you don't own it." };
   }
 
-  const updates: Record<string, unknown> = {
+  const updates: TablesUpdate<"setups"> = {
     game: input.game,
     car: input.car.trim(),
     track: input.track.trim(),
@@ -377,7 +360,7 @@ export async function updateSetup(
 
   if (error) {
     logger.error("updateSetup: update failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't update the setup right now.") };
   }
   if (!updated) {
     return { error: "Setup no longer exists or you don't own it." };
@@ -455,7 +438,7 @@ export async function deleteSetup(setupId: string): Promise<{ error: string | nu
 
   if (error) {
     logger.error("deleteSetup: delete failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't delete the setup right now.") };
   }
   if (!deleted) {
     return { error: "Setup no longer exists or you don't own it." };
@@ -502,7 +485,7 @@ export async function toggleUpvote(
 
   if (error) {
     logger.error("toggleUpvote: mutation failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't update the upvote right now.") };
   }
 
   revalidatePath("/setups");
@@ -539,7 +522,7 @@ export async function rateSetup(
 
   if (error) {
     logger.error("rateSetup: upsert failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't save your rating right now.") };
   }
 
   revalidatePath("/setups");
@@ -606,7 +589,7 @@ export async function recordSetupExport(setupId: string): Promise<{ error: strin
 
   if (error) {
     logger.error("recordSetupExport: increment_downloads failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't record the download right now.") };
   }
 
   // Download/export counts are updated optimistically in the card; avoid

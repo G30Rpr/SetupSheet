@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { logger } from "@/lib/logger";
 import { fetchWithTimeout } from "@/lib/supabase/fetch";
+import type { Database } from "@/lib/supabase/database.types";
 
 /**
  * Refreshes the Supabase auth session on every request and keeps the
@@ -12,7 +13,7 @@ import { fetchWithTimeout } from "@/lib/supabase/fetch";
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dummy.supabase.co",
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy-key",
     {

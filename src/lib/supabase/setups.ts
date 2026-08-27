@@ -11,63 +11,19 @@ import {
 import { normalizeSetupValues } from "@/lib/setup-values";
 import { normalizeHttpsUrl } from "@/lib/safe-url";
 import { getCurrentUser } from "@/lib/supabase/auth";
+import type { Tables } from "@/lib/supabase/database.types";
 import { sanitizeDisplayName } from "@/lib/user-display";
 import { normalizeVideoUrl } from "@/lib/video-url";
-import type { Condition, Game, RigProfile, Setup, SetupTag, SetupValues } from "@/lib/types";
+import type { Condition, Game, RigProfile, Setup, SetupTag } from "@/lib/types";
 
-interface SetupRow {
-  id: string;
-  user_id: string;
-  game: string;
-  car: string;
-  track: string;
-  condition: string;
-  lap_time: string | null;
-  description: string;
-  tags: string[];
-  rig_profile: string;
-  setup_values: SetupValues | null;
-  file_path: string | null;
-  file_name: string | null;
-  video_url: string | null;
-  telemetry_file_path: string | null;
-  telemetry_file_name: string | null;
-  pace: number;
-  predictability: number;
-  rating_count: number;
-  upvotes: number;
-  downloads: number;
-  created_at: string;
-}
+type SetupRow = Tables<"setups">;
 
 // Keep the public projection explicit. Using `*` would silently expose a
 // future private/admin column on every public setup response. Deploy the SQL
 // migrations before the app when adding a new public field, then add it here
 // and to SetupRow/mapRow in the same change.
-const SETUP_COLUMNS = [
-  "id",
-  "user_id",
-  "game",
-  "car",
-  "track",
-  "condition",
-  "lap_time",
-  "description",
-  "tags",
-  "rig_profile",
-  "setup_values",
-  "file_path",
-  "file_name",
-  "video_url",
-  "telemetry_file_path",
-  "telemetry_file_name",
-  "pace",
-  "predictability",
-  "rating_count",
-  "upvotes",
-  "downloads",
-  "created_at",
-].join(", ");
+const SETUP_COLUMNS =
+  "id, user_id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, file_path, file_name, video_url, telemetry_file_path, telemetry_file_name, pace, predictability, rating_count, upvotes, downloads, created_at";
 
 /**
  * getSetups() feeds /setups' client-side fuzzy search and filtering, which
@@ -78,6 +34,10 @@ const SETUP_COLUMNS = [
  * larger than any realistic filtered/browsed result set today.
  */
 export const SETUPS_BROWSE_LIMIT = 500;
+export interface SetupCursor {
+  createdAt: string;
+  id: string;
+}
 /** Prevent a single profile page from turning into an unbounded public query. */
 export const PROFILE_SETUPS_LIMIT = 500;
 
@@ -211,9 +171,9 @@ async function getAuthors(
 /** Hydrates a flat setup query with the viewer state and author metadata shared by every setup reader. */
 async function hydrateSetupRows(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  rows: unknown[]
+  rows: SetupRow[]
 ): Promise<Setup[]> {
-  const typedRows = rows as SetupRow[];
+  const typedRows = rows;
   if (typedRows.length === 0) return [];
 
   const [viewer, authors] = await Promise.all([
@@ -250,10 +210,46 @@ export async function getSetups(): Promise<Setup[]> {
     .from("setups")
     .select(SETUP_COLUMNS)
     .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(SETUPS_BROWSE_LIMIT);
 
   const rows = unwrapList(result, "getSetups: failed to load setups");
   return hydrateSetupRows(supabase, rows);
+}
+
+/**
+ * Keyset page for browse expansion. The `(created_at, id)` cursor makes
+ * ordering deterministic even when multiple uploads share a timestamp.
+ */
+export async function getSetupsAfter(
+  cursor: SetupCursor
+): Promise<{ setups: Setup[]; nextCursor: SetupCursor | null; error: string | null }> {
+  const supabase = await createClient();
+  const result = await supabase
+    .from("setups")
+    .select(SETUP_COLUMNS)
+    .or(
+      `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`
+    )
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(SETUPS_BROWSE_LIMIT);
+
+  const rows = unwrapList(result, "getSetupsAfter: failed to load older setups");
+  if (result.error) {
+    return { setups: [], nextCursor: null, error: "Couldn't load older setups right now." };
+  }
+
+  const setups = await hydrateSetupRows(supabase, rows);
+  const lastRow = rows.at(-1);
+  return {
+    setups,
+    nextCursor:
+      rows.length === SETUPS_BROWSE_LIMIT && lastRow
+        ? { createdAt: lastRow.created_at, id: lastRow.id }
+        : null,
+    error: null,
+  };
 }
 
 /**
@@ -307,7 +303,7 @@ const getSitemapRows = cache(async (): Promise<SitemapRow[]> => {
     .order("created_at", { ascending: false })
     .limit(5000);
 
-  return unwrapList(result, "getSitemapRows: failed to load setups") as SitemapRow[];
+  return unwrapList(result, "getSitemapRows: failed to load setups");
 });
 
 export async function getSetupSitemapEntries(): Promise<{ id: string; updatedAt: string }[]> {

@@ -67,8 +67,9 @@ src/
     ui-constants.ts       Shared setup-card pagination constants
     supabase/
       client.ts           Browser Supabase client (Client Components)
-      server.ts            Server Supabase client, memoized per-request via React's cache()
-      proxy.ts               Session-refresh helper used by src/proxy.ts
+      server.ts             Server Supabase client, memoized per-request via React's cache()
+      database.types.ts     Schema types used by all Supabase clients/queries
+      proxy.ts              Session-refresh helper used by src/proxy.ts
       setups.ts             getSetups(), getFeaturedSetups(), getSetupCount(), row mapping
       leaderboard.ts          getLeaderboard() — reads the public.leaderboard view
       follows.ts               isFollowing()
@@ -77,6 +78,8 @@ src/
       setups.ts             Server actions: createSetup, updateSetup, toggleUpvote, rateSetup,
                             uploadSetupFile, downloadSetup -- validates game/condition/rig/tags
                             against lib/data.ts before touching the database
+      setup-browse.ts       Keyset pagination action for loading older setups
+      action-errors.ts      Stable user-facing error mapping for backend failures
       follows.ts              toggleFollow
       notifications.ts         markNotificationRead, markAllNotificationsRead,
                               clearReadNotifications
@@ -109,6 +112,7 @@ supabase/
     0017_video_url_and_telemetry.sql                lap-proof links + telemetry attachments
     0018_data_validation_hardening.sql              direct-API data and attachment constraints
     0019_storage_extension_hardening.sql            Storage extension allow-list policies
+    0020_create_setup_with_rating.sql               atomic setup + initial rating transaction
   seed.sql                          sample setups across all 8 supported games
 ```
 
@@ -239,7 +243,8 @@ script, so it's safe to run against a Postgres instance you use for other
 things) and runs the regression checks under `supabase/testing/*.test.sql`
 — currently covering `fulfill_setup_request()`'s game/car/track matching,
 its race-condition fix, the request-reopen trigger, comment length, and
-0018's direct-API data constraints. Needs a reachable Postgres
+0018's direct-API data constraints, and 0020's atomic setup creation.
+Needs a reachable Postgres
 (`PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD` env vars, defaulting to
 `localhost:5432` as `postgres`) — CI runs this same script against a
 `postgres:16` service container on every push.
@@ -313,19 +318,20 @@ the schema changes — only `src/lib/setup-schemas.ts` and the seed data.
 
 ### 4. How the app talks to it
 
-- `src/lib/supabase/setups.ts` — `getSetups()` fetches all setups plus the
-  current viewer's upvote state in one server-side call, mapping DB rows to
-  the `Setup` type the UI already expects. If Supabase is unreachable or the
-  query errors, it logs and returns `[]` instead of throwing, so a backend
-  hiccup degrades to an empty browse page rather than a 500 — verified by
-  running with the Supabase host deliberately unreachable.
+- `src/lib/supabase/setups.ts` — `getSetups()` fetches the newest bounded page
+  plus the current viewer's upvote state in one server-side call, mapping DB
+  rows to the `Setup` type the UI already expects. `getSetupsAfter()` provides
+  the next keyset page for browse expansion. If Supabase is unreachable or a
+  query errors, it logs and returns an empty result instead of throwing, so a
+  backend hiccup degrades to an empty browse page rather than a 500.
 - `src/lib/actions/setups.ts` — `createSetup`, `updateSetup`, `deleteSetup`,
   `toggleUpvote`, `rateSetup`, `uploadSetupFile`, and `downloadSetup` are all
   Server Actions; each checks for a logged-in user before touching the
   database (defense in depth on top of RLS), and `createSetup`/`updateSetup`
   additionally validate `game`/`condition`/`rigProfile`/`tags` against the
   arrays in `lib/data.ts` before the query runs, so a bad value gets a clean
-  error message instead of a raw Postgres constraint violation.
+  error message instead of a raw Postgres constraint violation. Creation and
+  the initial rating are committed atomically through migration `0020`.
 - `SetupCard`'s upvote pill is a real toggle button: optimistic update on
   click, reverted if the server action errors. Clicking it while logged out
   triggers Discord login instead of failing silently. Its download button

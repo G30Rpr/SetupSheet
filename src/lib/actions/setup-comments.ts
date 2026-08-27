@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getActionError } from "@/lib/actions/action-errors";
 import { MAX_COMMENT_LENGTH } from "@/lib/data";
 import { logger } from "@/lib/logger";
 import { getCurrentUser } from "@/lib/supabase/auth";
@@ -47,7 +48,7 @@ export async function createComment(
 
   if (error) {
     logger.error("createComment: insert failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't post the comment right now.") };
   }
 
   revalidatePath(`/setups/${setupId}`);
@@ -76,7 +77,7 @@ export async function deleteComment(
 
   if (error) {
     logger.error("deleteComment: delete failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't delete the comment right now.") };
   }
 
   revalidatePath(`/setups/${setupId}`);

@@ -1,45 +1,17 @@
 import { unwrapList } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
+import type { Tables } from "@/lib/supabase/database.types";
 import { normalizeSetupValues } from "@/lib/setup-values";
 import { sanitizeStoredFileName } from "@/lib/storage";
 import { normalizeVideoUrl } from "@/lib/video-url";
-import type { Condition, Game, RigProfile, SetupTag, SetupValues, SetupVersion } from "@/lib/types";
+import type { Condition, Game, RigProfile, SetupTag, SetupVersion } from "@/lib/types";
 
-interface SetupVersionRow {
-  id: string;
-  game: string;
-  car: string;
-  track: string;
-  condition: string;
-  lap_time: string | null;
-  description: string;
-  tags: string[];
-  rig_profile: string;
-  setup_values: SetupValues | null;
-  file_name: string | null;
-  video_url: string | null;
-  telemetry_file_name: string | null;
-  created_at: string;
-}
+type SetupVersionRow = Tables<"setup_versions">;
 
 // Keep the history projection explicit so a future private column cannot be
 // pulled into a public Server Action response by accident.
-const SETUP_VERSION_COLUMNS = [
-  "id",
-  "game",
-  "car",
-  "track",
-  "condition",
-  "lap_time",
-  "description",
-  "tags",
-  "rig_profile",
-  "setup_values",
-  "file_name",
-  "video_url",
-  "telemetry_file_name",
-  "created_at",
-].join(", ");
+const SETUP_VERSION_COLUMNS =
+  "id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, file_name, video_url, telemetry_file_name, created_at";
 
 /**
  * Fetches a setup's edit history, newest first, capped at the most recent
