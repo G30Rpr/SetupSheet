@@ -51,6 +51,7 @@ src/
     star-rating.tsx      Pace / Predictability star rating display
     tag-badge.tsx         Setup tag → Badge color mapping
     profile-view.tsx      Shared display for both /profile and /profile/[userId]
+    profile-setups-grid.tsx Client-paged setup-card grid used by profiles
     profile-skeleton.tsx   Shared loading skeleton for both profile routes
     contributor-badge.tsx  Bronze/Silver/Gold badge, derived from total upvotes
     follow-button.tsx      Follow/Following toggle shown on someone else's profile
@@ -63,6 +64,7 @@ src/
     acc-setup-parser.ts     Parses a dropped ACC .json to auto-fill the Car field
     setup-schemas.ts       Per-game setup-screen field definitions (see below)
     utils.ts              `cn()` class-merging helper, `getInitials()`
+    ui-constants.ts       Shared setup-card pagination constants
     supabase/
       client.ts           Browser Supabase client (Client Components)
       server.ts            Server Supabase client, memoized per-request via React's cache()

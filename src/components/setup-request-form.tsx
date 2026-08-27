@@ -39,15 +39,19 @@ export function SetupRequestForm() {
     const notes = String(formData.get("notes") ?? "");
 
     startTransition(async () => {
-      const result = await createSetupRequest({ game, car, track, notes });
-      if (result.error) {
-        setError(result.error);
-        return;
+      try {
+        const result = await createSetupRequest({ game, car, track, notes });
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        setGame("");
+        e.currentTarget.reset();
+        toast.success("Request posted");
+        router.refresh();
+      } catch {
+        setError("Couldn't post the request right now. Please try again.");
       }
-      setGame("");
-      e.currentTarget.reset();
-      toast.success("Request posted");
-      router.refresh();
     });
   }
 

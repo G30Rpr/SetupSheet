@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,15 +30,32 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
   const [comments, setComments] = useState<SetupComment[] | null>(null);
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
   const runUndoableDelete = useUndoableDelete();
 
-  function refetch() {
-    getSetupCommentsAction(setup.id).then(setComments);
-  }
+  const refetch = useCallback(() => {
+    getSetupCommentsAction(setup.id)
+      .then((result) => {
+        setLoadError(null);
+        setComments(result);
+      })
+      .catch(() => {
+        setComments([]);
+        setLoadError("Couldn't load comments right now.");
+      });
+  }, [setup.id]);
 
-  useEffect(refetch, [setup.id]);
+  useEffect(refetch, [refetch]);
+
+  function clearPendingDelete(commentId: string) {
+    setPendingDeleteIds((prev) => {
+      const next = new Set(prev);
+      next.delete(commentId);
+      return next;
+    });
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,13 +65,17 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
     }
     setError(null);
     startTransition(async () => {
-      const result = await createComment(setup.id, body);
-      if (result.error) {
-        setError(result.error);
-        return;
+      try {
+        const result = await createComment(setup.id, body);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        setBody("");
+        refetch();
+      } catch {
+        setError("Couldn't post the comment right now. Please try again.");
       }
-      setBody("");
-      refetch();
     });
   }
 
@@ -71,22 +92,19 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
         });
       },
       commit: async () => {
-        const result = await deleteComment(commentId, setup.id);
-        if (result.error) {
-          setPendingDeleteIds((prev) => {
-            const next = new Set(prev);
-            next.delete(commentId);
-            return next;
-          });
-          toast.error(result.error);
-          return;
+        try {
+          const result = await deleteComment(commentId, setup.id);
+          if (result.error) {
+            clearPendingDelete(commentId);
+            toast.error(result.error);
+            return;
+          }
+          setComments((prev) => prev?.filter((comment) => comment.id !== commentId) ?? prev);
+          clearPendingDelete(commentId);
+        } catch {
+          clearPendingDelete(commentId);
+          toast.error("Couldn't delete the comment right now.");
         }
-        setComments((prev) => prev?.filter((comment) => comment.id !== commentId) ?? prev);
-        setPendingDeleteIds((prev) => {
-          const next = new Set(prev);
-          next.delete(commentId);
-          return next;
-        });
       },
     });
   }
@@ -95,7 +113,11 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
 
   return (
     <div className="mt-2 flex flex-col gap-3 text-xs">
-      {visibleComments === null ? (
+      {loadError ? (
+        <p role="alert" className="text-racing-red">
+          {loadError}
+        </p>
+      ) : visibleComments === null ? (
         <p className="text-muted-foreground">Loading comments...</p>
       ) : visibleComments.length === 0 ? (
         <p className="text-muted-foreground">No comments yet.</p>

@@ -51,13 +51,18 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
       message: `Cancelled request for ${request.car} @ ${request.track}`,
       onUndo: () => setIsCancelled(false),
       commit: async () => {
-        const result = await deleteSetupRequest(request.id);
-        if (result.error) {
+        try {
+          const result = await deleteSetupRequest(request.id);
+          if (result.error) {
+            setIsCancelled(false);
+            toast.error(result.error);
+            return;
+          }
+          router.refresh();
+        } catch {
           setIsCancelled(false);
-          toast.error(result.error);
-          return;
+          toast.error("Couldn't cancel this request right now.");
         }
-        router.refresh();
       },
     });
   }
@@ -67,23 +72,33 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
       void signInWithDiscord();
       return;
     }
+    setError(null);
     setShowPicker(true);
     if (candidates === null) {
-      getMyMatchingSetupsAction(request.game, request.car, request.track).then(setCandidates);
+      getMyMatchingSetupsAction(request.game, request.car, request.track)
+        .then(setCandidates)
+        .catch(() => {
+          setCandidates([]);
+          setError("Couldn't load your setups right now.");
+        });
     }
   }
 
   function handleFulfill() {
     if (!selectedSetupId) return;
     startTransition(async () => {
-      const result = await fulfillSetupRequest(request.id, selectedSetupId);
-      if (result.error) {
-        setError(result.error);
-        return;
+      try {
+        const result = await fulfillSetupRequest(request.id, selectedSetupId);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        setShowPicker(false);
+        toast.success("Request fulfilled — thanks for sharing!");
+        router.refresh();
+      } catch {
+        setError("Couldn't fulfill this request right now. Please try again.");
       }
-      setShowPicker(false);
-      toast.success("Request fulfilled — thanks for sharing!");
-      router.refresh();
     });
   }
 

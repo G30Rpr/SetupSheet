@@ -120,8 +120,8 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   // synchronously-ish whether the existing car/track is a known option.
   useEffect(() => {
     let cancelled = false;
-    Promise.all([import("@/lib/car-lists"), import("@/lib/track-lists")]).then(
-      ([carListsModule, trackListsModule]) => {
+    Promise.all([import("@/lib/car-lists"), import("@/lib/track-lists")])
+      .then(([carListsModule, trackListsModule]) => {
         if (cancelled) return;
         setCarLists(carListsModule.carLists);
         setTrackLists(trackListsModule.trackLists);
@@ -133,8 +133,10 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
             !isKnownOption(trackListsModule.trackLists[existingSetup.game], existingSetup.track)
           );
         }
-      }
-    );
+      })
+      .catch(() => {
+        if (!cancelled) setError("Couldn't load the car and track lists. Manual entry is still available.");
+      });
     return () => {
       cancelled = true;
     };
@@ -208,12 +210,16 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
 
   async function handleGameChange(value: string) {
     setGame(value as Game);
-    const { getEmptySetupValues } = await import("@/lib/setup-schemas");
-    setSetupValues(getEmptySetupValues(value as Game));
-    setUseManualCarInput(false);
-    setUseManualTrackInput(false);
-    setDetectedCar(null);
-    setDetectedSetupValues({});
+    try {
+      const { getEmptySetupValues } = await import("@/lib/setup-schemas");
+      setSetupValues(getEmptySetupValues(value as Game));
+      setUseManualCarInput(false);
+      setUseManualTrackInput(false);
+      setDetectedCar(null);
+      setDetectedSetupValues({});
+    } catch {
+      setError("Couldn't load the fields for that game. Please try again.");
+    }
   }
 
   function updateSetupValue(key: string, value: string) {

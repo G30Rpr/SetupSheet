@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { ContributorBadge } from "@/components/contributor-badge";
 import { EmptyState } from "@/components/empty-state";
 import { FollowButton } from "@/components/follow-button";
-import { SetupCard } from "@/components/setup-card";
+import { ProfileSetupsGrid } from "@/components/profile-setups-grid";
 import { getInitials } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
@@ -131,11 +131,7 @@ export function ProfileView({
       </div>
 
       {setups.length > 0 ? (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {setups.map((setup) => (
-            <SetupCard key={setup.id} setup={setup} />
-          ))}
-        </div>
+        <ProfileSetupsGrid key={setups[0]?.id ?? "no-setups"} setups={setups} />
       ) : (
         <EmptyState
           icon={Upload}
@@ -163,11 +159,7 @@ export function ProfileView({
             <Bookmark className="size-4.5 fill-current text-racing-cyan" />
             Saved Setups
           </h2>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {favoritedSetups.map((setup) => (
-              <SetupCard key={setup.id} setup={setup} />
-            ))}
-          </div>
+          <ProfileSetupsGrid key={favoritedSetups[0]?.id ?? "no-saved-setups"} setups={favoritedSetups} />
         </div>
       )}
     </div>

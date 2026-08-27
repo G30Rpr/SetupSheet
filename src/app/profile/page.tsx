@@ -58,6 +58,7 @@ export default async function ProfilePage() {
 
   return (
     <ProfileView
+      key={user.id}
       displayName={displayName}
       avatarUrl={avatarUrl ?? undefined}
       memberSince={profile?.memberSince}

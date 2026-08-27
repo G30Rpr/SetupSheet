@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { unwrapSingle } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeHttpsUrl } from "@/lib/safe-url";
@@ -12,7 +14,7 @@ export interface Profile {
 }
 
 /** Fetches a profile row by user id, or null if it doesn't exist / the query fails. */
-export async function getProfile(userId: string): Promise<Profile | null> {
+export const getProfile = cache(async (userId: string): Promise<Profile | null> => {
   const supabase = await createClient();
 
   const result = await supabase
@@ -31,4 +33,4 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     memberSince: row.created_at,
     followerCount: row.follower_count,
   };
-}
+});

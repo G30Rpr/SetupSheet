@@ -157,11 +157,17 @@ export function SetupCard({
     setUpvotes((n) => n + (wasUpvoted ? -1 : 1));
 
     startTransition(async () => {
-      const result = await toggleUpvote(setup.id, wasUpvoted);
-      if (result.error) {
+      try {
+        const result = await toggleUpvote(setup.id, wasUpvoted);
+        if (result.error) {
+          setHasUpvoted(wasUpvoted);
+          setUpvotes((n) => n + (wasUpvoted ? 1 : -1));
+          toast.error(result.error);
+        }
+      } catch {
         setHasUpvoted(wasUpvoted);
         setUpvotes((n) => n + (wasUpvoted ? 1 : -1));
-        toast.error(result.error);
+        toast.error("Couldn't update the upvote right now.");
       }
     });
   }
@@ -176,10 +182,15 @@ export function SetupCard({
     setHasFavorited(!wasFavorited);
 
     startFavoriteTransition(async () => {
-      const result = await toggleFavorite(setup.id, wasFavorited);
-      if (result.error) {
+      try {
+        const result = await toggleFavorite(setup.id, wasFavorited);
+        if (result.error) {
+          setHasFavorited(wasFavorited);
+          toast.error(result.error);
+        }
+      } catch {
         setHasFavorited(wasFavorited);
-        toast.error(result.error);
+        toast.error("Couldn't update saved status right now.");
       }
     });
   }
@@ -201,9 +212,17 @@ export function SetupCard({
     setMyRating(next);
 
     startTransition(async () => {
-      const result = await rateSetup(setup.id, next.pace, next.predictability);
-      if (result.error) toast.error(result.error);
-      router.refresh();
+      try {
+        const result = await rateSetup(setup.id, next.pace, next.predictability);
+        if (result.error) {
+          setMyRating(setup.myRating);
+          toast.error(result.error);
+        }
+        router.refresh();
+      } catch {
+        setMyRating(setup.myRating);
+        toast.error("Couldn't save your rating right now.");
+      }
     });
   }
 
@@ -214,13 +233,18 @@ export function SetupCard({
       message: `Deleted "${setup.car} @ ${setup.track}"`,
       onUndo: () => setIsDeleted(false),
       commit: async () => {
-        const result = await deleteSetup(setup.id);
-        if (result.error) {
+        try {
+          const result = await deleteSetup(setup.id);
+          if (result.error) {
+            setIsDeleted(false);
+            toast.error(result.error);
+            return;
+          }
+          router.refresh();
+        } catch {
           setIsDeleted(false);
-          toast.error(result.error);
-          return;
+          toast.error("Couldn't delete this setup right now.");
         }
-        router.refresh();
       },
     });
   }
@@ -238,33 +262,37 @@ export function SetupCard({
 
   function handleDownload() {
     startDownloadTransition(async () => {
-      // No uploaded file behind this setup -- export the manually-entered
-      // values as a text file instead, so Download always does something.
-      if (!setup.fileUrl) {
-        triggerBlobDownload(
-          new Blob([buildSetupExportText(setup)], { type: "text/plain" }),
-          buildSetupExportFilename(setup)
-        );
-        setDownloads((n) => n + 1);
-        await recordSetupExport(setup.id);
-        return;
-      }
-
-      const result = await downloadSetup(setup.id);
-      if (result.error || !result.url) {
-        toast.error(result.error ?? "Failed to download setup.");
-        return;
-      }
-
-      setDownloads((n) => n + 1);
-
       try {
-        const response = await fetch(result.url);
-        if (!response.ok) throw new Error("Download failed");
-        const blob = await response.blob();
-        triggerBlobDownload(blob, result.fileName ?? "setup-file");
+        // No uploaded file behind this setup -- export the manually-entered
+        // values as a text file instead, so Download always does something.
+        if (!setup.fileUrl) {
+          triggerBlobDownload(
+            new Blob([buildSetupExportText(setup)], { type: "text/plain" }),
+            buildSetupExportFilename(setup)
+          );
+          setDownloads((n) => n + 1);
+          await recordSetupExport(setup.id);
+          return;
+        }
+
+        const result = await downloadSetup(setup.id);
+        if (result.error || !result.url) {
+          toast.error(result.error ?? "Failed to download setup.");
+          return;
+        }
+
+        setDownloads((n) => n + 1);
+
+        try {
+          const response = await fetch(result.url);
+          if (!response.ok) throw new Error("Download failed");
+          const blob = await response.blob();
+          triggerBlobDownload(blob, result.fileName ?? "setup-file");
+        } catch {
+          window.open(result.url, "_blank", "noopener,noreferrer");
+        }
       } catch {
-        window.open(result.url, "_blank", "noopener,noreferrer");
+        toast.error("Couldn't prepare this download right now.");
       }
     });
   }

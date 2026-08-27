@@ -28,16 +28,25 @@ function formatTimestamp(dateStr: string) {
  */
 export default function SetupCardHistory({ setup }: { setup: Setup }) {
   const [versions, setVersions] = useState<SetupVersion[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    getSetupVersionsAction(setup.id).then((result) => {
-      if (!cancelled) setVersions(result);
-    });
+    getSetupVersionsAction(setup.id)
+      .then((result) => {
+        if (!cancelled) setVersions(result);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError("Couldn't load history right now.");
+      });
     return () => {
       cancelled = true;
     };
   }, [setup.id]);
+
+  if (loadError) {
+    return <p role="alert" className="text-xs text-racing-red">{loadError}</p>;
+  }
 
   if (versions === null) {
     return <p className="text-xs text-muted-foreground">Loading history...</p>;

@@ -11,6 +11,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/client";
+import { logger } from "@/lib/logger";
 
 interface AuthContextValue {
   user: User | null;
@@ -45,11 +46,20 @@ export function AuthProvider({
       setIsLoading(false);
     });
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      setIsLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+        setIsLoading(false);
+      })
+      .catch((error) => {
+        // Keep the server-rendered user when a transient browser request
+        // fails; an auth-network outage should not log a user out or leave
+        // the header in its loading state forever.
+        logger.error("AuthProvider: failed to load browser session", error);
+        setIsLoading(false);
+      });
 
     return () => subscription.unsubscribe();
   }, [supabase]);
@@ -60,15 +70,25 @@ export function AuthProvider({
       session,
       isLoading,
       async signInWithDiscord() {
-        await supabase.auth.signInWithOAuth({
-          provider: "discord",
-          options: {
-            redirectTo: `${window.location.origin}/auth/callback`,
-          },
-        });
+        try {
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: "discord",
+            options: {
+              redirectTo: `${window.location.origin}/auth/callback`,
+            },
+          });
+          if (error) logger.error("AuthProvider: Discord sign-in failed", error);
+        } catch (error) {
+          logger.error("AuthProvider: Discord sign-in failed", error);
+        }
       },
       async signOut() {
-        await supabase.auth.signOut();
+        try {
+          const { error } = await supabase.auth.signOut();
+          if (error) logger.error("AuthProvider: sign-out failed", error);
+        } catch (error) {
+          logger.error("AuthProvider: sign-out failed", error);
+        }
       },
     }),
     [supabase, user, session, isLoading]

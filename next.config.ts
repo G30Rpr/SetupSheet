@@ -6,6 +6,7 @@ import type { NextConfig } from "next";
 // build/server-start time. Everything below is genuinely static, so it stays
 // here.
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   async headers() {
     const headers = [
       { key: "X-Content-Type-Options", value: "nosniff" },

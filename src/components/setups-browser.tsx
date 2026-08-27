@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GitCompare, Search, SearchX, SlidersHorizontal, Upload, X } from "lucide-react";
 
@@ -19,6 +19,7 @@ import { SetupCard } from "@/components/setup-card";
 import { conditions, games, getCarsForGame, getTracksForGame, rigProfiles } from "@/lib/data";
 import { ALL, filterAndSortSetups, getSearchSuggestions, type SortOption } from "@/lib/filter-setups";
 import { isTypingTarget } from "@/lib/is-typing-target";
+import { SETUP_CARD_PAGE_SIZE } from "@/lib/ui-constants";
 import { cn } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
@@ -35,7 +36,6 @@ const SORT_VALUES = sortOptions.map((option) => option.value);
 // Caps how many SetupCards (each with its own lazy-loaded panels) mount at
 // once -- without this, a large/filtered-open result set renders every
 // match in one giant grid.
-const PAGE_SIZE = 24;
 
 // Only the filters/sort, never page -- restoring an old page number without
 // the matching result set to scroll through would be more confusing than
@@ -43,8 +43,6 @@ const PAGE_SIZE = 24;
 const LAST_FILTERS_KEY = "setupsheet:last-filters";
 
 export function SetupsBrowser({ setups }: { setups: Setup[] }) {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
@@ -106,7 +104,14 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
       if (page > 1) params.set("page", String(page));
 
       const query = params.toString();
-      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+      const url = new URL(window.location.href);
+      url.search = query;
+      // These filters are applied entirely in this client component. Using
+      // Next router.replace here would trigger a full RSC request (and reload
+      // up to 500 setups) on every debounce while the user types. Native
+      // history integration updates the shareable URL without rerendering the
+      // server page; a real navigation/refresh still reads the query normally.
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 
       localStorage.setItem(
         LAST_FILTERS_KEY,
@@ -115,7 +120,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
     }, 300);
 
     return () => clearTimeout(id);
-  }, [search, game, car, track, condition, rig, sort, page, pathname, router]);
+  }, [search, game, car, track, condition, rig, sort, page]);
 
   // Jump back to page 1 whenever a filter/search/sort actually changes --
   // skipped on mount so restoring ?page=N from a shared/bookmarked URL
@@ -180,7 +185,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
     [setups, search, game, car, track, condition, rig, sort]
   );
 
-  const visibleSetups = filtered.slice(0, page * PAGE_SIZE);
+  const visibleSetups = filtered.slice(0, page * SETUP_CARD_PAGE_SIZE);
   const hasMore = filtered.length > visibleSetups.length;
 
   const hasActiveFilters =
@@ -415,7 +420,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
           {hasMore && (
             <div className="flex justify-center">
               <Button variant="outline" onClick={() => setPage((p) => p + 1)}>
-                Load {Math.min(PAGE_SIZE, filtered.length - visibleSetups.length)} more
+                Load {Math.min(SETUP_CARD_PAGE_SIZE, filtered.length - visibleSetups.length)} more
               </Button>
             </div>
           )}

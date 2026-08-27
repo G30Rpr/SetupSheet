@@ -68,7 +68,18 @@ A full code audit was conducted on **SetupSheet**, a Next.js 16 web application 
 - **Proxy Middleware Session Management:** `src/proxy.ts` delegates to `src/lib/supabase/proxy.ts` to refresh Supabase auth tokens on every request before page rendering.
 - **Query Bounds:** `getSetups()` enforces `SETUPS_BROWSE_LIMIT = 500` to avoid unbounded database reads while serving client-side fuzzy search.
 
-### 4.2 ACC Setup File Parser
+### 4.2 Phase 2 follow-up: code efficiency and maintainability
+- **Shared setup hydration:** `src/lib/supabase/setups.ts` now centralizes viewer/author hydration for browse, featured, comparison, profile, and detail readers instead of repeating the same `Promise.all`/mapping logic.
+- **Explicit data boundaries:** setup and version readers use explicit public column projections rather than `select("*")`, preventing future private/admin columns from leaking into public responses.
+- **Request deduplication:** sitemap setup/profile rows and cached profile metadata use per-request React `cache()`, avoiding duplicate Supabase reads during one render.
+- **Client-side URL updates:** browse filters use native `history.replaceState` because the filters already run locally; typing no longer triggers a full RSC/server reload on every debounce.
+- **Bounded rendering:** profile setup cards are isolated in `ProfileSetupsGrid` and paged at 24 cards per batch, preventing a 500-row profile payload from mounting hundreds of stateful cards immediately.
+- **Async failure states:** auth hydration, comments, setup history, request candidates, notification mutations, ratings, downloads, follows, and upload/request mutations now handle rejected promises with recovery UI/toasts rather than leaving unhandled rejections.
+- **Remaining maintainability opportunity:** `SetupCard` and `UploadForm` remain large feature components. Splitting mutation hooks and presentational sections would reduce prop/state density before adding more community features.
+- **Type-safety opportunity:** Supabase queries currently use local row interfaces plus casts rather than generated `Database` types; generating types from the deployed schema would catch migration/query drift at compile time.
+- **Error-surface opportunity:** mutation actions still return some raw Supabase messages. Detailed errors are logged, but production users should receive stable generic messages with a small allow-list of expected validation conflicts.
+
+### 4.3 ACC Setup File Parser
 - **Parsing Robustness:** `src/lib/acc-setup-parser.ts` parses raw Assetto Corsa Competizione JSON setup files, converting tire cambers, electronics, fuel, brake pads, dampers, and aero settings into structured `SetupValues`. Safely handles missing/malformed fields without throwing.
 
 ---

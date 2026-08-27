@@ -29,9 +29,9 @@ interface SetupRow {
   setup_values: SetupValues | null;
   file_path: string | null;
   file_name: string | null;
-  video_url?: string | null;
-  telemetry_file_path?: string | null;
-  telemetry_file_name?: string | null;
+  video_url: string | null;
+  telemetry_file_path: string | null;
+  telemetry_file_name: string | null;
   pace: number;
   predictability: number;
   rating_count: number;
@@ -40,21 +40,34 @@ interface SetupRow {
   created_at: string;
 }
 
-/**
- * Select `"*"` rather than an explicit column list. The explicit list
- * silently broke every browse/detail query in production when a migration
- * adding columns (e.g. video_url / telemetry_*) hadn't been applied to the
- * live database yet -- or when PostgREST's schema cache hadn't picked the
- * new columns up: every query errored with "column not found", unwrapList
- * degraded the failure to [], and the site showed zero setups even though
- * the rows were all still there (the count query, which projects nothing,
- * kept working -- "20 community setups" next to an empty grid). `"*"`
- * resolves against whatever columns PostgREST actually knows about, so
- * reads degrade gracefully across schema drift; mapRow() already treats
- * the newer fields as optional. Same failure-mode family as the FK join
- * this file deliberately avoids in getSetups() below.
- */
-const SETUP_COLUMNS = "*";
+// Keep the public projection explicit. Using `*` would silently expose a
+// future private/admin column on every public setup response. Deploy the SQL
+// migrations before the app when adding a new public field, then add it here
+// and to SetupRow/mapRow in the same change.
+const SETUP_COLUMNS = [
+  "id",
+  "user_id",
+  "game",
+  "car",
+  "track",
+  "condition",
+  "lap_time",
+  "description",
+  "tags",
+  "rig_profile",
+  "setup_values",
+  "file_path",
+  "file_name",
+  "video_url",
+  "telemetry_file_path",
+  "telemetry_file_name",
+  "pace",
+  "predictability",
+  "rating_count",
+  "upvotes",
+  "downloads",
+  "created_at",
+].join(", ");
 
 /**
  * getSetups() feeds /setups' client-side fuzzy search and filtering, which
@@ -79,11 +92,19 @@ async function getViewer(
   supabase: Awaited<ReturnType<typeof createClient>>,
   setupIds: string[]
 ): Promise<Viewer> {
-  const user = await getCurrentUser(supabase);
-
-  if (!user || setupIds.length === 0) {
+  if (setupIds.length === 0) {
     return {
-      userId: user?.id ?? null,
+      userId: null,
+      upvotedSetupIds: new Set(),
+      favoritedSetupIds: new Set(),
+      myRatings: new Map(),
+    };
+  }
+
+  const user = await getCurrentUser(supabase);
+  if (!user) {
+    return {
+      userId: null,
       upvotedSetupIds: new Set(),
       favoritedSetupIds: new Set(),
       myRatings: new Map(),
@@ -187,6 +208,28 @@ async function getAuthors(
   return authors;
 }
 
+/** Hydrates a flat setup query with the viewer state and author metadata shared by every setup reader. */
+async function hydrateSetupRows(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: unknown[]
+): Promise<Setup[]> {
+  const typedRows = rows as SetupRow[];
+  if (typedRows.length === 0) return [];
+
+  const [viewer, authors] = await Promise.all([
+    getViewer(
+      supabase,
+      typedRows.map((row) => row.id)
+    ),
+    getAuthors(
+      supabase,
+      typedRows.map((row) => row.user_id)
+    ),
+  ]);
+
+  return typedRows.map((row) => mapRow(row, viewer, authors, supabase));
+}
+
 /**
  * Fetches every setup, newest first, with the current viewer's upvote and
  * rating state attached. Returns an empty list (rather than throwing) if
@@ -210,20 +253,7 @@ export async function getSetups(): Promise<Setup[]> {
     .limit(SETUPS_BROWSE_LIMIT);
 
   const rows = unwrapList(result, "getSetups: failed to load setups");
-
-  const typedRows = rows as unknown as SetupRow[];
-  const [viewer, authors] = await Promise.all([
-    getViewer(
-      supabase,
-      typedRows.map((r) => r.id)
-    ),
-    getAuthors(
-      supabase,
-      typedRows.map((r) => r.user_id)
-    ),
-  ]);
-
-  return typedRows.map((row) => mapRow(row, viewer, authors, supabase));
+  return hydrateSetupRows(supabase, rows);
 }
 
 /**
@@ -243,20 +273,7 @@ export async function getFeaturedSetups(limit: number): Promise<Setup[]> {
     .limit(limit);
 
   const rows = unwrapList(result, "getFeaturedSetups: failed to load setups");
-
-  const typedRows = rows as unknown as SetupRow[];
-  const [viewer, authors] = await Promise.all([
-    getViewer(
-      supabase,
-      typedRows.map((r) => r.id)
-    ),
-    getAuthors(
-      supabase,
-      typedRows.map((r) => r.user_id)
-    ),
-  ]);
-
-  return typedRows.map((row) => mapRow(row, viewer, authors, supabase));
+  return hydrateSetupRows(supabase, rows);
 }
 
 /** Total number of setups, for the landing page's stat tile -- a count-only query, no rows transferred. */
@@ -276,17 +293,26 @@ export async function getSetupCount(): Promise<number> {
  * under the 50,000-URL sitemap limit as a defensive bound, same reasoning
  * as the landing page's featured-setups query.
  */
-export async function getSetupSitemapEntries(): Promise<{ id: string; updatedAt: string }[]> {
-  const supabase = await createClient();
+interface SitemapRow {
+  id: string;
+  user_id: string;
+  created_at: string;
+}
 
+const getSitemapRows = cache(async (): Promise<SitemapRow[]> => {
+  const supabase = await createClient();
   const result = await supabase
     .from("setups")
-    .select("id, created_at")
+    .select("id, user_id, created_at")
     .order("created_at", { ascending: false })
     .limit(5000);
 
-  const rows = unwrapList(result, "getSetupSitemapEntries: failed to load setups");
-  return rows.map((row) => ({ id: row.id as string, updatedAt: row.created_at as string }));
+  return unwrapList(result, "getSitemapRows: failed to load setups") as SitemapRow[];
+});
+
+export async function getSetupSitemapEntries(): Promise<{ id: string; updatedAt: string }[]> {
+  const rows = await getSitemapRows();
+  return rows.map((row) => ({ id: row.id, updatedAt: row.created_at }));
 }
 
 /**
@@ -297,18 +323,10 @@ export async function getSetupSitemapEntries(): Promise<{ id: string; updatedAt:
  * query, keeping each user's most recent upload as their "last modified".
  */
 export async function getProfileSitemapEntries(): Promise<{ userId: string; updatedAt: string }[]> {
-  const supabase = await createClient();
-
-  const result = await supabase
-    .from("setups")
-    .select("user_id, created_at")
-    .order("created_at", { ascending: false })
-    .limit(5000);
-
-  const rows = unwrapList(result, "getProfileSitemapEntries: failed to load setups");
+  const rows = await getSitemapRows();
 
   const seen = new Map<string, string>();
-  for (const row of rows as { user_id: string; created_at: string }[]) {
+  for (const row of rows) {
     if (!seen.has(row.user_id)) {
       seen.set(row.user_id, row.created_at);
     }
@@ -331,20 +349,7 @@ export async function getSetupsByIds(ids: string[]): Promise<Setup[]> {
   const result = await supabase.from("setups").select(SETUP_COLUMNS).in("id", ids);
 
   const rows = unwrapList(result, "getSetupsByIds: failed to load setups");
-
-  const typedRows = rows as unknown as SetupRow[];
-  const [viewer, authors] = await Promise.all([
-    getViewer(
-      supabase,
-      typedRows.map((r) => r.id)
-    ),
-    getAuthors(
-      supabase,
-      typedRows.map((r) => r.user_id)
-    ),
-  ]);
-
-  return typedRows.map((row) => mapRow(row, viewer, authors, supabase));
+  return hydrateSetupRows(supabase, rows);
 }
 
 /** Fetches every setup uploaded by a given user, newest first. */
@@ -359,17 +364,7 @@ export async function getSetupsByUser(userId: string): Promise<Setup[]> {
     .limit(PROFILE_SETUPS_LIMIT);
 
   const rows = unwrapList(result, "getSetupsByUser: failed to load setups");
-
-  const typedRows = rows as unknown as SetupRow[];
-  const [viewer, authors] = await Promise.all([
-    getViewer(
-      supabase,
-      typedRows.map((r) => r.id)
-    ),
-    getAuthors(supabase, [userId]),
-  ]);
-
-  return typedRows.map((row) => mapRow(row, viewer, authors, supabase));
+  return hydrateSetupRows(supabase, rows);
 }
 
 /**
@@ -390,11 +385,6 @@ export const getSetupById = cache(async (id: string): Promise<Setup | null> => {
   const row = unwrapSingle(result, "getSetupById: failed to load setup");
   if (!row) return null;
 
-  const typedRow = row as unknown as SetupRow;
-  const [viewer, authors] = await Promise.all([
-    getViewer(supabase, [typedRow.id]),
-    getAuthors(supabase, [typedRow.user_id]),
-  ]);
-
-  return mapRow(typedRow, viewer, authors, supabase);
+  const [setup] = await hydrateSetupRows(supabase, [row]);
+  return setup ?? null;
 });
