@@ -102,7 +102,6 @@ A full code audit was conducted on **SetupSheet**, a Next.js 16 web application 
 ### 6.3 Performance and Resilience
 - Main-page setup cards still lazy-load values/history/comments/install-guide panels; browse and profile reads are bounded, while the remaining client-side browse cap is disclosed to visitors.
 - Supabase auth reads used by actions and comment/browse paths are wrapped so transient auth-network failures degrade to a logged-out/empty state instead of an unhandled exception.
-- CI now caches Playwright browser binaries by lockfile, reducing repeated E2E setup time.
 - Exact Core Web Vitals/PageSpeed data and screenshots were not present in this checkout; LCP/CLS/INP conclusions remain provisional until those artifacts are supplied.
 
 ## 7. Testing & Quality Assurance
@@ -129,7 +128,7 @@ A full code audit was conducted on **SetupSheet**, a Next.js 16 web application 
 - **Typecheck:** `npx tsc --noEmit` — 0 errors.
 - **Linter:** `npm run lint` — 0 errors/warnings.
 - **Production Build:** `npm run build` — 16/16 routes successfully compiled with Next.js 16.3.3.
-- **Playwright:** Test discovery succeeded; local browser execution was blocked because the sandbox could not download Chromium, while CI now installs/caches it.
+- **Playwright:** Test discovery succeeded; local browser execution was blocked because the sandbox could not download Chromium; CI installs it with `--with-deps` on each E2E run.
 - **Database migration harness:** Not run locally because `psql` is not installed in the sandbox; the CI service job remains configured to apply all 19 migrations and SQL regressions.
 
 ---
