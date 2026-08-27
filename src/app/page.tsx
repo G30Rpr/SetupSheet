@@ -213,8 +213,8 @@ export default async function Home() {
                 Got a setup that&apos;s fast and safe?
               </h2>
               <p className="max-w-md text-balance text-muted-foreground">
-                Share it with the community in under a minute. No sign-up
-                friction, just drag, drop, and race.
+                Share it with the community in under a minute. Browse freely,
+                then use Discord to publish when you&apos;re ready to race.
               </p>
             </div>
             <Button asChild size="lg" className="shrink-0">

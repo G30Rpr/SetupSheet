@@ -90,7 +90,10 @@ A full code audit was conducted on **SetupSheet**, a Next.js 16 web application 
 
 ### 6.1 UI/UX and Accessibility
 - Primary actions retain a clear hierarchy: the landing-page hero leads with Browse Setups, while Upload remains the secondary action and the persistent header CTA.
+- The mobile navigation drawer now includes the same setup search flow as desktop, and the hero copy no longer implies that publishing requires no authentication.
+- Optional lap-proof and telemetry fields are collapsed by default for new uploads, reducing initial form length while automatically expanding when editing an existing proof attachment.
 - Interactive star ratings and icon-only controls now meet a practical 24px+ touch target, and filter labels are explicitly associated with their Radix Select triggers.
+- A mobile E2E regression covers opening the drawer, searching, and navigating to filtered setups; the global focus treatment keeps custom controls visibly keyboard-accessible.
 - Search suggestions expose combobox/listbox semantics and support ArrowUp/ArrowDown/Enter for keyboard and screen-reader users.
 - Form/action errors use `role="alert"`; setup cards and request cards use semantic `<article>` elements. Mobile card action rows and request fulfillment controls wrap instead of overflowing.
 - Theme colors were tuned for AA-sized text in both themes: dark primary/destructive buttons use an accessible foreground, light amber/red/cyan utility colors no longer rely on low-contrast Tailwind defaults, and the video iframe is permitted by the production CSP.

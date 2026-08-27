@@ -14,3 +14,15 @@ test("header search navigates to /setups?q=...", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/setups\?q=spa(\+|%20)porsche/);
 });
+
+test("mobile menu exposes the same search flow", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Open menu" }).click();
+  const searchInput = page.getByRole("textbox", { name: "Search setups" }).last();
+  await searchInput.fill("spa porsche");
+  await searchInput.press("Enter");
+
+  await expect(page).toHaveURL(/\/setups\?q=spa(\+|%20)porsche/);
+});

@@ -37,10 +37,26 @@ export function SiteHeader({
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+
   function handleSearchSubmit(e: FormEvent) {
     e.preventDefault();
     const trimmed = query.trim();
     router.push(trimmed ? `/setups?q=${encodeURIComponent(trimmed)}` : "/setups");
+    setOpen(false);
+  }
+
+  function focusSearch() {
+    const desktopInput = searchInputRef.current;
+    if (desktopInput && desktopInput.offsetParent !== null) {
+      desktopInput.focus();
+      return;
+    }
+
+    // The desktop search is display:none below xl. Open the mobile drawer
+    // first, then focus its search field after Radix mounts the sheet content.
+    setOpen(true);
+    window.setTimeout(() => mobileSearchInputRef.current?.focus(), 0);
   }
 
   // "/" focuses this search box from anywhere on the site, same convention
@@ -49,7 +65,7 @@ export function SiteHeader({
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return;
       e.preventDefault();
-      searchInputRef.current?.focus();
+      focusSearch();
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
@@ -131,6 +147,19 @@ export function SiteHeader({
                     Setup<span className="text-racing-coral">Sheet</span>
                   </SheetTitle>
                 </SheetHeader>
+                <form onSubmit={handleSearchSubmit} className="px-4 pb-3">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      ref={mobileSearchInputRef}
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search cars or tracks"
+                      className="pl-9"
+                      aria-label="Search setups"
+                    />
+                  </div>
+                </form>
                 <nav className="flex flex-col gap-1 px-4">
                   {navLinks.map((link) => (
                     <SheetClose asChild key={link.href}>
