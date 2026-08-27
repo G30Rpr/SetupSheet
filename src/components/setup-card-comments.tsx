@@ -81,7 +81,12 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
           toast.error(result.error);
           return;
         }
-        refetch();
+        setComments((prev) => prev?.filter((comment) => comment.id !== commentId) ?? prev);
+        setPendingDeleteIds((prev) => {
+          const next = new Set(prev);
+          next.delete(commentId);
+          return next;
+        });
       },
     });
   }
@@ -118,7 +123,7 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
                   type="button"
                   onClick={() => handleDelete(comment.id)}
                   aria-label="Delete comment"
-                  className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-red-400 disabled:opacity-60"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-racing-red disabled:opacity-60"
                 >
                   <Trash2 className="size-3" />
                 </button>
@@ -138,7 +143,11 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
             rows={2}
             className="text-xs"
           />
-          {error && <p className="text-red-400">{error}</p>}
+          {error && (
+            <p role="alert" className="text-racing-red">
+              {error}
+            </p>
+          )}
           <Button type="submit" size="sm" disabled={isPending || !body.trim()} className="self-end">
             <Send className="size-3.5" />
             {isPending ? "Posting..." : "Post"}

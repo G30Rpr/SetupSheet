@@ -1,16 +1,19 @@
 "use server";
 
 import { logger } from "@/lib/logger";
+import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
+import { isUuid } from "@/lib/utils";
 
 export async function markNotificationRead(id: string): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser(supabase);
 
   if (!user) {
     return { error: "You need to be logged in." };
+  }
+  if (!isUuid(id)) {
+    return { error: "That notification id is invalid." };
   }
 
   const { error } = await supabase
@@ -29,9 +32,7 @@ export async function markNotificationRead(id: string): Promise<{ error: string 
 
 export async function markAllNotificationsRead(): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser(supabase);
 
   if (!user) {
     return { error: "You need to be logged in." };
@@ -54,9 +55,7 @@ export async function markAllNotificationsRead(): Promise<{ error: string | null
 /** Deletes the current user's already-read notifications, so the list doesn't grow forever with no way to prune it. */
 export async function clearReadNotifications(): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser(supabase);
 
   if (!user) {
     return { error: "You need to be logged in." };

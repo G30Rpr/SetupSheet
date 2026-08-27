@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getEmptySetupValues, setupSchemas } from "@/lib/setup-schemas";
+import { MAX_SETUP_VALUE_LENGTH } from "@/lib/setup-values";
 import type { Game, SetupValues } from "@/lib/types";
 
 export type { SetupValues };
@@ -34,6 +35,7 @@ export function SetupValuesFields({
                 <Input
                   id={field.key}
                   placeholder={field.placeholder}
+                  maxLength={MAX_SETUP_VALUE_LENGTH}
                   value={values[field.key] ?? ""}
                   onChange={(e) => onChange(field.key, e.target.value)}
                 />

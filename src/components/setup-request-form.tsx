@@ -113,7 +113,10 @@ export function SetupRequestForm() {
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 rounded-md border border-racing-red/30 bg-racing-red/10 px-4 py-2.5 text-sm text-red-400">
+          <div
+            role="alert"
+            className="flex items-center gap-2 rounded-md border border-racing-red/30 bg-racing-red/10 px-4 py-2.5 text-sm text-racing-red"
+          >
             <AlertCircle className="size-4 shrink-0" />
             {error}
           </div>

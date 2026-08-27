@@ -17,13 +17,15 @@ export function RatingBar({
   color: "coral" | "cyan";
   className?: string;
 }) {
-  const pct = Math.round((value / max) * 100);
+  const safeValue = Number.isFinite(value) ? Math.min(Math.max(value, 0), max) : 0;
+  const pct = max > 0 ? Math.round((safeValue / max) * 100) : 0;
 
   return (
     <div className={cn("flex flex-1 items-center gap-2", className)}>
       <div
         className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary"
         role="progressbar"
+        aria-label={`${safeValue.toFixed(1)} out of ${max}`}
         aria-valuenow={pct}
         aria-valuemin={0}
         aria-valuemax={100}

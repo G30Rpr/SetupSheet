@@ -19,6 +19,7 @@ import { SetupCard } from "@/components/setup-card";
 import { conditions, games, getCarsForGame, getTracksForGame, rigProfiles } from "@/lib/data";
 import { ALL, filterAndSortSetups, getSearchSuggestions, type SortOption } from "@/lib/filter-setups";
 import { isTypingTarget } from "@/lib/is-typing-target";
+import { cn } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
 const sortOptions: { value: SortOption; label: string }[] = [
@@ -171,6 +172,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
   );
 
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const suggestions = useMemo(() => getSearchSuggestions(setups, search), [setups, search]);
 
   const filtered = useMemo(
@@ -207,15 +209,45 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
           <Input
             ref={searchInputRef}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setActiveSuggestionIndex(-1);
+            }}
             onFocus={() => setShowSuggestions(true)}
             onBlur={() => setShowSuggestions(false)}
             onKeyDown={(e) => {
-              if (e.key === "Escape") e.currentTarget.blur();
+              if (e.key === "Escape") {
+                setActiveSuggestionIndex(-1);
+                e.currentTarget.blur();
+              } else if (e.key === "ArrowDown" && suggestions.length > 0) {
+                e.preventDefault();
+                setShowSuggestions(true);
+                setActiveSuggestionIndex((index) => (index + 1) % suggestions.length);
+              } else if (e.key === "ArrowUp" && suggestions.length > 0) {
+                e.preventDefault();
+                setShowSuggestions(true);
+                setActiveSuggestionIndex((index) =>
+                  index <= 0 ? suggestions.length - 1 : index - 1
+                );
+              } else if (e.key === "Enter" && activeSuggestionIndex >= 0) {
+                e.preventDefault();
+                setSearch(suggestions[activeSuggestionIndex]);
+                setActiveSuggestionIndex(-1);
+                setShowSuggestions(false);
+              }
             }}
             placeholder="Search by car, track, game, or tag..."
             className="pl-9 pr-9"
+            role="combobox"
             aria-label="Search setups"
+            aria-autocomplete="list"
+            aria-expanded={showSuggestions && suggestions.length > 0}
+            aria-controls="setup-search-suggestions"
+            aria-activedescendant={
+              activeSuggestionIndex >= 0
+                ? `setup-search-suggestion-${activeSuggestionIndex}`
+                : undefined
+            }
           />
           {!search && (
             <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border/80 bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
@@ -224,21 +256,33 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
           )}
 
           {showSuggestions && suggestions.length > 0 && (
-            <ul className="absolute z-10 mt-1.5 w-full overflow-hidden rounded-md border border-border/80 bg-popover shadow-lg">
-              {suggestions.map((suggestion) => (
+            <ul
+              id="setup-search-suggestions"
+              role="listbox"
+              className="absolute z-10 mt-1.5 w-full overflow-hidden rounded-md border border-border/80 bg-popover shadow-lg"
+            >
+              {suggestions.map((suggestion, index) => (
                 <li key={suggestion}>
                   <button
+                    id={`setup-search-suggestion-${index}`}
                     type="button"
+                    role="option"
+                    aria-selected={activeSuggestionIndex === index}
                     // onMouseDown (not onClick) fires before the input's
                     // onBlur, and preventDefault stops that blur from
                     // happening at all -- otherwise the dropdown would
                     // close itself before the click could register.
                     onMouseDown={(e) => e.preventDefault()}
+                    onMouseEnter={() => setActiveSuggestionIndex(index)}
                     onClick={() => {
                       setSearch(suggestion);
+                      setActiveSuggestionIndex(-1);
                       setShowSuggestions(false);
                     }}
-                    className="w-full truncate px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-accent"
+                    className={cn(
+                      "w-full truncate px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-accent",
+                      activeSuggestionIndex === index && "bg-accent"
+                    )}
                   >
                     {suggestion}
                   </button>
@@ -416,11 +460,13 @@ function FilterSelect({
   options: string[];
   placeholder: string;
 }) {
+  const id = `filter-${label.toLowerCase()}`;
+
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <label htmlFor={id} className="text-xs font-medium text-muted-foreground">{label}</label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger id={id} className="w-full">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>

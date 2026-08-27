@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 const rankMedalClass: Record<number, string> = {
   1: "bg-racing-amber/15 text-racing-amber ring-1 ring-inset ring-racing-amber/30",
   2: "bg-secondary text-foreground ring-1 ring-inset ring-border",
-  3: "bg-racing-red/10 text-red-400/90 ring-1 ring-inset ring-racing-red/20",
+  3: "bg-racing-red/10 text-racing-red/90 ring-1 ring-inset ring-racing-red/20",
 };
 
 export default async function LeaderboardPage() {

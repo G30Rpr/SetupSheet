@@ -1,5 +1,8 @@
 import { unwrapList } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeSetupValues } from "@/lib/setup-values";
+import { sanitizeStoredFileName } from "@/lib/storage";
+import { normalizeVideoUrl } from "@/lib/video-url";
 import type { Condition, Game, RigProfile, SetupTag, SetupValues, SetupVersion } from "@/lib/types";
 
 interface SetupVersionRow {
@@ -14,11 +17,14 @@ interface SetupVersionRow {
   rig_profile: string;
   setup_values: SetupValues | null;
   file_name: string | null;
+  video_url?: string | null;
+  telemetry_file_name?: string | null;
   created_at: string;
 }
 
-const SETUP_VERSION_COLUMNS =
-  "id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, file_name, created_at";
+// `*` keeps history readable while a deployment is rolling out 0017; the
+// newer proof columns are optional in SetupVersionRow and are normalized below.
+const SETUP_VERSION_COLUMNS = "*";
 
 /**
  * Fetches a setup's edit history, newest first, capped at the most recent
@@ -52,7 +58,9 @@ export async function getSetupVersions(setupId: string): Promise<SetupVersion[]>
     description: row.description,
     tags: row.tags as SetupTag[],
     rigProfile: row.rig_profile as RigProfile,
-    setupValues: row.setup_values,
-    fileName: row.file_name,
+    setupValues: normalizeSetupValues(row.setup_values),
+    fileName: sanitizeStoredFileName(row.file_name),
+    videoUrl: normalizeVideoUrl(row.video_url),
+    telemetryFileName: sanitizeStoredFileName(row.telemetry_file_name),
   }));
 }

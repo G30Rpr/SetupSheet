@@ -3,7 +3,16 @@ import { cache } from "react";
 import { logger } from "@/lib/logger";
 import { unwrapCount, unwrapList, unwrapSingle } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
-import { SETUP_FILES_BUCKET } from "@/lib/storage";
+import {
+  isOwnedStoragePath,
+  sanitizeStoredFileName,
+  SETUP_FILES_BUCKET,
+} from "@/lib/storage";
+import { normalizeSetupValues } from "@/lib/setup-values";
+import { normalizeHttpsUrl } from "@/lib/safe-url";
+import { getCurrentUser } from "@/lib/supabase/auth";
+import { sanitizeDisplayName } from "@/lib/user-display";
+import { normalizeVideoUrl } from "@/lib/video-url";
 import type { Condition, Game, RigProfile, Setup, SetupTag, SetupValues } from "@/lib/types";
 
 interface SetupRow {
@@ -56,6 +65,8 @@ const SETUP_COLUMNS = "*";
  * larger than any realistic filtered/browsed result set today.
  */
 export const SETUPS_BROWSE_LIMIT = 500;
+/** Prevent a single profile page from turning into an unbounded public query. */
+export const PROFILE_SETUPS_LIMIT = 500;
 
 interface Viewer {
   userId: string | null;
@@ -68,9 +79,7 @@ async function getViewer(
   supabase: Awaited<ReturnType<typeof createClient>>,
   setupIds: string[]
 ): Promise<Viewer> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser(supabase);
 
   if (!user || setupIds.length === 0) {
     return {
@@ -107,10 +116,16 @@ function mapRow(
   supabase: Awaited<ReturnType<typeof createClient>>
 ): Setup {
   const author = authors.get(row.user_id);
-  const telemetryUrl = row.telemetry_file_path
-    ? supabase.storage.from(SETUP_FILES_BUCKET).getPublicUrl(row.telemetry_file_path).data.publicUrl
+  const safeVideoUrl = normalizeVideoUrl(row.video_url);
+  const safeFilePath = isOwnedStoragePath(row.file_path, row.user_id) ? row.file_path : null;
+  const safeTelemetryPath = isOwnedStoragePath(row.telemetry_file_path, row.user_id)
+    ? row.telemetry_file_path
     : null;
-  const isVerified = Boolean(row.video_url || telemetryUrl);
+  const telemetryUrl = safeTelemetryPath
+    ? supabase.storage.from(SETUP_FILES_BUCKET).getPublicUrl(safeTelemetryPath).data.publicUrl
+    : null;
+  const isVerified = Boolean(safeVideoUrl || telemetryUrl);
+  const setupValues = normalizeSetupValues(row.setup_values);
 
   return {
     id: row.id,
@@ -135,13 +150,13 @@ function mapRow(
     myRating: viewer.myRatings.get(row.id) ?? null,
     isOwner: viewer.userId === row.user_id,
     downloads: row.downloads,
-    setupValues: row.setup_values ?? undefined,
-    fileName: row.file_name,
-    fileUrl: row.file_path
-      ? supabase.storage.from(SETUP_FILES_BUCKET).getPublicUrl(row.file_path).data.publicUrl
+    setupValues: setupValues ?? undefined,
+    fileName: sanitizeStoredFileName(row.file_name),
+    fileUrl: safeFilePath
+      ? supabase.storage.from(SETUP_FILES_BUCKET).getPublicUrl(safeFilePath).data.publicUrl
       : null,
-    videoUrl: row.video_url,
-    telemetryFileName: row.telemetry_file_name,
+    videoUrl: safeVideoUrl,
+    telemetryFileName: sanitizeStoredFileName(row.telemetry_file_name),
     telemetryFileUrl: telemetryUrl,
     isVerifiedLap: isVerified,
   };
@@ -164,7 +179,10 @@ async function getAuthors(
     return authors;
   }
   for (const profile of profiles ?? []) {
-    authors.set(profile.id, { username: profile.username, avatarUrl: profile.avatar_url });
+    authors.set(profile.id, {
+      username: sanitizeDisplayName(profile.username),
+      avatarUrl: normalizeHttpsUrl(profile.avatar_url),
+    });
   }
   return authors;
 }
@@ -337,7 +355,8 @@ export async function getSetupsByUser(userId: string): Promise<Setup[]> {
     .from("setups")
     .select(SETUP_COLUMNS)
     .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(PROFILE_SETUPS_LIMIT);
 
   const rows = unwrapList(result, "getSetupsByUser: failed to load setups");
 

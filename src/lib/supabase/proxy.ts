@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { logger } from "@/lib/logger";
+import { fetchWithTimeout } from "@/lib/supabase/fetch";
 
 /**
  * Refreshes the Supabase auth session on every request and keeps the
@@ -15,6 +16,7 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dummy.supabase.co",
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy-key",
     {
+      global: { fetch: fetchWithTimeout },
       cookies: {
         getAll() {
           return request.cookies.getAll();

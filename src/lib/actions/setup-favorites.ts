@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 
 import { logger } from "@/lib/logger";
+import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
+import { isUuid } from "@/lib/utils";
 
 /** Favorites or unfavorites a setup as the current user, mirroring toggleUpvote/toggleFollow. */
 export async function toggleFavorite(
@@ -11,12 +13,13 @@ export async function toggleFavorite(
   isCurrentlyFavorited: boolean
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser(supabase);
 
   if (!user) {
     return { error: "You need to be logged in with Discord to save a setup." };
+  }
+  if (!isUuid(setupId) || typeof isCurrentlyFavorited !== "boolean") {
+    return { error: "That favorite request is invalid." };
   }
 
   const { error } = isCurrentlyFavorited

@@ -74,4 +74,21 @@ describe("validateSetupFields", () => {
     });
     expect(result).toBe("Unknown game.");
   });
+
+  it("rejects malformed action payloads instead of throwing", () => {
+    expect(validateSetupFields(null)).toBe("Invalid setup fields.");
+    expect(validateSetupFields({ ...validInput(), tags: "Safe" })).toBe(
+      "Tags must be a list of valid values."
+    );
+    expect(validateSetupFields({ ...validInput(), car: "   " })).toBe("Car is required.");
+  });
+
+  it("rejects non-string or oversized structured values", () => {
+    expect(
+      validateSetupFields({ ...validInput(), setupValues: { frontArb: 3 } })
+    ).toBe("Setup values are invalid or too large.");
+    expect(
+      validateSetupFields({ ...validInput(), setupValues: { frontArb: "x".repeat(201) } })
+    ).toBe("Setup values are invalid or too large.");
+  });
 });

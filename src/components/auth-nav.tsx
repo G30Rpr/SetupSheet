@@ -16,17 +16,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DiscordIcon } from "@/components/icons/discord-icon";
+import { normalizeHttpsUrl } from "@/lib/safe-url";
+import { getUserDisplayName } from "@/lib/user-display";
 import { cn } from "@/lib/utils";
-
-function getDisplayName(user: NonNullable<ReturnType<typeof useAuth>["user"]>) {
-  return (
-    user.user_metadata?.full_name ??
-    user.user_metadata?.name ??
-    user.user_metadata?.user_name ??
-    user.email ??
-    "Racer"
-  );
-}
 
 function getInitials(name: string) {
   return name
@@ -60,8 +52,8 @@ export function UserMenu() {
   const { user, signOut } = useAuth();
   if (!user) return null;
 
-  const displayName = getDisplayName(user);
-  const avatarUrl = user.user_metadata?.avatar_url as string | undefined;
+  const displayName = getUserDisplayName(user);
+  const avatarUrl = normalizeHttpsUrl(user.user_metadata?.avatar_url);
 
   async function handleSignOut() {
     await signOut();
@@ -76,7 +68,7 @@ export function UserMenu() {
           aria-label="Account menu"
         >
           <Avatar className="ring-1 ring-border transition-colors hover:ring-racing-coral/50">
-            <AvatarImage src={avatarUrl} alt={displayName} />
+            <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
             <AvatarFallback className="bg-racing-coral/15 text-racing-coral">
               {getInitials(displayName)}
             </AvatarFallback>

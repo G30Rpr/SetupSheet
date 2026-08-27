@@ -7,7 +7,7 @@ import { AuthProvider } from "@/components/auth-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ThemeProvider } from "@/components/theme-provider";
-import { logger } from "@/lib/logger";
+import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getNotifications, getUnreadNotificationCount } from "@/lib/supabase/notifications";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
@@ -40,6 +40,11 @@ const jsonLd = {
   name: SITE_NAME,
   url: SITE_URL,
   description,
+  potentialAction: {
+    "@type": "SearchAction",
+    target: `${SITE_URL}/setups?q={search_term_string}`,
+    "query-input": "required name=search_term_string",
+  },
 };
 
 export default async function RootLayout({
@@ -55,19 +60,11 @@ export default async function RootLayout({
 
   const supabase = await createClient();
 
-  // A network-level failure (DNS, connection refused) throws here rather
-  // than resolving to a catchable { error } result -- without this, an
-  // unreachable Supabase project would crash the entire root layout on
-  // every page, not just degrade the data that depends on it.
-  let user = null;
-  try {
-    const {
-      data: { user: fetchedUser },
-    } = await supabase.auth.getUser();
-    user = fetchedUser;
-  } catch (error) {
-    logger.error("RootLayout: failed to fetch current user", error);
-  }
+  // A network-level auth failure is handled by getCurrentUser(), so an
+  // unreachable Supabase project degrades the layout to logged-out instead
+  // of crashing every page. The per-request cache also lets data loaders
+  // reuse this same auth lookup.
+  const user = await getCurrentUser(supabase);
 
   const [initialNotifications, initialUnreadCount] = user
     ? await Promise.all([getNotifications(user.id, 10), getUnreadNotificationCount(user.id)])

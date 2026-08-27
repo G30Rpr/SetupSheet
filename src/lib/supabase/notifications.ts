@@ -1,3 +1,5 @@
+import { normalizeHttpsUrl } from "@/lib/safe-url";
+import { sanitizeDisplayName } from "@/lib/user-display";
 import { unwrapCount, unwrapList } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
 
@@ -66,8 +68,8 @@ export async function getNotifications(userId: string, limit = 20): Promise<Noti
       id: row.id,
       type: row.type as NotificationType,
       actorId: row.actor_id,
-      actorUsername: actor?.username ?? "Racer",
-      actorAvatarUrl: actor?.avatar_url ?? null,
+      actorUsername: sanitizeDisplayName(actor?.username),
+      actorAvatarUrl: normalizeHttpsUrl(actor?.avatar_url),
       setupId: row.setup_id,
       car: setup?.car ?? null,
       track: setup?.track ?? null,

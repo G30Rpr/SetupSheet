@@ -15,13 +15,17 @@ export function StarRating({
 }) {
   if (onChange) {
     return (
-      <div className={cn("flex items-center gap-0.5", className)} aria-label={`${value} out of ${max} stars`}>
+      <div
+        className={cn("flex items-center gap-0.5", className)}
+        role="group"
+        aria-label={`${value} out of ${max} stars`}
+      >
         {Array.from({ length: max }).map((_, i) => (
           <button
             key={i}
             type="button"
             onClick={() => onChange(i + 1)}
-            className="p-0.5"
+            className="flex size-7 items-center justify-center rounded-sm p-1 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
             aria-label={`Rate ${i + 1} out of ${max}`}
           >
             <Star

@@ -35,12 +35,16 @@ import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
 import { createSetup, updateSetup, uploadSetupFile, uploadTelemetryFile } from "@/lib/actions/setups";
 import { parseAccSetupFile } from "@/lib/acc-setup-parser";
+import { ALLOWED_TELEMETRY_FILE_EXTENSIONS } from "@/lib/storage";
+import { MAX_VIDEO_URL_LENGTH, validateVideoUrl } from "@/lib/video-url";
+import { normalizeSetupValues } from "@/lib/setup-values";
 import { resolveEffectiveSetupValues } from "@/lib/resolve-effective-setup-values";
 import { isKnownOption, type SelectOptionGroup } from "@/lib/select-options";
 import { cn } from "@/lib/utils";
 import {
   MAX_CAR_LENGTH,
   MAX_DESCRIPTION_LENGTH,
+  MAX_LAP_TIME_LENGTH,
   MAX_TRACK_LENGTH,
   conditions,
   games,
@@ -159,7 +163,8 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
       if (draft.rig) setRig(draft.rig);
       if (draft.description) setDescription(draft.description);
       if (Array.isArray(draft.tags)) setTags(draft.tags);
-      if (draft.setupValues && typeof draft.setupValues === "object") setSetupValues(draft.setupValues);
+      const restoredSetupValues = normalizeSetupValues(draft.setupValues);
+      if (restoredSetupValues) setSetupValues(restoredSetupValues);
       if (typeof draft.pace === "number") setPace(draft.pace);
       if (typeof draft.predictability === "number") setPredictability(draft.predictability);
       if (draft.entryMode === "file" || draft.entryMode === "manual") setEntryMode(draft.entryMode);
@@ -233,20 +238,24 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
       return;
     }
 
-    const text = await newFile.text();
-    const result = parseAccSetupFile(text);
-    if (!result) return;
+    try {
+      const text = await newFile.text();
+      const result = parseAccSetupFile(text);
+      if (!result) return;
 
-    const targetGame: Game = "Assetto Corsa Competizione";
-    if (game !== targetGame) {
-      setGame(targetGame);
-      setUseManualTrackInput(false);
-    }
-    setDetectedSetupValues(result.setupValues);
+      const targetGame: Game = "Assetto Corsa Competizione";
+      if (game !== targetGame) {
+        setGame(targetGame);
+        setUseManualTrackInput(false);
+      }
+      setDetectedSetupValues(result.setupValues);
 
-    if (result.car) {
-      setUseManualCarInput(false);
-      setDetectedCar(result.car);
+      if (result.car) {
+        setUseManualCarInput(false);
+        setDetectedCar(result.car);
+      }
+    } catch {
+      setError("Couldn't read that setup file. You can still enter the values manually.");
     }
   }
 
@@ -313,6 +322,12 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     const formData = new FormData(e.currentTarget);
     const car = String(formData.get("car") ?? "");
     const track = String(formData.get("track") ?? "");
+    const videoError = validateVideoUrl(videoUrl);
+    if (videoError) {
+      setError(videoError);
+      toast.error(videoError);
+      return;
+    }
 
     const effectiveSetupValues = resolveEffectiveSetupValues({
       entryMode,
@@ -324,25 +339,53 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     });
 
     startTransition(async () => {
-      const [fileFields, telemetryFields] = await Promise.all([
-        resolveFileFields(),
-        resolveTelemetryFields(),
-      ]);
+      try {
+        const [fileFields, telemetryFields] = await Promise.all([
+          resolveFileFields(),
+          resolveTelemetryFields(),
+        ]);
 
-      if (fileFields.error) {
-        setError(fileFields.error);
-        toast.error(fileFields.error);
-        return;
-      }
+        if (fileFields.error) {
+          setError(fileFields.error);
+          toast.error(fileFields.error);
+          return;
+        }
 
-      if (telemetryFields.error) {
-        setError(telemetryFields.error);
-        toast.error(telemetryFields.error);
-        return;
-      }
+        if (telemetryFields.error) {
+          setError(telemetryFields.error);
+          toast.error(telemetryFields.error);
+          return;
+        }
 
-      if (existingSetup) {
-        const result = await updateSetup(existingSetup.id, {
+        if (existingSetup) {
+          const result = await updateSetup(existingSetup.id, {
+            game,
+            car,
+            track,
+            condition,
+            lapTime,
+            description,
+            tags,
+            rigProfile: rig,
+            setupValues: effectiveSetupValues,
+            filePath: fileFields.filePath,
+            fileName: fileFields.fileName,
+            videoUrl: videoUrl.trim() || null,
+            telemetryFilePath: telemetryFields.telemetryFilePath,
+            telemetryFileName: telemetryFields.telemetryFileName,
+          });
+
+          if (result.error) {
+            setError(result.error);
+            toast.error(result.error);
+          } else {
+            toast.success("Setup updated");
+            router.push("/setups");
+          }
+          return;
+        }
+
+        const result = await createSetup({
           game,
           car,
           track,
@@ -351,6 +394,8 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           description,
           tags,
           rigProfile: rig,
+          pace,
+          predictability,
           setupValues: effectiveSetupValues,
           filePath: fileFields.filePath,
           fileName: fileFields.fileName,
@@ -363,37 +408,13 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           setError(result.error);
           toast.error(result.error);
         } else {
-          toast.success("Setup updated");
-          router.push("/setups");
+          if (user) localStorage.removeItem(draftKey(user.id));
+          setStatus("success");
         }
-        return;
-      }
-
-      const result = await createSetup({
-        game,
-        car,
-        track,
-        condition,
-        lapTime,
-        description,
-        tags,
-        rigProfile: rig,
-        pace,
-        predictability,
-        setupValues: effectiveSetupValues,
-        filePath: fileFields.filePath,
-        fileName: fileFields.fileName,
-        videoUrl: videoUrl.trim() || null,
-        telemetryFilePath: telemetryFields.telemetryFilePath,
-        telemetryFileName: telemetryFields.telemetryFileName,
-      });
-
-      if (result.error) {
-        setError(result.error);
-        toast.error(result.error);
-      } else {
-        if (user) localStorage.removeItem(draftKey(user.id));
-        setStatus("success");
+      } catch {
+        const message = "Something went wrong while saving the setup. Please try again.";
+        setError(message);
+        toast.error(message);
       }
     });
   }
@@ -405,10 +426,15 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     setLapTime("");
     setRig("");
     setDescription("");
+    setVideoUrl("");
     setFile(null);
+    setTelemetryFile(null);
     setDetectedCar(null);
     setDetectedSetupValues({});
     setKeepExistingFile(false);
+    setKeepExistingTelemetry(false);
+    setUseManualCarInput(false);
+    setUseManualTrackInput(false);
     setSetupValues({});
     setTags([]);
     setPace(3);
@@ -621,6 +647,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                 id="lapTime"
                 name="lapTime"
                 placeholder="e.g. 2:16.482"
+                maxLength={MAX_LAP_TIME_LENGTH}
                 value={lapTime}
                 onChange={(e) => setLapTime(e.target.value)}
               />
@@ -660,7 +687,10 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
               <Input
                 id="videoUrl"
                 name="videoUrl"
+                type="url"
+                inputMode="url"
                 placeholder="https://www.youtube.com/watch?v=..."
+                maxLength={MAX_VIDEO_URL_LENGTH}
                 value={videoUrl}
                 onChange={(e) => setVideoUrl(e.target.value)}
               />
@@ -683,7 +713,13 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                   </button>
                 </div>
               ) : (
-                <FileDropzone file={telemetryFile} onFileChange={setTelemetryFile} />
+                <FileDropzone
+                  file={telemetryFile}
+                  onFileChange={setTelemetryFile}
+                  acceptedExtensions={ALLOWED_TELEMETRY_FILE_EXTENSIONS}
+                  ariaLabel="Choose a telemetry file"
+                  helperText=".ld, .ldx, .ibt, .vbo, .drf, .csv, .zip or .zvp — up to 10 MB"
+                />
               )}
               <p className="text-xs text-muted-foreground">
                 Supports MoTeC (.ld, .ldx), iRacing (.ibt), VBOX (.vbo), CSV, or ZIP up to 10 MB.
@@ -742,7 +778,10 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
       </Card>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-md border border-racing-red/30 bg-racing-red/10 px-4 py-3 text-sm text-red-400">
+        <div
+          role="alert"
+          className="flex items-center gap-2 rounded-md border border-racing-red/30 bg-racing-red/10 px-4 py-3 text-sm text-racing-red"
+        >
           <AlertCircle className="size-4 shrink-0" />
           {error}
         </div>

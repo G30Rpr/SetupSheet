@@ -90,7 +90,7 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
   if (isCancelled) return null;
 
   return (
-    <Card className={cn("gap-2.5 px-4 py-3.5", isFulfilled && "opacity-70")}>
+    <Card as="article" className={cn("gap-2.5 px-4 py-3.5", isFulfilled && "opacity-70")}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -110,7 +110,7 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
             type="button"
             onClick={handleDelete}
             aria-label="Cancel request"
-            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-red-400 disabled:opacity-60"
+            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-racing-red disabled:opacity-60"
           >
             <Trash2 className="size-3.5" />
           </button>
@@ -148,9 +148,9 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
               .
             </p>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <Select value={selectedSetupId} onValueChange={setSelectedSetupId}>
-                <SelectTrigger className="w-full max-w-[240px]">
+                <SelectTrigger className="w-full sm:max-w-[240px]">
                   <SelectValue placeholder="Pick your setup" />
                 </SelectTrigger>
                 <SelectContent>
@@ -166,7 +166,11 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
               </Button>
             </div>
           )}
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && (
+            <p role="alert" className="text-xs text-racing-red">
+              {error}
+            </p>
+          )}
         </div>
       ) : null}
     </Card>

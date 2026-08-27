@@ -31,6 +31,7 @@ export const setupTags: SetupTag[] = [
 
 export const MAX_CAR_LENGTH = 80;
 export const MAX_TRACK_LENGTH = 80;
+export const MAX_LAP_TIME_LENGTH = 32;
 export const MAX_DESCRIPTION_LENGTH = 2000;
 export const MAX_COMMENT_LENGTH = 1000;
 

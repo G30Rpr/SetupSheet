@@ -1,3 +1,5 @@
+import { normalizeHttpsUrl } from "@/lib/safe-url";
+import { sanitizeDisplayName } from "@/lib/user-display";
 import { unwrapList } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
 
@@ -29,8 +31,8 @@ export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
 
   return rows.map((row) => ({
     userId: row.user_id,
-    username: row.username,
-    avatarUrl: row.avatar_url,
+    username: sanitizeDisplayName(row.username),
+    avatarUrl: normalizeHttpsUrl(row.avatar_url),
     setupCount: row.setup_count,
     totalUpvotes: row.total_upvotes,
   }));

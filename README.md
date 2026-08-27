@@ -99,6 +99,14 @@ supabase/
     0009_column_level_grants.sql                 column-scoped UPDATE grants on setups/profiles
     0010_notifications_delete_policy.sql          lets a user delete their own notifications
     0011_notifications_column_grant.sql            same column-scoped grant, for notifications
+    0012_setup_versions.sql                         public pre-edit version history
+    0013_setup_requests.sql                         community request board + fulfillment RPC
+    0014_setup_favorites.sql                        private saved-setups list
+    0015_setup_comments.sql                         public setup comments + owner notifications
+    0016_fulfill_request_hardening.sql              request matching/race/reopen hardening
+    0017_video_url_and_telemetry.sql                lap-proof links + telemetry attachments
+    0018_data_validation_hardening.sql              direct-API data and attachment constraints
+    0019_storage_extension_hardening.sql            Storage extension allow-list policies
   seed.sql                          sample setups across all 8 supported games
 ```
 
@@ -195,11 +203,12 @@ don't change per-row.
 ### 1. Apply the schema
 
 In the [Supabase dashboard](https://supabase.com/dashboard) → your project →
-**SQL Editor**, paste and run the migrations **in order**:
-`supabase/migrations/0001_init_setups_schema.sql`, then
-`0002_update_games_list.sql`. (If you use the Supabase CLI locally instead,
-`supabase db push` picks up everything under `supabase/migrations/` in
-order.)
+**SQL Editor**, paste and run every file under
+`supabase/migrations/` **in numeric order**. Start with
+`0001_init_setups_schema.sql`; later migrations add ratings, storage, community
+features, lap-proof attachments, and the direct-API hardening constraints.
+(If you use the Supabase CLI locally instead, `supabase db push` picks up
+everything under `supabase/migrations/` in order.)
 
 `0001` creates:
 
@@ -227,11 +236,11 @@ migration to a throwaway Postgres database (created and dropped by the
 script, so it's safe to run against a Postgres instance you use for other
 things) and runs the regression checks under `supabase/testing/*.test.sql`
 — currently covering `fulfill_setup_request()`'s game/car/track matching,
-its race-condition fix, the request-reopen trigger, and the comment length
-constraint. Needs a reachable Postgres (`PGHOST`/`PGPORT`/`PGUSER`/
-`PGPASSWORD` env vars, defaulting to `localhost:5432` as `postgres`) — CI
-runs this same script against a `postgres:16` service container on every
-push.
+its race-condition fix, the request-reopen trigger, comment length, and
+0018's direct-API data constraints. Needs a reachable Postgres
+(`PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD` env vars, defaulting to
+`localhost:5432` as `postgres`) — CI runs this same script against a
+`postgres:16` service container on every push.
 
 **RLS policies**, scoped with `auth.uid()`:
 
@@ -247,11 +256,11 @@ push.
 Row-level policies only restrict *which row* a user can touch — nothing
 about *which column*. `0009` and `0011` close that gap for the
 denormalized/trigger-owned columns (`setups.upvotes/downloads/pace/
-predictability/rating_count`, `profiles.follower_count`,
-`notifications.actor_id/setup_id/type`) with an explicit
+predictability/rating_count`, `profiles.follower_count`, `notifications.actor_id/setup_id/type`, and
+`setup_ratings.setup_id/created_at`) with an explicit
 `revoke ... / grant update (<allowed columns>) ...`, so a user's own
 row-level write access can't be used to fabricate a public trust signal
-like an upvote count or a fake notification.
+like an upvote count or a fake notification or move ratings between setups.
 
 Anonymous visitors can always browse (`setups` select is public) — only
 uploading, editing, and upvoting require being logged in and acting as
@@ -381,6 +390,15 @@ the schema changes — only `src/lib/setup-schemas.ts` and the seed data.
   commenting on your own setup), reusing the same `notifications` table
   with another widened `type`. Rendered as a fourth expandable panel on
   `SetupCard`, alongside Setup values/How to install/Version history.
+- **Lap proof & telemetry** — migration `0017` adds optional HTTPS YouTube/
+  Twitch proof links plus bounded telemetry attachments. The web action and
+  Storage policies restrict URLs, file extensions, file sizes, and attachment
+  folders to the uploader; a `Verified Lap` badge is shown only for safe
+  proof data.
+- **Direct-write hardening** — migrations `0018` and `0019` repeat important
+  bounds at the database/Storage policy layer for clients that bypass the
+  React form. Migration versions are unique; `npm run test:db` fails early if
+  a duplicate numeric migration prefix is introduced.
 
 ## Deploying to Vercel
 

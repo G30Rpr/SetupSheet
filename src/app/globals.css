@@ -27,7 +27,9 @@
   --popover-foreground: oklch(0.96 0.004 260);
 
   --primary: oklch(0.62 0.19 25);
-  --primary-foreground: oklch(0.98 0.01 25);
+  /* Dark coral is light enough that near-white button text misses AA;
+     use a dark foreground here while keeping the light theme's white text. */
+  --primary-foreground: oklch(0.15 0.004 260);
 
   --secondary: oklch(0.24 0.008 260);
   --secondary-foreground: oklch(0.94 0.004 260);
@@ -38,7 +40,7 @@
   --accent: oklch(0.27 0.01 260);
   --accent-foreground: oklch(0.96 0.004 260);
 
-  --destructive: oklch(0.58 0.22 27);
+  --destructive: oklch(0.54 0.22 27);
   --destructive-foreground: oklch(0.97 0.01 27);
 
   --border: oklch(1 0 0 / 10%);
@@ -96,7 +98,7 @@
   --racing-red: oklch(0.54 0.22 27);
   --racing-red-foreground: oklch(0.99 0.01 27);
   --racing-green: oklch(0.52 0.16 149);
-  --racing-amber: oklch(0.58 0.15 80);
+  --racing-amber: oklch(0.54 0.15 80);
   --racing-coral: oklch(0.56 0.2 25);
   --racing-cyan: oklch(0.48 0.13 200);
 

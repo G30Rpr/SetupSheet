@@ -34,6 +34,7 @@ export function ProfileView({
   followerCount,
   follow,
   setups,
+  setupsCapped = false,
   isOwnProfile,
   favoritedSetups,
 }: {
@@ -44,6 +45,8 @@ export function ProfileView({
   /** Present only when viewing someone else's profile -- renders a Follow button. */
   follow?: { targetUserId: string; initialIsFollowing: boolean };
   setups: Setup[];
+  /** True when the data layer hit its defensive profile-page cap. */
+  setupsCapped?: boolean;
   isOwnProfile: boolean;
   /** Present only on your own profile -- favorites are private, so a public visitor never sees this section. */
   favoritedSetups?: Setup[];
@@ -78,7 +81,7 @@ export function ProfileView({
           <FollowButton targetUserId={follow.targetUserId} initialIsFollowing={follow.initialIsFollowing} />
         )}
 
-        <div className="flex items-center gap-5">
+        <div className="flex w-full flex-wrap items-center justify-around gap-4 sm:w-auto sm:justify-start sm:gap-5">
           <div className="flex flex-col items-center">
             <span className="font-mono text-lg font-semibold tabular-nums">{setups.length}</span>
             <span className="text-xs text-muted-foreground">Setups</span>
@@ -106,6 +109,12 @@ export function ProfileView({
           </div>
         </div>
       </Card>
+
+      {setupsCapped && (
+        <p className="-mt-4 mb-5 text-xs text-muted-foreground">
+          Showing the most recent setups.
+        </p>
+      )}
 
       <div className="mb-5 flex items-center justify-between">
         <h2 className="text-xl font-semibold tracking-tight">

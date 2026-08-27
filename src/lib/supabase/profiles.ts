@@ -1,5 +1,7 @@
 import { unwrapSingle } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeHttpsUrl } from "@/lib/safe-url";
+import { sanitizeDisplayName } from "@/lib/user-display";
 
 export interface Profile {
   id: string;
@@ -24,8 +26,8 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 
   return {
     id: row.id,
-    username: row.username,
-    avatarUrl: row.avatar_url,
+    username: sanitizeDisplayName(row.username),
+    avatarUrl: normalizeHttpsUrl(row.avatar_url),
     memberSince: row.created_at,
     followerCount: row.follower_count,
   };

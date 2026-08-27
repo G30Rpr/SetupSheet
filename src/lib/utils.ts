@@ -13,3 +13,11 @@ export function getInitials(name: string) {
     .join("")
     .toUpperCase();
 }
+
+/** UUIDs are the identifiers accepted by the database-facing actions. */
+export function isUuid(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  );
+}

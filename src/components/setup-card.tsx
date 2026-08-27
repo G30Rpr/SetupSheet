@@ -50,6 +50,7 @@ import {
   getAvailableExportFormats,
 } from "@/lib/setup-export";
 import { SITE_URL } from "@/lib/site";
+import { normalizeVideoUrl } from "@/lib/video-url";
 import { useUndoableDelete } from "@/lib/use-undoable-delete";
 import { cn, getInitials } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
@@ -70,29 +71,35 @@ function formatDate(dateStr: string) {
 }
 
 function parseVideoEmbed(urlStr?: string | null) {
-  if (!urlStr) return null;
+  const safeUrl = normalizeVideoUrl(urlStr);
+  if (!safeUrl) return null;
+
   try {
-    const url = new URL(urlStr.startsWith("http") ? urlStr : `https://${urlStr}`);
-    if (url.hostname.includes("youtube.com") || url.hostname.includes("youtu.be")) {
-      let id = "";
-      if (url.hostname.includes("youtu.be")) {
-        id = url.pathname.slice(1);
-      } else if (url.pathname.includes("/embed/")) {
-        id = url.pathname.split("/embed/")[1];
-      } else if (url.pathname.includes("/shorts/")) {
-        id = url.pathname.split("/shorts/")[1];
-      } else {
-        id = url.searchParams.get("v") ?? "";
-      }
-      id = id.split("&")[0].split("?")[0];
-      if (id) {
-        return { type: "youtube", src: `https://www.youtube-nocookie.com/embed/${id}` };
-      }
+    const url = new URL(safeUrl);
+    const isYouTube = ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be", "www.youtu.be"].includes(
+      url.hostname.toLowerCase()
+    );
+    if (!isYouTube) return null;
+
+    let id = "";
+    if (url.hostname.toLowerCase().includes("youtu.be")) {
+      id = url.pathname.slice(1).split("/")[0];
+    } else if (url.pathname.startsWith("/embed/")) {
+      id = url.pathname.slice("/embed/".length).split("/")[0];
+    } else if (url.pathname.startsWith("/shorts/")) {
+      id = url.pathname.slice("/shorts/".length).split("/")[0];
+    } else {
+      id = url.searchParams.get("v") ?? "";
     }
+
+    // Keep the value embedded in the trusted YouTube origin strictly within
+    // YouTube's id alphabet; malformed/hostile links remain ordinary safe
+    // external links instead of becoming an iframe URL.
+    if (!/^[A-Za-z0-9_-]{6,64}$/.test(id)) return null;
+    return { type: "youtube", src: `https://www.youtube-nocookie.com/embed/${id}` };
   } catch {
     return null;
   }
-  return null;
 }
 
 const conditionVariant = {
@@ -134,6 +141,10 @@ export function SetupCard({
   const runUndoableDelete = useUndoableDelete();
   const { user, signInWithDiscord } = useAuth();
   const v = setup.setupValues;
+  // Defense in depth for rows created before URL validation was added (or
+  // inserted directly through PostgREST): never render an untrusted value as
+  // an href, even if it bypassed the Server Action.
+  const safeVideoUrl = normalizeVideoUrl(setup.videoUrl);
 
   function handleUpvoteClick() {
     if (!user) {
@@ -180,8 +191,12 @@ export function SetupCard({
     }
 
     const next = {
-      pace: field === "pace" ? value : myRating?.pace ?? 0,
-      predictability: field === "predictability" ? value : myRating?.predictability ?? 0,
+      // Ratings are stored as one row with both dimensions required. When a
+      // viewer is rating for the first time, use the neutral 3-star value
+      // for the dimension they have not clicked yet instead of sending 0
+      // and guaranteeing a database constraint error.
+      pace: field === "pace" ? value : myRating?.pace ?? 3,
+      predictability: field === "predictability" ? value : myRating?.predictability ?? 3,
     };
     setMyRating(next);
 
@@ -245,10 +260,11 @@ export function SetupCard({
 
       try {
         const response = await fetch(result.url);
+        if (!response.ok) throw new Error("Download failed");
         const blob = await response.blob();
         triggerBlobDownload(blob, result.fileName ?? "setup-file");
       } catch {
-        window.open(result.url, "_blank");
+        window.open(result.url, "_blank", "noopener,noreferrer");
       }
     });
   }
@@ -283,15 +299,15 @@ export function SetupCard({
   if (isDeleted) return null;
 
   return (
-    <Card className="group relative overflow-hidden border-border/80 py-0 transition-all duration-200 hover:-translate-y-1 hover:border-racing-coral/40 hover:shadow-[0_8px_30px_-8px_oklch(0.62_0.19_25/25%)]">
+    <Card as="article" className="group relative overflow-hidden border-border/80 py-0 transition-all duration-200 hover:-translate-y-1 hover:border-racing-coral/40 hover:shadow-[0_8px_30px_-8px_oklch(0.62_0.19_25/25%)]">
       <div className="flex flex-col gap-3 p-5">
         {/* Top row: game + condition + owner controls */}
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Gamepad2 className="size-3.5" />
             {setup.game}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {setup.isVerifiedLap && (
               <Badge variant="green" className="gap-1 font-semibold">
                 <BadgeCheck className="size-3.5 text-racing-green" />
@@ -313,7 +329,7 @@ export function SetupCard({
                 <Link
                   href={`/setups/${setup.id}/edit`}
                   aria-label="Edit setup"
-                  className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 >
                   <Pencil className="size-3.5" />
                 </Link>
@@ -321,7 +337,7 @@ export function SetupCard({
                   type="button"
                   onClick={handleDelete}
                   aria-label="Delete setup"
-                  className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-red-400 disabled:opacity-60"
+                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-racing-red disabled:opacity-60"
                 >
                   <Trash2 className="size-3.5" />
                 </button>
@@ -331,7 +347,7 @@ export function SetupCard({
               type="button"
               onClick={handleShare}
               aria-label="Share setup"
-              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               <Share2 className="size-3.5" />
             </button>
@@ -395,7 +411,7 @@ export function SetupCard({
         </div>
 
         {/* Hotlap Video Proof */}
-        {setup.videoUrl && (
+        {safeVideoUrl && (
           <div>
             <button
               type="button"
@@ -413,10 +429,10 @@ export function SetupCard({
 
             {showVideo && (
               <div className="mt-2.5 overflow-hidden rounded-lg border border-border bg-black/40 p-1">
-                {parseVideoEmbed(setup.videoUrl)?.src ? (
+                {parseVideoEmbed(safeVideoUrl)?.src ? (
                   <div className="relative aspect-video w-full overflow-hidden rounded-md">
                     <iframe
-                      src={parseVideoEmbed(setup.videoUrl)?.src ?? ""}
+                      src={parseVideoEmbed(safeVideoUrl)?.src ?? ""}
                       title={`Hotlap proof for ${setup.car} @ ${setup.track}`}
                       className="absolute inset-0 size-full border-0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -425,9 +441,9 @@ export function SetupCard({
                   </div>
                 ) : (
                   <div className="flex items-center justify-between p-3 text-xs">
-                    <span className="text-muted-foreground truncate">{setup.videoUrl}</span>
+                    <span className="text-muted-foreground truncate">{safeVideoUrl}</span>
                     <a
-                      href={setup.videoUrl}
+                      href={safeVideoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 font-medium text-racing-coral hover:underline shrink-0"
@@ -639,7 +655,7 @@ export function SetupCard({
               aria-pressed={hasFavorited}
               aria-label={hasFavorited ? "Remove from saved setups" : "Save setup"}
               className={cn(
-                "flex items-center rounded-full p-1.5 transition-colors disabled:opacity-60",
+                "flex size-8 items-center justify-center rounded-full transition-colors disabled:opacity-60",
                 hasFavorited
                   ? "bg-racing-cyan/15 text-racing-cyan ring-1 ring-inset ring-racing-cyan/40"
                   : "bg-secondary text-foreground hover:bg-racing-cyan/10 hover:text-racing-cyan"

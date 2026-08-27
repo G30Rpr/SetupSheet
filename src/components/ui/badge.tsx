@@ -16,10 +16,10 @@ const badgeVariants = cva(
         outline: "text-foreground border-border",
         green:
           "border-transparent bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30",
-        red: "border-transparent bg-racing-red/15 text-red-400 ring-1 ring-inset ring-racing-red/30",
+        red: "border-transparent bg-racing-red/15 text-racing-red ring-1 ring-inset ring-racing-red/30",
         amber:
           "border-transparent bg-racing-amber/15 text-racing-amber ring-1 ring-inset ring-racing-amber/30",
-        blue: "border-transparent bg-sky-400/15 text-sky-400 ring-1 ring-inset ring-sky-400/30",
+        blue: "border-transparent bg-sky-400/15 text-racing-cyan ring-1 ring-inset ring-sky-400/30",
       },
     },
     defaultVariants: {

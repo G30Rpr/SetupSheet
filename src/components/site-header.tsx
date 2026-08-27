@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/sheet";
 import { isTypingTarget } from "@/lib/is-typing-target";
 import { navLinks } from "@/lib/nav-links";
+import { getUserDisplayName } from "@/lib/user-display";
 import type { NotificationItem } from "@/lib/supabase/notifications";
 
 export function SiteHeader({
@@ -178,7 +179,7 @@ function MobileAuthRow() {
       <div className="flex items-center gap-3 rounded-md border border-border/80 px-3 py-2.5">
         <UserMenu />
         <span className="truncate text-sm font-medium">
-          {user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email}
+          {getUserDisplayName(user)}
         </span>
       </div>
     );

@@ -5,15 +5,19 @@ import { Card } from "@/components/ui/card";
 import { DiscordLoginButton } from "@/components/auth-nav";
 import { ProfileView } from "@/components/profile-view";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/auth";
 import { getProfile } from "@/lib/supabase/profiles";
 import { getFavoritedSetups } from "@/lib/supabase/setup-favorites";
-import { getSetupsByUser } from "@/lib/supabase/setups";
+import { getSetupsByUser, PROFILE_SETUPS_LIMIT } from "@/lib/supabase/setups";
+import { normalizeHttpsUrl } from "@/lib/safe-url";
+import { getUserDisplayName } from "@/lib/user-display";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const title = `My Profile — ${SITE_NAME}`;
 
 export const metadata: Metadata = {
   title,
+  robots: { index: false, follow: false },
   alternates: { canonical: `${SITE_URL}/profile` },
   openGraph: { title, url: "/profile", type: "website", siteName: SITE_NAME },
   twitter: { card: "summary_large_image", title },
@@ -21,9 +25,7 @@ export const metadata: Metadata = {
 
 export default async function ProfilePage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser(supabase);
 
   if (!user) {
     return (
@@ -51,21 +53,17 @@ export default async function ProfilePage() {
     getFavoritedSetups(user.id),
   ]);
 
-  const displayName =
-    profile?.username ??
-    (user.user_metadata?.full_name as string | undefined) ??
-    (user.user_metadata?.name as string | undefined) ??
-    user.email ??
-    "Racer";
-  const avatarUrl = profile?.avatarUrl ?? (user.user_metadata?.avatar_url as string | undefined);
+  const displayName = profile?.username ?? getUserDisplayName(user);
+  const avatarUrl = profile?.avatarUrl ?? normalizeHttpsUrl(user.user_metadata?.avatar_url);
 
   return (
     <ProfileView
       displayName={displayName}
-      avatarUrl={avatarUrl}
+      avatarUrl={avatarUrl ?? undefined}
       memberSince={profile?.memberSince}
       followerCount={profile?.followerCount ?? 0}
       setups={setups}
+      setupsCapped={setups.length === PROFILE_SETUPS_LIMIT}
       favoritedSetups={favoritedSetups}
       isOwnProfile
     />
