@@ -31,8 +31,21 @@ interface SetupRow {
   created_at: string;
 }
 
-const SETUP_COLUMNS =
-  "id, user_id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, file_path, file_name, video_url, telemetry_file_path, telemetry_file_name, pace, predictability, rating_count, upvotes, downloads, created_at";
+/**
+ * Select `"*"` rather than an explicit column list. The explicit list
+ * silently broke every browse/detail query in production when a migration
+ * adding columns (e.g. video_url / telemetry_*) hadn't been applied to the
+ * live database yet -- or when PostgREST's schema cache hadn't picked the
+ * new columns up: every query errored with "column not found", unwrapList
+ * degraded the failure to [], and the site showed zero setups even though
+ * the rows were all still there (the count query, which projects nothing,
+ * kept working -- "20 community setups" next to an empty grid). `"*"`
+ * resolves against whatever columns PostgREST actually knows about, so
+ * reads degrade gracefully across schema drift; mapRow() already treats
+ * the newer fields as optional. Same failure-mode family as the FK join
+ * this file deliberately avoids in getSetups() below.
+ */
+const SETUP_COLUMNS = "*";
 
 /**
  * getSetups() feeds /setups' client-side fuzzy search and filtering, which
