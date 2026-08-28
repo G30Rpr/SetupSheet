@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
 
 import { UploadForm } from "@/components/upload-form";
+import { fullPageTitle } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
-const title = `Upload a Setup — ${SITE_NAME}`;
+const title = "Upload a Setup";
+const socialTitle = fullPageTitle(title);
 const description = "Share your sim racing setup with the community in under a minute.";
 
 export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: `${SITE_URL}/upload` },
-  openGraph: { title, description, url: "/upload", type: "website", siteName: SITE_NAME },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: { title: socialTitle, description, url: "/upload", type: "website", siteName: SITE_NAME },
+  twitter: { card: "summary_large_image", title: socialTitle, description },
 };
 
 export default function UploadPage() {

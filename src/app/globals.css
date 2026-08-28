@@ -171,11 +171,32 @@
     background-image:
       radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.62 0.19 25 / 12%), transparent),
       radial-gradient(ellipse 60% 40% at 100% 0%, oklch(0.62 0.19 200 / 8%), transparent);
-    background-attachment: fixed;
+    /* A fixed attachment forces an expensive repaint while scrolling on
+       mobile browsers. The gradients are decorative, so let the page scroll
+       naturally and keep the main content paint-friendly. */
+    background-attachment: scroll;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
 @layer utilities {
+  /* Skip layout/paint work for cards below the fold while preserving a
+     stable approximate size for the grid's scrollbar and scroll position. */
+  .content-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 520px;
+  }
+
   .text-balance {
     text-wrap: balance;
   }

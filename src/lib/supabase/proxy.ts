@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { logger } from "@/lib/logger";
 import { fetchWithTimeout } from "@/lib/supabase/fetch";
+import { hasSupabaseAuthCookie } from "@/lib/supabase/auth-cookie";
 import type { Database } from "@/lib/supabase/database.types";
 
 /**
@@ -40,10 +41,15 @@ export async function updateSession(request: NextRequest) {
   // a network-level failure (DNS, connection refused) throws here rather
   // than resolving to a catchable { error } result -- without this, an
   // unreachable Supabase project would crash every single request.
-  try {
-    await supabase.auth.getUser();
-  } catch (error) {
-    logger.error("updateSession: failed to refresh auth session", error);
+  // Anonymous requests have nothing to refresh. Skipping this call removes a
+  // needless Supabase round trip from every public page and makes metadata
+  // routes (sitemap/robots/OG images) fast even before a project is configured.
+  if (hasSupabaseAuthCookie(request.cookies.getAll().map(({ name }) => name))) {
+    try {
+      await supabase.auth.getUser();
+    } catch (error) {
+      logger.error("updateSession: failed to refresh auth session", error);
+    }
   }
 
   return supabaseResponse;

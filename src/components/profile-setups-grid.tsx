@@ -14,11 +14,13 @@ export function ProfileSetupsGrid({ setups }: { setups: Setup[] }) {
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid list-none grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {visibleSetups.map((setup) => (
-          <SetupCard key={setup.id} setup={setup} />
+          <li key={setup.id} className="min-w-0">
+            <SetupCard setup={setup} titleLevel={3} />
+          </li>
         ))}
-      </div>
+      </ul>
       {visibleSetups.length < setups.length && (
         <div className="mt-6 flex justify-center">
           <Button

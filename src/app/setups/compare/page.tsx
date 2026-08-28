@@ -7,18 +7,20 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { SetupValuesDiff } from "@/components/setup-values-diff";
 import { getSetupsByIds } from "@/lib/supabase/setups";
+import { fullPageTitle } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
-const title = `Compare Setups — ${SITE_NAME}`;
+const title = "Compare Setups";
+const socialTitle = fullPageTitle(title);
 const description = "Compare two setups' tuning values side by side.";
 
 export const metadata: Metadata = {
   title,
   description,
-  robots: { index: false },
+  robots: { index: false, follow: false },
   alternates: { canonical: `${SITE_URL}/setups/compare` },
-  openGraph: { title, description, url: "/setups/compare", type: "website", siteName: SITE_NAME },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: { title: socialTitle, description, url: "/setups/compare", type: "website", siteName: SITE_NAME },
+  twitter: { card: "summary_large_image", title: socialTitle, description },
 };
 
 export default async function ComparePage({

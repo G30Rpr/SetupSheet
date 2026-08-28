@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { GitCompare, Search, SearchX, SlidersHorizontal, Upload, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -206,9 +206,13 @@ export function SetupsBrowser({
     [loadedSetups, search]
   );
 
+  // Fuzzy matching includes bounded edit-distance work for every loaded
+  // setup. Defer that derived list so the text field remains responsive on
+  // lower-powered phones as the browse index grows.
+  const deferredSearch = useDeferredValue(search);
   const filtered = useMemo(
-    () => filterAndSortSetups(loadedSetups, { search, game, car, track, condition, rig }, sort),
-    [loadedSetups, search, game, car, track, condition, rig, sort]
+    () => filterAndSortSetups(loadedSetups, { search: deferredSearch, game, car, track, condition, rig }, sort),
+    [loadedSetups, deferredSearch, game, car, track, condition, rig, sort]
   );
 
   const visibleSetups = filtered.slice(0, page * SETUP_CARD_PAGE_SIZE);
@@ -470,18 +474,22 @@ export function SetupsBrowser({
         </div>
       )}
 
+      <h2 id="setup-results-heading" className="sr-only">Setup results</h2>
       {filtered.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {visibleSetups.map((setup) => (
-              <SetupCard
-                key={setup.id}
-                setup={setup}
-                compareSelected={compareIds.includes(setup.id)}
-                onToggleCompare={compareMode ? () => toggleCompareSelect(setup.id) : undefined}
-              />
-            ))}
-          </div>
+          <section aria-labelledby="setup-results-heading" aria-busy={deferredSearch !== search}>
+            <ul className="grid list-none grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {visibleSetups.map((setup) => (
+                <li key={setup.id} className="min-w-0">
+                  <SetupCard
+                    setup={setup}
+                    compareSelected={compareIds.includes(setup.id)}
+                    onToggleCompare={compareMode ? () => toggleCompareSelect(setup.id) : undefined}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
 
           {hasMore && (
             <div className="flex justify-center">

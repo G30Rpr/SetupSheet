@@ -29,7 +29,7 @@ dark, sim-racing themed UI (carbon black, racing green, alert red).
 ```
 src/
   app/
-    layout.tsx        Root layout (header + footer + fonts + metadata + notification fetch)
+    layout.tsx        Root layout (header + footer + metadata + notification fetch)
     error.tsx          Catches any client-side render error below the layout
     global-error.tsx   Last-resort fallback if the root layout itself throws
     page.tsx           Landing page
@@ -44,6 +44,8 @@ src/
     site-header.tsx     Top nav with mobile drawer (Sheet); notification bell + account
                          menu each mount once regardless of viewport
     site-footer.tsx     Footer
+    json-ld.tsx         Nonce-protected JSON-LD renderer shared by public routes
+    related-setups.tsx  Streamed below-the-fold internal setup links
     setup-card.tsx      The setup card (car/track, lap time, tags, ratings, author byline...)
     setups-browser.tsx  Client component: filter state + filtered grid
     upload-form.tsx      Upload form; drag a real ACC .json and it auto-fills the Car field
@@ -67,12 +69,17 @@ src/
     utils.ts              `cn()` class-merging helper, `getInitials()`
     ui-constants.ts       Shared setup-card pagination constants
     browse-filters.ts     Validated server-side browse/search filters
+    seo.ts                Metadata/JSON-LD helpers and description bounds
     supabase/
       client.ts           Browser Supabase client (Client Components)
       server.ts             Server Supabase client, memoized per-request via React's cache()
+      public.ts             Cookie-free public client for Next Data Cache reads
+      auth-cookie.ts        Fast auth-cookie detection shared by server/proxy code
       database.types.ts     Schema types used by all Supabase clients/queries
       proxy.ts              Session-refresh helper used by src/proxy.ts
-      setups.ts             getSetups(), getFeaturedSetups(), getSetupCount(), row mapping
+      setups.ts             Public setup cache, browse/detail queries, row mapping
+      profiles.ts           Cached public profile metadata
+      leaderboard.ts          Cached public leaderboard view
       leaderboard.ts          getLeaderboard() — reads the public.leaderboard view
       follows.ts               isFollowing()
       notifications.ts         getNotifications(), getUnreadNotificationCount()
@@ -116,6 +123,7 @@ supabase/
     0019_storage_extension_hardening.sql            Storage extension allow-list policies
     0020_create_setup_with_rating.sql               atomic setup + initial rating transaction
     0021_insert_grants_and_rate_limits.sql          INSERT hardening + contribution throttles
+    0022_setup_updated_at.sql                        edit freshness timestamp for SEO/sitemaps
   seed.sql                          sample setups across all 8 supported games
 ```
 
@@ -128,6 +136,32 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+## Performance and SEO notes
+
+- Primary public setup, profile, leaderboard, related-link, and sitemap reads use
+  a cookie-free Supabase client behind Next's Data Cache. Setup/leaderboard data
+  revalidates every 60 seconds; the sitemap revalidates hourly. Successful
+  setup/follow mutations invalidate the relevant cache tags, while viewer
+  state (upvotes, favorites, ratings, notifications) is always read from the
+  request's authenticated SSR client and is never cached.
+- The shared root layout skips Supabase auth refreshes when no `sb-...-auth-token`
+  cookie exists, avoiding a public-page timeout/round trip for anonymous
+  visitors. The page still refreshes an existing session on every request.
+- `next.config.ts` gives generated OG images and metadata endpoints CDN-safe
+  `Cache-Control` headers. Setup cards lazy-load avatars/iframes and defer
+  below-the-fold rendering; setup values, install guides, history, comments,
+  and upload rosters are code-split until needed.
+- The root metadata uses a title template, canonical URLs, Open Graph/Twitter
+  cards, and a shared nonce-protected `JsonLd` component. Public setup pages
+  expose Article and BreadcrumbList data; browse, profile, leaderboard, and
+  requests pages expose CollectionPage/ProfilePage/ItemList data as
+  appropriate. User text is escaped before it enters JSON-LD.
+- `updated_at` is maintained by migration `0022_setup_updated_at.sql` only
+  for contributor-editable setup fields, so sitemap `lastModified` and
+  structured-data `dateModified` do not change for counter/rating trigger
+  updates. The migration also adds composite newest-first indexes and
+  `pg_trgm` indexes for browse substring searches.
 
 ## Auth: Supabase + Discord OAuth
 
@@ -246,8 +280,8 @@ script, so it's safe to run against a Postgres instance you use for other
 things) and runs the regression checks under `supabase/testing/*.test.sql`
 — currently covering `fulfill_setup_request()`'s game/car/track matching,
 its race-condition fix, the request-reopen trigger, comment length, and
-0018's direct-API data constraints, 0020's atomic setup creation, and
-0021's INSERT grants/rate limits. Needs a reachable Postgres
+0018's direct-API data constraints, 0020's atomic setup creation, 0021's
+INSERT grants/rate limits, and 0022's setup freshness trigger. Needs a reachable Postgres
 (`PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD` env vars, defaulting to
 `localhost:5432` as `postgres`) — CI runs this same script against a
 `postgres:16` service container on every push.

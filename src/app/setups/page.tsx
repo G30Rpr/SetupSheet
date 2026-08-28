@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { JsonLd } from "@/components/json-ld";
 import { SetupsBrowser } from "@/components/setups-browser";
 import {
   SETUPS_BROWSE_LIMIT,
@@ -11,17 +12,19 @@ import {
   EMPTY_BROWSE_FILTERS,
   normalizeBrowseFilters,
 } from "@/lib/browse-filters";
+import { absoluteUrl, fullPageTitle } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
-const title = `Browse Setups — ${SITE_NAME}`;
+const title = "Browse Setups";
+const socialTitle = fullPageTitle(title);
 const description = "Browse free community sim racing setups by game, car, track and condition.";
 
 export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: `${SITE_URL}/setups` },
-  openGraph: { title, description, url: "/setups", type: "website", siteName: SITE_NAME },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: { title: socialTitle, description, url: "/setups", type: "website", siteName: SITE_NAME },
+  twitter: { card: "summary_large_image", title: socialTitle, description },
 };
 
 export default async function SetupsPage({
@@ -56,9 +59,28 @@ export default async function SetupsPage({
   // grows past that cap, both stop covering the oldest setups too (not
   // just the browse grid), which is worth being upfront about here.
   const isCapped = setups.length === SETUPS_BROWSE_LIMIT && totalCount > SETUPS_BROWSE_LIMIT;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: title,
+    description,
+    url: `${SITE_URL}/setups`,
+    isPartOf: { "@id": `${SITE_URL}#website` },
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: Math.min(setups.length, 12),
+      itemListElement: setups.slice(0, 12).map((setup, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: `${setup.car} @ ${setup.track}`,
+        url: absoluteUrl(`/setups/${encodeURIComponent(setup.id)}`),
+      })),
+    },
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+      <JsonLd data={jsonLd} />
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           Browse Setups

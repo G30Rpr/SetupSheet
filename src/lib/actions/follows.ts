@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import { getActionError } from "@/lib/actions/action-errors";
 import { logger } from "@/lib/logger";
@@ -40,6 +40,7 @@ export async function toggleFollow(
     return { error: getActionError(error, "Couldn't update your follow status.") };
   }
 
+  revalidateTag("public-profiles", "max");
   revalidatePath(`/profile/${targetUserId}`);
   return { error: null };
 }

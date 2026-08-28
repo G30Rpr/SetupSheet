@@ -98,18 +98,22 @@ const conditionVariant = {
 export function SetupCard({
   setup,
   linkTitle = true,
+  titleLevel = 2,
   compareSelected = false,
   onToggleCompare,
 }: {
   setup: Setup;
   /** False on the setup's own detail page, where linking to itself would be a no-op. */
   linkTitle?: boolean;
+  /** Heading level follows the section that owns the card grid. */
+  titleLevel?: 2 | 3;
   /** Whether this card is one of the (up to 2) setups picked for the comparison tool. */
   compareSelected?: boolean;
   /** Presence of this prop is what turns on the compare-mode checkbox -- omit it entirely on the detail/profile call sites. */
   onToggleCompare?: () => void;
 }) {
   const router = useRouter();
+  const Title = titleLevel === 3 ? "h3" : "h2";
   const [showValues, setShowValues] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
@@ -313,7 +317,7 @@ export function SetupCard({
   if (isDeleted) return null;
 
   return (
-    <Card as="article" className="group relative overflow-hidden border-border/80 py-0 transition-all duration-200 hover:-translate-y-1 hover:border-racing-coral/40 hover:shadow-[0_8px_30px_-8px_oklch(0.62_0.19_25/25%)]">
+    <Card as="article" className="content-auto group relative overflow-hidden border-border/80 py-0 transition-all duration-200 hover:-translate-y-1 hover:border-racing-coral/40 hover:shadow-[0_8px_30px_-8px_oklch(0.62_0.19_25/25%)]">
       <div className="flex flex-col gap-3 p-5">
         {/* Top row: game + condition + owner controls */}
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -385,7 +389,7 @@ export function SetupCard({
 
         {/* Car + Track */}
         <div>
-          <h3 className="text-lg font-semibold leading-tight tracking-tight text-foreground">
+          <Title className="text-lg font-semibold leading-tight tracking-tight text-foreground">
             {linkTitle ? (
               <Link href={`/setups/${setup.id}`} className="transition-colors hover:text-racing-coral">
                 {setup.car}
@@ -393,7 +397,7 @@ export function SetupCard({
             ) : (
               setup.car
             )}
-          </h3>
+          </Title>
           <p className="text-sm text-muted-foreground">{setup.track}</p>
         </div>
 
@@ -449,6 +453,8 @@ export function SetupCard({
                       src={parseVideoEmbed(safeVideoUrl)?.src ?? ""}
                       title={`Hotlap proof for ${setup.car} @ ${setup.track}`}
                       className="absolute inset-0 size-full border-0"
+                      loading="lazy"
+                      referrerPolicy="strict-origin-when-cross-origin"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />

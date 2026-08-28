@@ -33,6 +33,7 @@ export function SiteHeader({
   initialUnreadCount: number;
 }) {
   const router = useRouter();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -126,10 +127,12 @@ export function SiteHeader({
               (one copy per breakpoint), doubling their hydration cost. */}
           <div className="flex items-center gap-1 md:ml-1 md:border-l md:border-border/80 md:pl-3">
             <ThemeToggle className="hidden md:inline-flex" />
-            <NotificationBell
-              initialNotifications={initialNotifications}
-              initialUnreadCount={initialUnreadCount}
-            />
+            {user && (
+              <NotificationBell
+                initialNotifications={initialNotifications}
+                initialUnreadCount={initialUnreadCount}
+              />
+            )}
             <AuthNav />
           </div>
 

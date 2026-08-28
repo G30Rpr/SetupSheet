@@ -10,17 +10,21 @@ import { getProfile } from "@/lib/supabase/profiles";
 import { getFavoritedSetups } from "@/lib/supabase/setup-favorites";
 import { getSetupsByUser, PROFILE_SETUPS_LIMIT } from "@/lib/supabase/setups";
 import { normalizeHttpsUrl } from "@/lib/safe-url";
+import { fullPageTitle } from "@/lib/seo";
 import { getUserDisplayName } from "@/lib/user-display";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
-const title = `My Profile — ${SITE_NAME}`;
+const title = "My Profile";
+const socialTitle = fullPageTitle(title);
+const description = "Manage your SetupSheet profile, shared setups, and saved setups.";
 
 export const metadata: Metadata = {
   title,
+  description,
   robots: { index: false, follow: false },
   alternates: { canonical: `${SITE_URL}/profile` },
-  openGraph: { title, url: "/profile", type: "website", siteName: SITE_NAME },
-  twitter: { card: "summary_large_image", title },
+  openGraph: { title: socialTitle, description, url: "/profile", type: "website", siteName: SITE_NAME },
+  twitter: { card: "summary_large_image", title: socialTitle, description },
 };
 
 export default async function ProfilePage() {
@@ -35,7 +39,7 @@ export default async function ProfilePage() {
             <PenLine className="size-7" />
           </span>
           <div>
-            <h2 className="text-xl font-semibold">Log in to view your profile</h2>
+            <h1 className="text-xl font-semibold">Log in to view your profile</h1>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
               We use Discord to keep track of who uploaded what, so your
               profile and setups are scoped to your own account.

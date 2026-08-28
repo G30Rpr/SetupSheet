@@ -1,7 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import { getActionError } from "@/lib/actions/action-errors";
 import { logger } from "@/lib/logger";
@@ -42,6 +42,10 @@ export interface CreateSetupInput {
   videoUrl?: string | null;
   telemetryFilePath?: string | null;
   telemetryFileName?: string | null;
+}
+
+function revalidatePublicSetupData() {
+  revalidateTag("public-setups", "max");
 }
 
 export interface UpdateSetupInput {
@@ -256,6 +260,7 @@ export async function createSetup(
     return { error: getActionError(error, "Couldn't publish the setup right now.") };
   }
 
+  revalidatePublicSetupData();
   revalidatePath("/setups");
   revalidatePath("/");
   return { error: null };
@@ -393,6 +398,7 @@ export async function updateSetup(
     if (removeError) logger.warn("updateSetup: failed to remove old telemetry file", removeError);
   }
 
+  revalidatePublicSetupData();
   revalidatePath("/setups");
   revalidatePath(`/setups/${setupId}`);
   revalidatePath("/");
@@ -454,6 +460,7 @@ export async function deleteSetup(setupId: string): Promise<{ error: string | nu
     if (removeError) logger.warn("deleteSetup: failed to remove attached files", removeError);
   }
 
+  revalidatePublicSetupData();
   revalidatePath("/setups");
   revalidatePath(`/setups/${setupId}`);
   revalidatePath("/");
@@ -488,6 +495,7 @@ export async function toggleUpvote(
     return { error: getActionError(error, "Couldn't update the upvote right now.") };
   }
 
+  revalidatePublicSetupData();
   revalidatePath("/setups");
   revalidatePath("/");
   return { error: null };
@@ -525,6 +533,7 @@ export async function rateSetup(
     return { error: getActionError(error, "Couldn't save your rating right now.") };
   }
 
+  revalidatePublicSetupData();
   revalidatePath("/setups");
   revalidatePath("/");
   return { error: null };
