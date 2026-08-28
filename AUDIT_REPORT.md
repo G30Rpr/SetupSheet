@@ -14,7 +14,7 @@ A full code audit was conducted on **SetupSheet**, a Next.js 16 web application 
 - **Build Resilience:** **Fixed.** Resolved a production build failure caused by `next/font/google` attempting external font downloads at build time in network-restricted environments. Replaced with robust CSS font variables and fallback font stacks in `globals.css`. Production build (`next build`) now succeeds cleanly with Turbopack.
 - **Security:** **Hardened.** Discovered and resolved an Open Redirect vulnerability in the OAuth callback handler (`src/app/auth/callback/route.ts`) by introducing strict URL sanitization (`sanitizeRedirectUrl`) and comprehensive Vitest unit tests.
 - **Environment Resilience:** **Hardened.** Added fallback default strings to Supabase SSR client initializers (`client.ts`, `server.ts`, `proxy.ts`) to prevent server crashes when environment variables are missing or unconfigured.
-- **Code Quality:** **Excellent.** Zero ESLint errors or warnings, zero TypeScript type errors (`npx tsc --noEmit`), and 115 passing unit tests across 20 test suites.
+- **Code Quality:** **Excellent.** Zero ESLint errors or warnings, zero TypeScript type errors (`npx tsc --noEmit`), and 118 passing unit tests across 21 test suites.
 - **Database & RLS Security:** **Hardened.** 21 SQL migrations implement granular Row Level Security (RLS), column-level grants, security-definer RPC functions, direct-API data constraints, transactional setup creation, and contribution throttles.
 - **Follow-up Findings:** **Fixed.** The follow-up pass closed a duplicate migration version, unsafe proof-link rendering, unvalidated Server Action payloads, cross-user attachment references, missing telemetry cleanup, and several accessibility/SEO gaps.
 
@@ -73,7 +73,7 @@ A full code audit was conducted on **SetupSheet**, a Next.js 16 web application 
 - **Explicit data boundaries:** setup and version readers use explicit public column projections rather than `select("*")`, preventing future private/admin columns from leaking into public responses.
 - **Request deduplication:** sitemap setup/profile rows and cached profile metadata use per-request React `cache()`, avoiding duplicate Supabase reads during one render.
 - **Client-side URL updates:** browse filters use native `history.replaceState` because the filters already run locally; typing no longer triggers a full RSC/server reload on every debounce.
-- **Browse expansion:** `getSetupsAfter()` and the `loadMoreSetups` Server Action add a deterministic `(created_at, id)` keyset page, allowing visitors to expand beyond the initial 500 records without a large initial payload.
+- **Browse expansion:** `getSetupsAfter()` and the `loadMoreSetups` Server Action add a deterministic `(created_at, id)` keyset page; validated filters/search terms are pushed into the remote page query, allowing visitors to expand beyond the initial 500 records without a large initial payload.
 - **Bounded rendering:** profile setup cards are isolated in `ProfileSetupsGrid` and paged at 24 cards per batch, preventing a 500-row profile payload from mounting hundreds of stateful cards immediately.
 - **Async failure states:** auth hydration, comments, setup history, request candidates, notification mutations, ratings, downloads, follows, and upload/request mutations now handle rejected promises with recovery UI/toasts rather than leaving unhandled rejections.
 - **Atomic writes:** `0020_create_setup_with_rating.sql` moves setup creation and the uploader's initial rating into one invoker RPC transaction, so a failed rating cannot leave a half-created setup.
@@ -125,7 +125,7 @@ A full code audit was conducted on **SetupSheet**, a Next.js 16 web application 
 ## 7. Testing & Quality Assurance
 
 ### Test Suite Execution
-- **Vitest Unit Tests:** **20/20 passing test files (115/115 tests passed)**.
+- **Vitest Unit Tests:** **21/21 passing test files (118/118 tests passed)**.
   - `src/app/auth/callback/route.test.ts` (OAuth callback sanitization)
   - `src/lib/filter-setups.test.ts` (Fuzzy search & tag filtering)
   - `src/lib/acc-setup-parser.test.ts` (ACC JSON parser)
@@ -144,6 +144,7 @@ A full code audit was conducted on **SetupSheet**, a Next.js 16 web application 
   - `src/lib/storage.test.ts` (Storage path/name guards)
   - `src/lib/actions/action-errors.test.ts` (safe backend error mapping)
   - `src/lib/actions/setup-browse.test.ts` (browse cursor validation)
+  - `src/lib/browse-filters.test.ts` (server filter normalization)
 
 - **Typecheck:** `npx tsc --noEmit` — 0 errors.
 - **Linter:** `npm run lint` — 0 errors/warnings.
@@ -155,7 +156,7 @@ A full code audit was conducted on **SetupSheet**, a Next.js 16 web application 
 
 ## 8. Recommended Next Steps
 
-1. **Server-side filter queries:** Browse expansion now uses a deterministic `(created_at, id)` keyset cursor; the next scalability step is moving fuzzy/filter matching into database queries so loading older pages is not required for every search.
+1. **Search completeness:** Initial and older browse pages now apply validated game/car/track/condition/rig/search filters in Supabase. The next refinement is a profile join/full-text index so author-name search is also complete without relying on loaded client rows.
 2. **Moderation and edge rate limits:** Contribution throttles now cover setup/comment/request rows; add IP/edge limits for Storage uploads and public download-counter increments, plus moderation/reporting before broad launch.
 3. **Privacy/compliance surfaces:** Add a privacy policy, retention/deletion explanation, and an account/data-deletion path if the service will operate for EU/California users.
 4. **Real-user performance pass:** Run PageSpeed/Lighthouse on a deployed URL and verify LCP/INP/CLS on mobile and desktop with representative setup data.

@@ -1,5 +1,6 @@
 "use server";
 
+import { normalizeBrowseFilters, type BrowseFilters } from "@/lib/browse-filters";
 import { getSetupsAfter, type SetupCursor } from "@/lib/supabase/setups";
 import { isUuid } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
@@ -14,8 +15,13 @@ const ISO_CURSOR_PATTERN =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/;
 
 /** Loads the next keyset page for the client-side browse index. */
-export async function loadMoreSetups(cursor: SetupCursor): Promise<MoreSetupsResult> {
+export async function loadMoreSetups(
+  cursor: SetupCursor,
+  filters: BrowseFilters
+): Promise<MoreSetupsResult> {
+  const normalizedFilters = normalizeBrowseFilters(filters);
   if (
+    !normalizedFilters ||
     !cursor ||
     typeof cursor.createdAt !== "string" ||
     cursor.createdAt.length > 64 ||
@@ -27,7 +33,7 @@ export async function loadMoreSetups(cursor: SetupCursor): Promise<MoreSetupsRes
   }
 
   try {
-    return await getSetupsAfter(cursor);
+    return await getSetupsAfter(cursor, normalizedFilters);
   } catch {
     return {
       setups: [],

@@ -1,7 +1,16 @@
 import type { Metadata } from "next";
 
 import { SetupsBrowser } from "@/components/setups-browser";
-import { SETUPS_BROWSE_LIMIT, getSetupCount, getSetups } from "@/lib/supabase/setups";
+import {
+  SETUPS_BROWSE_LIMIT,
+  getSetupCount,
+  getSetups,
+} from "@/lib/supabase/setups";
+import {
+  ALL_BROWSE_FILTER,
+  EMPTY_BROWSE_FILTERS,
+  normalizeBrowseFilters,
+} from "@/lib/browse-filters";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const title = `Browse Setups — ${SITE_NAME}`;
@@ -15,8 +24,33 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title, description },
 };
 
-export default async function SetupsPage() {
-  const [setups, totalCount] = await Promise.all([getSetups(), getSetupCount()]);
+export default async function SetupsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    q?: string;
+    game?: string;
+    car?: string;
+    track?: string;
+    condition?: string;
+    rig?: string;
+  }>;
+}) {
+  const params = await searchParams;
+  const filters =
+    normalizeBrowseFilters({
+      search: params.q ?? "",
+      game: params.game ?? ALL_BROWSE_FILTER,
+      car: params.car ?? ALL_BROWSE_FILTER,
+      track: params.track ?? ALL_BROWSE_FILTER,
+      condition: params.condition ?? ALL_BROWSE_FILTER,
+      rig: params.rig ?? ALL_BROWSE_FILTER,
+    }) ?? EMPTY_BROWSE_FILTERS;
+
+  // Keep the global count separate from the filtered setup page. The browser
+  // can change filters without a server navigation, so it needs a global
+  // upper bound to know whether an older-page request may still be useful.
+  const [setups, totalCount] = await Promise.all([getSetups(filters), getSetupCount()]);
   // getSetups() caps at SETUPS_BROWSE_LIMIT -- search and filtering run
   // client-side over whatever it fetched, so once the community actually
   // grows past that cap, both stop covering the oldest setups too (not
@@ -45,6 +79,7 @@ export default async function SetupsPage() {
         key={setups[0]?.id ?? "no-setups"}
         setups={setups}
         totalCount={totalCount}
+        initialFilters={filters}
       />
     </div>
   );

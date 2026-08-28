@@ -11,6 +11,12 @@ import {
 import { normalizeSetupValues } from "@/lib/setup-values";
 import { normalizeHttpsUrl } from "@/lib/safe-url";
 import { getCurrentUser } from "@/lib/supabase/auth";
+import {
+  ALL_BROWSE_FILTER,
+  buildBrowseSearchExpression,
+  EMPTY_BROWSE_FILTERS,
+  type BrowseFilters,
+} from "@/lib/browse-filters";
 import type { Tables } from "@/lib/supabase/database.types";
 import { sanitizeDisplayName } from "@/lib/user-display";
 import { normalizeVideoUrl } from "@/lib/video-url";
@@ -203,12 +209,19 @@ async function hydrateSetupRows(
  * Supabase's own migration tooling. Flat queries + in-memory joins side-step
  * that failure mode entirely.
  */
-export async function getSetups(): Promise<Setup[]> {
+export async function getSetups(filters: BrowseFilters = EMPTY_BROWSE_FILTERS): Promise<Setup[]> {
   const supabase = await createClient();
+  let query = supabase.from("setups").select(SETUP_COLUMNS);
 
-  const result = await supabase
-    .from("setups")
-    .select(SETUP_COLUMNS)
+  if (filters.game !== ALL_BROWSE_FILTER) query = query.eq("game", filters.game);
+  if (filters.car !== ALL_BROWSE_FILTER) query = query.eq("car", filters.car);
+  if (filters.track !== ALL_BROWSE_FILTER) query = query.eq("track", filters.track);
+  if (filters.condition !== ALL_BROWSE_FILTER) query = query.eq("condition", filters.condition);
+  if (filters.rig !== ALL_BROWSE_FILTER) query = query.eq("rig_profile", filters.rig);
+  const searchExpression = buildBrowseSearchExpression(filters.search);
+  if (searchExpression) query = query.or(searchExpression);
+
+  const result = await query
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(SETUPS_BROWSE_LIMIT);
@@ -222,15 +235,32 @@ export async function getSetups(): Promise<Setup[]> {
  * ordering deterministic even when multiple uploads share a timestamp.
  */
 export async function getSetupsAfter(
-  cursor: SetupCursor
+  cursor: SetupCursor,
+  filters: BrowseFilters = EMPTY_BROWSE_FILTERS
 ): Promise<{ setups: Setup[]; nextCursor: SetupCursor | null; error: string | null }> {
   const supabase = await createClient();
-  const result = await supabase
-    .from("setups")
-    .select(SETUP_COLUMNS)
-    .or(
+  let query = supabase.from("setups").select(SETUP_COLUMNS);
+  const searchExpression = buildBrowseSearchExpression(filters.search);
+
+  // PostgREST exposes one `or` parameter. When searching, use the reliable
+  // timestamp boundary and reserve that single OR expression for the search
+  // fields; with no search, use the full composite cursor.
+  if (searchExpression) {
+    query = query.lt("created_at", cursor.createdAt);
+  } else {
+    query = query.or(
       `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`
-    )
+    );
+  }
+
+  if (filters.game !== ALL_BROWSE_FILTER) query = query.eq("game", filters.game);
+  if (filters.car !== ALL_BROWSE_FILTER) query = query.eq("car", filters.car);
+  if (filters.track !== ALL_BROWSE_FILTER) query = query.eq("track", filters.track);
+  if (filters.condition !== ALL_BROWSE_FILTER) query = query.eq("condition", filters.condition);
+  if (filters.rig !== ALL_BROWSE_FILTER) query = query.eq("rig_profile", filters.rig);
+  if (searchExpression) query = query.or(searchExpression);
+
+  const result = await query
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(SETUPS_BROWSE_LIMIT);
@@ -272,14 +302,20 @@ export async function getFeaturedSetups(limit: number): Promise<Setup[]> {
   return hydrateSetupRows(supabase, rows);
 }
 
-/** Total number of setups, for the landing page's stat tile -- a count-only query, no rows transferred. */
-export async function getSetupCount(): Promise<number> {
+/** Total number of setups, optionally scoped to the same server-side browse filters. */
+export async function getSetupCount(filters: BrowseFilters = EMPTY_BROWSE_FILTERS): Promise<number> {
   const supabase = await createClient();
+  let query = supabase.from("setups").select("id", { count: "exact", head: true });
 
-  const result = await supabase
-    .from("setups")
-    .select("id", { count: "exact", head: true });
+  if (filters.game !== ALL_BROWSE_FILTER) query = query.eq("game", filters.game);
+  if (filters.car !== ALL_BROWSE_FILTER) query = query.eq("car", filters.car);
+  if (filters.track !== ALL_BROWSE_FILTER) query = query.eq("track", filters.track);
+  if (filters.condition !== ALL_BROWSE_FILTER) query = query.eq("condition", filters.condition);
+  if (filters.rig !== ALL_BROWSE_FILTER) query = query.eq("rig_profile", filters.rig);
+  const searchExpression = buildBrowseSearchExpression(filters.search);
+  if (searchExpression) query = query.or(searchExpression);
 
+  const result = await query;
   return unwrapCount(result, "getSetupCount: failed to count setups");
 }
 

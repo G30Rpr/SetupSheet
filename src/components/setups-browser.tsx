@@ -19,6 +19,7 @@ import { SetupCard } from "@/components/setup-card";
 import { loadMoreSetups } from "@/lib/actions/setup-browse";
 import { conditions, games, getCarsForGame, getTracksForGame, rigProfiles } from "@/lib/data";
 import { ALL, filterAndSortSetups, getSearchSuggestions, type SortOption } from "@/lib/filter-setups";
+import type { BrowseFilters } from "@/lib/browse-filters";
 import { isTypingTarget } from "@/lib/is-typing-target";
 import { SETUP_CARD_PAGE_SIZE } from "@/lib/ui-constants";
 import type { SetupCursor } from "@/lib/supabase/setups";
@@ -47,9 +48,11 @@ const LAST_FILTERS_KEY = "setupsheet:last-filters";
 export function SetupsBrowser({
   setups,
   totalCount,
+  initialFilters,
 }: {
   setups: Setup[];
   totalCount: number;
+  initialFilters: BrowseFilters;
 }) {
   const searchParams = useSearchParams();
   const [additionalSetups, setAdditionalSetups] = useState<Setup[]>([]);
@@ -65,12 +68,12 @@ export function SetupsBrowser({
   );
   const hasMoreRemote = Boolean(remoteCursor && loadedSetups.length < totalCount);
 
-  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
-  const [game, setGame] = useState<string>(() => searchParams.get("game") ?? ALL);
-  const [car, setCar] = useState<string>(() => searchParams.get("car") ?? ALL);
-  const [track, setTrack] = useState<string>(() => searchParams.get("track") ?? ALL);
-  const [condition, setCondition] = useState<string>(() => searchParams.get("condition") ?? ALL);
-  const [rig, setRig] = useState<string>(() => searchParams.get("rig") ?? ALL);
+  const [search, setSearch] = useState(initialFilters.search);
+  const [game, setGame] = useState<string>(initialFilters.game);
+  const [car, setCar] = useState<string>(initialFilters.car);
+  const [track, setTrack] = useState<string>(initialFilters.track);
+  const [condition, setCondition] = useState<string>(initialFilters.condition);
+  const [rig, setRig] = useState<string>(initialFilters.rig);
   const [sort, setSort] = useState<SortOption>(() => {
     const fromUrl = searchParams.get("sort");
     return (SORT_VALUES as string[]).includes(fromUrl ?? "") ? (fromUrl as SortOption) : "newest";
@@ -236,7 +239,14 @@ export function SetupsBrowser({
 
     startLoadingOlder(async () => {
       try {
-        const result = await loadMoreSetups(cursor);
+        const result = await loadMoreSetups(cursor, {
+          search,
+          game,
+          car,
+          track,
+          condition,
+          rig,
+        });
         if (result.error) {
           setRemoteError(result.error);
           return;

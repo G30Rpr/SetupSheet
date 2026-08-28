@@ -66,6 +66,7 @@ src/
     setup-schemas.ts       Per-game setup-screen field definitions (see below)
     utils.ts              `cn()` class-merging helper, `getInitials()`
     ui-constants.ts       Shared setup-card pagination constants
+    browse-filters.ts     Validated server-side browse/search filters
     supabase/
       client.ts           Browser Supabase client (Client Components)
       server.ts             Server Supabase client, memoized per-request via React's cache()
