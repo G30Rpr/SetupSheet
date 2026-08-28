@@ -17,14 +17,14 @@ SetupSheet is a Next.js 16 / React 19 / TypeScript / Tailwind v4 application bac
 - **Core Web Vitals:** **Not measured.** No deployed URL, Lighthouse trace, PageSpeed Insights report, screenshots, or representative production dataset was supplied. Any LCP/INP/CLS conclusion below is explicitly source-based or provisional.
 - **SEO:** Page title templating, bounded descriptions, canonical URLs, Open Graph/Twitter metadata, route-aware robots directives, updated sitemap timestamps, JSON-LD, semantic headings/lists, breadcrumbs, streamed related links, and proper `notFound()` paths are implemented.
 - **Security:** The existing nonce-based CSP remains in place. JSON-LD is centralized in `src/components/json-ld.tsx`, HTML-escaped by `serializeJsonLd()`, and nonce-protected.
-- **Validation:** The current known-good unit suite is 23 test files / 123 tests. `npm run lint`, `npx tsc --noEmit`, `npm run build`, and `npm audit --audit-level=high` have passed during this pass. Database regression tests remain blocked locally because `psql` is unavailable. Playwright browser execution remains blocked by the sandbox's failed Chromium download.
+- **Validation:** The current known-good unit suite is 25 test files / 128 tests. `npm run lint`, `npx tsc --noEmit`, `npm run build`, and `npm audit --audit-level=high` have passed during this pass. Database regression tests remain blocked locally because `psql` is unavailable. Playwright browser execution remains blocked by the sandbox's failed Chromium download.
 
 ### Priority summary
 
 | Priority | Work | Status |
 |---|---|---|
 | Critical release gate | Run mobile/desktop Lighthouse or PageSpeed against a deployed URL with populated setup data | Awaiting external measurement |
-| High | Keep public cache tags and `0022_setup_updated_at.sql` deployed before relying on cached public pages/sitemap timestamps | Implemented; deployment verification required |
+| High | Keep public cache tags and migrations `0022`/`0023` deployed before relying on cached public pages/profile aggregates | Implemented; deployment verification required |
 | High | Validate JSON-LD, canonical URLs, sitemap coverage, and robots behavior in Google Search Console/Rich Results Test | Implemented; external validation required |
 | Medium | Replace the bounded client-side browse index with server-side search/RPC pagination as the catalog grows | Remaining optimization |
 | Medium | Split the sitemap into multiple documents before the 24,000-setup cap becomes material | Remaining scale optimization |
@@ -80,7 +80,7 @@ The application renders viewer-specific upvote, favorite, rating, and ownership 
 - `hydrateSetupRows()` still reads authenticated viewer state through the cookie-bound SSR client on each request; it is not placed inside the Data Cache.
 - `src/lib/actions/setups.ts` calls `revalidateTag("public-setups", "max")` after setup/rating/upvote mutations. `src/lib/actions/follows.ts` invalidates `public-profiles` after follower mutations.
 
-The tag invalidation and the `0022` migration must be deployed together with the application. This is a **verified implementation requirement**, not a PageSpeed measurement.
+The tag invalidation and migrations `0022`/`0023` must be deployed together with the application. This is a **verified implementation requirement**, not a PageSpeed measurement.
 
 ## Optimization Opportunities
 
@@ -99,9 +99,11 @@ Implemented mitigations:
 
 Remaining optimization: move full-text search and sort to a database RPC or indexed search endpoint, then send a small page of rows instead of serializing a 500-row client index. The current author-name search remains incomplete on older remote pages because the PostgREST search expression covers setup columns/tags, not the joined profile username.
 
-### 3.4 Profile reads are bounded but still serialize up to 500 setup rows
+### 3.4 Profile reads now paginate at the database boundary — **implemented**
 
-`getSetupsByUser()` is capped at `PROFILE_SETUPS_LIMIT = 500`, while `ProfileSetupsGrid` initially mounts 24 cards. This prevents immediate mounting cost but does not eliminate the RSC serialization cost of the remaining rows. A future profile keyset action should send 24-row pages and a small aggregate stats query. This is a **verified source-level optimization opportunity**, not a measured regression.
+Profile routes no longer fetch or serialize up to 500 complete setup rows. `getSetupsByUserPage()` in `src/lib/supabase/setups.ts` fetches 25 rows at a time, returns 24 setup cards plus a deterministic `(created_at, id)` cursor, and reuses the indexed public Data Cache. `src/lib/actions/profile-browse.ts` validates profile UUIDs and cursors before loading later pages. `src/components/profile-setups-grid.tsx` appends pages on demand, de-duplicates IDs, and exposes loading/error recovery states.
+
+`supabase/migrations/0023_profile_setup_stats.sql` extends the public `leaderboard` view with `total_ratings`; `getProfileSetupStats()` supplies full-profile setup count/upvote/rating totals without serializing every card. Both own and public profile routes pass the page cursor, stats, and initial-load errors into `ProfileView`. This closes the Phase 3.4 source-level finding; production RSC payload and interaction timings should still be confirmed with Lighthouse/real-user data.
 
 ### 3.5 Below-the-fold related links do not block setup LCP
 
@@ -140,7 +142,7 @@ The production build reports `/sitemap.xml` as a static/revalidated route with a
 1. Run Lighthouse/PageSpeed against a deployed build after populating realistic setup rows. Record the exact LCP element, response timings, JS long tasks, layout-shift sources, and mobile/desktop scores in CI or release notes.
 2. Add a performance budget for initial HTML, RSC payload, first-party JS, and total image bytes. Fail CI on large regressions rather than relying on bundle intuition.
 3. Replace the 500-row client browse index with Postgres full-text/trigram search and cursor pagination before the catalog becomes large enough that `SETUPS_BROWSE_LIMIT` hides results.
-4. Add profile keyset pagination and aggregate stats before profiles commonly exceed 24–50 public setups.
+4. Monitor profile page RSC payloads and keep the 24-row page size aligned with real-device memory and interaction measurements.
 5. Keep viewer state out of `unstable_cache`; invalidate `public-setups` after any mutation that changes public setup rows or aggregates. Never cache a response containing `hasUpvoted`, `hasFavorited`, `myRating`, or `isOwner` as shared data.
 6. Keep generated OG images and sitemap responses behind CDN caching, but retain a revalidation/invalidation path when setup metadata changes.
 7. If a production analytics provider is added, load it only after consent where required and use `next/script` with an explicit loading strategy; measure its INP and main-thread cost separately.
@@ -197,7 +199,7 @@ Only a small browse item list is included intentionally; embedding all 500 clien
 
 `supabase/migrations/0022_setup_updated_at.sql` adds `setups.updated_at` and a trigger that advances it only when contributor-editable fields change. Counter/rating trigger updates retain the old timestamp. `getSetupSeoData()` uses the public cached row, setup JSON-LD emits `dateModified`, and `src/app/sitemap.ts` emits the updated timestamp as `lastModified`.
 
-The migration must be applied after `0021`; `src/lib/supabase/database.types.ts` and the explicit public projection already include `updated_at`. The same migration adds `(created_at, id)` / `(user_id, created_at, id)` ordering indexes and `pg_trgm` indexes for validated substring search.
+The migration must be applied after `0021`; `src/lib/supabase/database.types.ts` and the explicit public projection already include `updated_at`. The same migration adds `(created_at, id)` / `(user_id, created_at, id)` ordering indexes and `pg_trgm` indexes for validated substring search. Migration `0023_profile_setup_stats.sql` then adds the `total_ratings` aggregate needed by paginated profile headers.
 
 ### 4.6 Heading hierarchy and semantic HTML were improved
 
@@ -238,14 +240,14 @@ The persistent header/footer, home game/rig links, setup author links, fulfilled
 - `npm ci` — installed 535 packages; npm reported 0 vulnerabilities.
 - `npm run lint` — passed with no warnings.
 - `npx tsc --noEmit` — passed with no errors.
-- `npm test` — 23 test files, 123 tests passed, including SEO helper and auth-cookie tests.
+- `npm test` — 25 test files, 128 tests passed, including SEO helper, auth-cookie, profile-pagination action, and profile-grid tests.
 - `npm run build` — production Turbopack build passed; routes compile with dynamic public pages, static OG/robots output, and hourly revalidated sitemap output.
 - `npm audit --audit-level=high` — 0 vulnerabilities.
 - `npx playwright test --list` — test discovery works; SEO coverage is present in `e2e/seo.spec.ts`.
 
 ### Blocked or not supplied
 
-- `npm run test:db` — not executable locally because `psql` is not installed. CI's `postgres:16` service remains the authoritative migration test environment. New SQL coverage is in `supabase/testing/zz_setup_updated_at.test.sql`.
+- `npm run test:db` — not executable locally because `psql` is not installed. CI's `postgres:16` service remains the authoritative migration test environment. New SQL coverage is in `supabase/testing/zz_setup_updated_at.test.sql` and `supabase/testing/zzz_profile_setup_stats.test.sql`.
 - `npm run test:e2e` — browser execution remains blocked because the sandbox could not download Chrome for Testing; CI installs Chromium with `npx playwright install --with-deps chromium`.
 - PageSpeed/Lighthouse — no deployed URL or metrics supplied; Core Web Vitals findings remain provisional.
 - Screenshot review — no screenshots supplied; pixel-level Phase 1 conclusions remain provisional.
@@ -255,17 +257,19 @@ The persistent header/footer, home game/rig links, setup author links, fulfilled
 ## 6. Files Added or Updated for Phases 3 and 4
 
 - `src/lib/seo.ts`, `src/lib/seo.test.ts`
+- `src/lib/actions/profile-browse.ts`, `src/lib/actions/profile-browse.test.ts`
 - `src/components/json-ld.tsx`
 - `src/components/related-setups.tsx`
 - `src/lib/supabase/public.ts`
 - `src/lib/supabase/auth-cookie.ts`, `src/lib/supabase/auth-cookie.test.ts`
 - `src/lib/supabase/setups.ts`, `profiles.ts`, `leaderboard.ts`, `auth.ts`, `proxy.ts`
-- `src/lib/actions/setups.ts`, `follows.ts`
+- `src/lib/actions/setups.ts`, `follows.ts`, `profile-browse.ts`
+- `src/components/profile-setups-grid.tsx`, `src/components/profile-view.tsx`
 - `src/app/layout.tsx`, `setups/page.tsx`, `setups/[id]/page.tsx`, `profile/[userId]/page.tsx`, `leaderboard/page.tsx`, `requests/page.tsx`, `not-found.tsx`
 - `src/app/setups/[id]/not-found.tsx`, `src/app/profile/[userId]/not-found.tsx`
 - `src/components/setup-card.tsx`, `setups-browser.tsx`, `profile-setups-grid.tsx`, `ui/avatar.tsx`, `globals.css`
 - `src/app/robots.ts`, `src/app/sitemap.ts`, `next.config.ts`, `src/lib/og-fonts.ts`
-- `supabase/migrations/0022_setup_updated_at.sql`
-- `supabase/testing/zz_setup_updated_at.test.sql`
+- `supabase/migrations/0022_setup_updated_at.sql`, `0023_profile_setup_stats.sql`
+- `supabase/testing/zz_setup_updated_at.test.sql`, `zzz_profile_setup_stats.test.sql`
 - `e2e/seo.spec.ts`
 - `README.md`

@@ -328,6 +328,7 @@ export type Database = {
           avatar_url: string | null;
           setup_count: number;
           total_upvotes: number;
+          total_ratings: number;
         };
         Relationships: Relationships;
       };

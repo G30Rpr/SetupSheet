@@ -54,7 +54,7 @@ src/
     star-rating.tsx      Pace / Predictability star rating display
     tag-badge.tsx         Setup tag → Badge color mapping
     profile-view.tsx      Shared display for both /profile and /profile/[userId]
-    profile-setups-grid.tsx Client-paged setup-card grid used by profiles
+    profile-setups-grid.tsx Cursor-paged setup-card grid used by profiles
     profile-skeleton.tsx   Shared loading skeleton for both profile routes
     contributor-badge.tsx  Bronze/Silver/Gold badge, derived from total upvotes
     follow-button.tsx      Follow/Following toggle shown on someone else's profile
@@ -79,8 +79,7 @@ src/
       proxy.ts              Session-refresh helper used by src/proxy.ts
       setups.ts             Public setup cache, browse/detail queries, row mapping
       profiles.ts           Cached public profile metadata
-      leaderboard.ts          Cached public leaderboard view
-      leaderboard.ts          getLeaderboard() — reads the public.leaderboard view
+      leaderboard.ts          getLeaderboard() — reads the cached public.leaderboard view
       follows.ts               isFollowing()
       notifications.ts         getNotifications(), getUnreadNotificationCount()
     actions/
@@ -88,6 +87,7 @@ src/
                             uploadSetupFile, downloadSetup -- validates game/condition/rig/tags
                             against lib/data.ts before touching the database
       setup-browse.ts       Keyset pagination action for loading older setups
+      profile-browse.ts     Cursor pagination action for public profile setups
       action-errors.ts      Stable user-facing error mapping for backend failures
       follows.ts              toggleFollow
       notifications.ts         markNotificationRead, markAllNotificationsRead,
@@ -124,6 +124,7 @@ supabase/
     0020_create_setup_with_rating.sql               atomic setup + initial rating transaction
     0021_insert_grants_and_rate_limits.sql          INSERT hardening + contribution throttles
     0022_setup_updated_at.sql                        edit freshness timestamp for SEO/sitemaps
+    0023_profile_setup_stats.sql                     aggregate totals for paginated profiles
   seed.sql                          sample setups across all 8 supported games
 ```
 
@@ -151,7 +152,9 @@ Open [http://localhost:3000](http://localhost:3000).
 - `next.config.ts` gives generated OG images and metadata endpoints CDN-safe
   `Cache-Control` headers. Setup cards lazy-load avatars/iframes and defer
   below-the-fold rendering; setup values, install guides, history, comments,
-  and upload rosters are code-split until needed.
+  and upload rosters are code-split until needed. Profile pages send 24 setup
+  cards at a time through `profile-browse.ts`; aggregate totals come from the
+  public leaderboard view instead of serializing every card.
 - The root metadata uses a title template, canonical URLs, Open Graph/Twitter
   cards, and a shared nonce-protected `JsonLd` component. Public setup pages
   expose Article and BreadcrumbList data; browse, profile, leaderboard, and
@@ -281,7 +284,8 @@ things) and runs the regression checks under `supabase/testing/*.test.sql`
 — currently covering `fulfill_setup_request()`'s game/car/track matching,
 its race-condition fix, the request-reopen trigger, comment length, and
 0018's direct-API data constraints, 0020's atomic setup creation, 0021's
-INSERT grants/rate limits, and 0022's setup freshness trigger. Needs a reachable Postgres
+INSERT grants/rate limits, 0022's setup freshness trigger, and 0023's profile
+aggregate view. Needs a reachable Postgres
 (`PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD` env vars, defaulting to
 `localhost:5432` as `postgres`) — CI runs this same script against a
 `postgres:16` service container on every push.

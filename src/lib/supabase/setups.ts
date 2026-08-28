@@ -23,6 +23,8 @@ import { createPublicClient } from "@/lib/supabase/public";
 import { sanitizeDisplayName } from "@/lib/user-display";
 import { normalizeVideoUrl } from "@/lib/video-url";
 import type { Condition, Game, RigProfile, Setup, SetupTag } from "@/lib/types";
+import { SETUP_CARD_PAGE_SIZE } from "@/lib/ui-constants";
+import { isUuid } from "@/lib/utils";
 
 type SetupRow = Tables<"setups">;
 
@@ -46,8 +48,20 @@ export interface SetupCursor {
   createdAt: string;
   id: string;
 }
-/** Prevent a single profile page from turning into an unbounded public query. */
-export const PROFILE_SETUPS_LIMIT = 500;
+/** Number of setup cards sent to a profile page at a time. */
+export const PROFILE_SETUP_PAGE_SIZE = SETUP_CARD_PAGE_SIZE;
+
+export interface ProfileSetupStats {
+  setupCount: number;
+  totalUpvotes: number;
+  totalRatings: number;
+}
+
+export interface ProfileSetupPage {
+  setups: Setup[];
+  nextCursor: SetupCursor | null;
+  error: string | null;
+}
 
 const PUBLIC_DATA_REVALIDATE_SECONDS = 60;
 const PUBLIC_SETUP_CACHE_TAG = "public-setups";
@@ -108,19 +122,61 @@ const getCachedSetupCount = unstable_cache(
   { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [PUBLIC_SETUP_CACHE_TAG] }
 );
 
-const getCachedUserSetupRows = unstable_cache(
-  async (userId: string): Promise<SetupRow[]> => {
+interface CachedProfileSetupPage {
+  rows: SetupRow[];
+  error: boolean;
+}
+
+const getCachedProfileSetupPage = unstable_cache(
+  async (
+    userId: string,
+    cursorCreatedAt: string,
+    cursorId: string
+  ): Promise<CachedProfileSetupPage> => {
     const supabase = createPublicClient();
-    const result = await supabase
+    let query = supabase
       .from("setups")
       .select(SETUP_COLUMNS)
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(PROFILE_SETUPS_LIMIT);
-    return unwrapList(result, "getCachedUserSetupRows: failed to load setups");
+      .order("id", { ascending: false })
+      .limit(PROFILE_SETUP_PAGE_SIZE + 1);
+
+    if (cursorCreatedAt && cursorId) {
+      query = query.or(
+        `created_at.lt.${cursorCreatedAt},and(created_at.eq.${cursorCreatedAt},id.lt.${cursorId})`
+      );
+    }
+
+    const result = await query;
+    return {
+      rows: unwrapList(result, "getCachedProfileSetupPage: failed to load setups"),
+      error: Boolean(result.error),
+    };
   },
-  ["setups-by-user"],
+  ["setups-profile-page"],
   { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [PUBLIC_SETUP_CACHE_TAG] }
+);
+
+const getCachedProfileSetupStats = unstable_cache(
+  async (userId: string): Promise<ProfileSetupStats | null> => {
+    const supabase = createPublicClient();
+    const result = await supabase
+      .from("leaderboard")
+      .select("setup_count, total_upvotes, total_ratings")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const row = unwrapSingle(result, "getCachedProfileSetupStats: failed to load profile totals");
+    if (!row) return null;
+
+    return {
+      setupCount: row.setup_count,
+      totalUpvotes: row.total_upvotes,
+      totalRatings: row.total_ratings,
+    };
+  },
+  ["profile-setup-stats"],
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [PUBLIC_SETUP_CACHE_TAG, "public-profiles"] }
 );
 
 const getCachedSetupRowById = unstable_cache(
@@ -567,11 +623,57 @@ export async function getSetupsByIds(ids: string[]): Promise<Setup[]> {
   return hydrateSetupRows(supabase, rows);
 }
 
-/** Fetches every setup uploaded by a given user, newest first. */
-export async function getSetupsByUser(userId: string): Promise<Setup[]> {
-  const supabase = await createClient();
-  const rows = await getCachedUserSetupRows(userId);
-  return hydrateSetupRows(supabase, rows);
+/** Strict cursor contract used by profile pagination before building a PostgREST filter. */
+const PROFILE_CURSOR_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/;
+
+function isValidProfileCursor(cursor: SetupCursor | null): boolean {
+  return Boolean(
+    cursor &&
+      typeof cursor.createdAt === "string" &&
+      cursor.createdAt.length <= 64 &&
+      PROFILE_CURSOR_PATTERN.test(cursor.createdAt) &&
+      !Number.isNaN(Date.parse(cursor.createdAt)) &&
+      isUuid(cursor.id)
+  );
+}
+
+/** Fetches one bounded page of a user's setups, newest first. */
+export const getSetupsByUserPage = cache(
+  async (userId: string, cursor: SetupCursor | null = null): Promise<ProfileSetupPage> => {
+    if (!isUuid(userId) || (cursor !== null && !isValidProfileCursor(cursor))) {
+      return { setups: [], nextCursor: null, error: "That profile page request is invalid." };
+    }
+
+    const supabase = await createClient();
+    const cachedPage = await getCachedProfileSetupPage(
+      userId,
+      cursor?.createdAt ?? "",
+      cursor?.id ?? ""
+    );
+
+    if (cachedPage.error) {
+      return { setups: [], nextCursor: null, error: "Couldn't load profile setups right now." };
+    }
+
+    const pageRows = cachedPage.rows.slice(0, PROFILE_SETUP_PAGE_SIZE);
+    const setups = await hydrateSetupRows(supabase, pageRows);
+    const lastRow = pageRows.at(-1);
+
+    return {
+      setups,
+      nextCursor:
+        cachedPage.rows.length > PROFILE_SETUP_PAGE_SIZE && lastRow
+          ? { createdAt: lastRow.created_at, id: lastRow.id }
+          : null,
+      error: null,
+    };
+  }
+);
+
+/** Cached aggregate totals keep the profile header accurate without loading every setup card. */
+export async function getProfileSetupStats(userId: string): Promise<ProfileSetupStats | null> {
+  return getCachedProfileSetupStats(userId);
 }
 
 export interface SetupSeoData {

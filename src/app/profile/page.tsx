@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { getProfile } from "@/lib/supabase/profiles";
 import { getFavoritedSetups } from "@/lib/supabase/setup-favorites";
-import { getSetupsByUser, PROFILE_SETUPS_LIMIT } from "@/lib/supabase/setups";
+import { getProfileSetupStats, getSetupsByUserPage } from "@/lib/supabase/setups";
 import { normalizeHttpsUrl } from "@/lib/safe-url";
 import { fullPageTitle } from "@/lib/seo";
 import { getUserDisplayName } from "@/lib/user-display";
@@ -51,9 +51,10 @@ export default async function ProfilePage() {
     );
   }
 
-  const [profile, setups, favoritedSetups] = await Promise.all([
+  const [profile, setupPage, stats, favoritedSetups] = await Promise.all([
     getProfile(user.id),
-    getSetupsByUser(user.id),
+    getSetupsByUserPage(user.id),
+    getProfileSetupStats(user.id),
     getFavoritedSetups(user.id),
   ]);
 
@@ -67,8 +68,10 @@ export default async function ProfilePage() {
       avatarUrl={avatarUrl ?? undefined}
       memberSince={profile?.memberSince}
       followerCount={profile?.followerCount ?? 0}
-      setups={setups}
-      setupsCapped={setups.length === PROFILE_SETUPS_LIMIT}
+      setups={setupPage.setups}
+      stats={stats}
+      pagination={{ profileId: user.id, nextCursor: setupPage.nextCursor }}
+      setupsError={setupPage.error}
       favoritedSetups={favoritedSetups}
       isOwnProfile
     />

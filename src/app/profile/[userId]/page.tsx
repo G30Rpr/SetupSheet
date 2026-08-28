@@ -8,7 +8,7 @@ import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isFollowing } from "@/lib/supabase/follows";
 import { getProfile } from "@/lib/supabase/profiles";
-import { getSetupsByUser, PROFILE_SETUPS_LIMIT } from "@/lib/supabase/setups";
+import { getProfileSetupStats, getSetupsByUserPage } from "@/lib/supabase/setups";
 import { absoluteUrl, fullPageTitle } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
@@ -55,7 +55,10 @@ export default async function PublicProfilePage({
 
   if (!profile) notFound();
 
-  const setups = await getSetupsByUser(userId);
+  const [setupPage, stats] = await Promise.all([
+    getSetupsByUserPage(userId),
+    getProfileSetupStats(userId),
+  ]);
   const viewerIsOwner = user?.id === userId;
   const viewerFollowsThem = !viewerIsOwner && (await isFollowing(user?.id ?? null, userId));
   const profileUrl = absoluteUrl(`/profile/${encodeURIComponent(userId)}`);
@@ -100,8 +103,10 @@ export default async function PublicProfilePage({
         memberSince={profile.memberSince}
         followerCount={profile.followerCount}
         follow={viewerIsOwner ? undefined : { targetUserId: userId, initialIsFollowing: viewerFollowsThem }}
-        setups={setups}
-        setupsCapped={setups.length === PROFILE_SETUPS_LIMIT}
+        setups={setupPage.setups}
+        stats={stats}
+        pagination={{ profileId: userId, nextCursor: setupPage.nextCursor }}
+        setupsError={setupPage.error}
         isOwnProfile={viewerIsOwner}
       />
     </>
