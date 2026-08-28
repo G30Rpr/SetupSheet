@@ -5,7 +5,6 @@ import { useEffect, useRef, useState, useTransition, type FormEvent } from "reac
 import {
   AlertCircle,
   CheckCircle2,
-  ChevronDown,
   File as FileIcon,
   FileUp,
   Loader2,
@@ -22,6 +21,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FileDropzone } from "@/components/file-dropzone";
 import { GroupedSelectField } from "@/components/grouped-select-field";
+import { UploadProofSection } from "@/components/upload-proof-section";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -36,8 +36,7 @@ import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
 import { createSetup, updateSetup, uploadSetupFile, uploadTelemetryFile } from "@/lib/actions/setups";
 import { parseAccSetupFile } from "@/lib/acc-setup-parser";
-import { ALLOWED_TELEMETRY_FILE_EXTENSIONS } from "@/lib/storage";
-import { MAX_VIDEO_URL_LENGTH, validateVideoUrl } from "@/lib/video-url";
+import { validateVideoUrl } from "@/lib/video-url";
 import { normalizeSetupValues } from "@/lib/setup-values";
 import { resolveEffectiveSetupValues } from "@/lib/resolve-effective-setup-values";
 import { isKnownOption, type SelectOptionGroup } from "@/lib/select-options";
@@ -681,84 +680,18 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
             </div>
           </section>
 
-          {/* Lap Proof & Telemetry (Optional) */}
-          <section className="flex flex-col gap-3 rounded-xl border border-border/80 bg-secondary/20 p-4">
-            <button
-              type="button"
-              onClick={() => setShowProofFields((visible) => !visible)}
-              aria-expanded={showProofFields}
-              aria-controls="lap-proof-fields"
-              className="flex w-full items-center justify-between gap-3 rounded-md text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-            >
-              <span
-                role="heading"
-                aria-level={3}
-                className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
-              >
-                <CheckCircle2 className="size-4 text-racing-green" />
-                Verified Lap Proof &amp; Telemetry
-                <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
-              </span>
-              <ChevronDown
-                className={cn(
-                  "size-4 shrink-0 text-muted-foreground transition-transform",
-                  showProofFields && "rotate-180"
-                )}
-              />
-            </button>
-            <p className="text-xs text-muted-foreground">
-              Add proof only if you have it. A video link or telemetry file adds a
-              &ldquo;Verified Lap&rdquo; badge to your setup card.
-            </p>
-
-            {showProofFields && (
-              <div id="lap-proof-fields" className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="videoUrl">Hotlap Video URL (YouTube / Twitch)</Label>
-                  <Input
-                    id="videoUrl"
-                    name="videoUrl"
-                    type="url"
-                    inputMode="url"
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    maxLength={MAX_VIDEO_URL_LENGTH}
-                    value={videoUrl}
-                    onChange={(e) => setVideoUrl(e.target.value)}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <Label>Telemetry / Data Logging File</Label>
-                  {isEditing && keepExistingTelemetry && existingSetup?.telemetryFileName ? (
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/40 px-3 py-2 text-sm">
-                      <span className="truncate text-xs font-medium text-racing-cyan">
-                        Telemetry attached: {existingSetup.telemetryFileName}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setKeepExistingTelemetry(false)}
-                        className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
-                        aria-label="Remove telemetry file"
-                      >
-                        <X className="size-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <FileDropzone
-                      file={telemetryFile}
-                      onFileChange={setTelemetryFile}
-                      acceptedExtensions={ALLOWED_TELEMETRY_FILE_EXTENSIONS}
-                      ariaLabel="Choose a telemetry file"
-                      helperText=".ld, .ldx, .ibt, .vbo, .drf, .csv, .zip or .zvp — up to 10 MB"
-                    />
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Supports MoTeC (.ld, .ldx), iRacing (.ibt), VBOX (.vbo), CSV, or ZIP up to 10 MB.
-                  </p>
-                </div>
-              </div>
-            )}
-          </section>
+          <UploadProofSection
+            showFields={showProofFields}
+            onToggleFields={() => setShowProofFields((visible) => !visible)}
+            videoUrl={videoUrl}
+            onVideoUrlChange={setVideoUrl}
+            telemetryFile={telemetryFile}
+            onTelemetryFileChange={setTelemetryFile}
+            isEditing={isEditing}
+            keepExistingTelemetry={keepExistingTelemetry}
+            existingTelemetryFileName={existingSetup?.telemetryFileName}
+            onRemoveExistingTelemetry={() => setKeepExistingTelemetry(false)}
+          />
 
           {!isEditing && (
             <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">

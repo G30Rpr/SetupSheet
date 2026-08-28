@@ -15,7 +15,7 @@ A full code audit was conducted on **SetupSheet**, a Next.js 16 web application 
 - **Security:** **Hardened.** Discovered and resolved an Open Redirect vulnerability in the OAuth callback handler (`src/app/auth/callback/route.ts`) by introducing strict URL sanitization (`sanitizeRedirectUrl`) and comprehensive Vitest unit tests.
 - **Environment Resilience:** **Hardened.** Added fallback default strings to Supabase SSR client initializers (`client.ts`, `server.ts`, `proxy.ts`) to prevent server crashes when environment variables are missing or unconfigured.
 - **Code Quality:** **Excellent.** Zero ESLint errors or warnings, zero TypeScript type errors (`npx tsc --noEmit`), and 115 passing unit tests across 20 test suites.
-- **Database & RLS Security:** **Hardened.** 20 SQL migrations implement granular Row Level Security (RLS), column-level grants, security-definer RPC functions, direct-API data constraints, and transactional setup creation.
+- **Database & RLS Security:** **Hardened.** 21 SQL migrations implement granular Row Level Security (RLS), column-level grants, security-definer RPC functions, direct-API data constraints, transactional setup creation, and contribution throttles.
 - **Follow-up Findings:** **Fixed.** The follow-up pass closed a duplicate migration version, unsafe proof-link rendering, unvalidated Server Action payloads, cross-user attachment references, missing telemetry cleanup, and several accessibility/SEO gaps.
 
 ---
@@ -78,7 +78,9 @@ A full code audit was conducted on **SetupSheet**, a Next.js 16 web application 
 - **Async failure states:** auth hydration, comments, setup history, request candidates, notification mutations, ratings, downloads, follows, and upload/request mutations now handle rejected promises with recovery UI/toasts rather than leaving unhandled rejections.
 - **Atomic writes:** `0020_create_setup_with_rating.sql` moves setup creation and the uploader's initial rating into one invoker RPC transaction, so a failed rating cannot leave a half-created setup.
 - **Error surfaces:** `src/lib/actions/action-errors.ts` now maps unknown backend errors to stable UI messages while preserving detailed server logs; expected fulfillment messages use an explicit allow-list.
-- **Remaining maintainability opportunity:** `SetupCard` and `UploadForm` remain large feature components. Splitting mutation hooks and presentational sections would reduce prop/state density before adding more community features.
+- **Contribution throttles:** migration `0021` uses column-scoped INSERT grants and transaction-level advisory locks to limit authenticated setup, comment, and request creation.
+- **SetupCard decomposition:** the stateful rating/footer area now lives in `SetupCardFooter`; upload proof/telemetry rendering lives in `UploadProofSection`.
+- **Remaining maintainability opportunity:** `UploadForm` still owns the full form state and submit orchestration; extracting a dedicated form-state hook would be the next clean split.
 - **Typed data access:** `src/lib/supabase/database.types.ts` now defines the public tables/views/functions and is supplied to browser, server, and proxy Supabase clients, so query and mutation names/columns are checked at compile time. It should be regenerated from the deployed schema whenever migrations change.
 
 ### 4.3 ACC Setup File Parser
@@ -147,13 +149,13 @@ A full code audit was conducted on **SetupSheet**, a Next.js 16 web application 
 - **Linter:** `npm run lint` — 0 errors/warnings.
 - **Production Build:** `npm run build` — 16/16 routes successfully compiled with Next.js 16.3.3.
 - **Playwright:** Test discovery succeeded; local browser execution was blocked because the sandbox could not download Chromium; CI installs it with `--with-deps` on each E2E run.
-- **Database migration harness:** Not run locally because `psql` is not installed in the sandbox; the CI service job remains configured to apply all 20 migrations and SQL regressions.
+- **Database migration harness:** Not run locally because `psql` is not installed in the sandbox; the CI service job remains configured to apply all 21 migrations and SQL regressions.
 
 ---
 
 ## 8. Recommended Next Steps
 
 1. **Server-side filter queries:** Browse expansion now uses a deterministic `(created_at, id)` keyset cursor; the next scalability step is moving fuzzy/filter matching into database queries so loading older pages is not required for every search.
-2. **Rate limiting/moderation:** Add per-user/IP controls and moderation workflows for uploads, comments, requests, and public download-counter increments before broad launch.
+2. **Moderation and edge rate limits:** Contribution throttles now cover setup/comment/request rows; add IP/edge limits for Storage uploads and public download-counter increments, plus moderation/reporting before broad launch.
 3. **Privacy/compliance surfaces:** Add a privacy policy, retention/deletion explanation, and an account/data-deletion path if the service will operate for EU/California users.
 4. **Real-user performance pass:** Run PageSpeed/Lighthouse on a deployed URL and verify LCP/INP/CLS on mobile and desktop with representative setup data.

@@ -48,6 +48,7 @@ src/
     setups-browser.tsx  Client component: filter state + filtered grid
     upload-form.tsx      Upload form; drag a real ACC .json and it auto-fills the Car field
     file-dropzone.tsx    Drag-and-drop / tap-to-choose file input
+    upload-proof-section.tsx Optional lap-proof and telemetry fields
     star-rating.tsx      Pace / Predictability star rating display
     tag-badge.tsx         Setup tag → Badge color mapping
     profile-view.tsx      Shared display for both /profile and /profile/[userId]
@@ -113,6 +114,7 @@ supabase/
     0018_data_validation_hardening.sql              direct-API data and attachment constraints
     0019_storage_extension_hardening.sql            Storage extension allow-list policies
     0020_create_setup_with_rating.sql               atomic setup + initial rating transaction
+    0021_insert_grants_and_rate_limits.sql          INSERT hardening + contribution throttles
   seed.sql                          sample setups across all 8 supported games
 ```
 
@@ -243,8 +245,8 @@ script, so it's safe to run against a Postgres instance you use for other
 things) and runs the regression checks under `supabase/testing/*.test.sql`
 — currently covering `fulfill_setup_request()`'s game/car/track matching,
 its race-condition fix, the request-reopen trigger, comment length, and
-0018's direct-API data constraints, and 0020's atomic setup creation.
-Needs a reachable Postgres
+0018's direct-API data constraints, 0020's atomic setup creation, and
+0021's INSERT grants/rate limits. Needs a reachable Postgres
 (`PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD` env vars, defaulting to
 `localhost:5432` as `postgres`) — CI runs this same script against a
 `postgres:16` service container on every push.
@@ -405,8 +407,10 @@ the schema changes — only `src/lib/setup-schemas.ts` and the seed data.
   proof data.
 - **Direct-write hardening** — migrations `0018` and `0019` repeat important
   bounds at the database/Storage policy layer for clients that bypass the
-  React form. Migration versions are unique; `npm run test:db` fails early if
-  a duplicate numeric migration prefix is introduced.
+  React form. Migration `0021` also removes protected columns from direct
+  authenticated INSERTs and throttles setup/comment/request creation. Migration
+  versions are unique; `npm run test:db` fails early if a duplicate numeric
+  migration prefix is introduced.
 
 ## Deploying to Vercel
 
