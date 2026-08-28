@@ -319,6 +319,66 @@ export type Database = {
         };
         Relationships: Relationships;
       };
+      account_deletion_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          status: string;
+          created_at: string;
+          completed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          status?: string;
+          created_at?: string;
+          completed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          status?: string;
+          created_at?: string;
+          completed_at?: string | null;
+        };
+        Relationships: Relationships;
+      };
+      content_reports: {
+        Row: {
+          id: string;
+          reporter_id: string;
+          target_type: string;
+          target_id: string;
+          reason: string;
+          details: string;
+          status: string;
+          created_at: string;
+          reviewed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          reporter_id: string;
+          target_type: string;
+          target_id: string;
+          reason: string;
+          details?: string;
+          status?: string;
+          created_at?: string;
+          reviewed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          reporter_id?: string;
+          target_type?: string;
+          target_id?: string;
+          reason?: string;
+          details?: string;
+          status?: string;
+          created_at?: string;
+          reviewed_at?: string | null;
+        };
+        Relationships: Relationships;
+      };
     };
     Views: {
       leaderboard: {
@@ -329,6 +389,35 @@ export type Database = {
           setup_count: number;
           total_upvotes: number;
           total_ratings: number;
+        };
+        Relationships: Relationships;
+      };
+      setup_search: {
+        Row: {
+          id: string;
+          user_id: string;
+          game: string;
+          car: string;
+          track: string;
+          condition: string;
+          lap_time: string | null;
+          description: string;
+          tags: string[];
+          rig_profile: string;
+          setup_values: Json | null;
+          file_path: string | null;
+          file_name: string | null;
+          video_url: string | null;
+          telemetry_file_path: string | null;
+          telemetry_file_name: string | null;
+          pace: number;
+          predictability: number;
+          rating_count: number;
+          upvotes: number;
+          downloads: number;
+          created_at: string;
+          updated_at: string;
+          author_username: string | null;
         };
         Relationships: Relationships;
       };

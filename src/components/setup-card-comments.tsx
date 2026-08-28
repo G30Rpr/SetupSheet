@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { Send, Trash2 } from "lucide-react";
+import { Flag, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/components/auth-provider";
@@ -140,6 +141,13 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
                 </div>
                 <p className="whitespace-pre-wrap text-muted-foreground">{comment.body}</p>
               </div>
+              <Link
+                href={`/report?type=comment&id=${encodeURIComponent(comment.id)}`}
+                aria-label="Report comment"
+                className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <Flag className="size-3" />
+              </Link>
               {comment.isOwner && (
                 <button
                   type="button"

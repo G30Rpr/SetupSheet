@@ -23,6 +23,10 @@ dark, sim-racing themed UI (carbon black, racing green, alert red).
 - `/setups/compare` — Side-by-side tuning-value diff for two setups of the
   same game, reached by turning on "Compare setups" on `/setups` and
   picking two cards.
+- `/privacy`, `/terms`, `/community-guidelines` — Public trust, policy, and
+  moderation information.
+- `/account/data-deletion` — Authenticated manual account/data-deletion request flow.
+- `/report` — Authenticated private reporting flow for setups, comments, and profiles.
 
 ## Project structure
 
@@ -55,6 +59,7 @@ src/
     tag-badge.tsx         Setup tag → Badge color mapping
     profile-view.tsx      Shared display for both /profile and /profile/[userId]
     profile-setups-grid.tsx Cursor-paged setup-card grid used by profiles
+    account-deletion-request.tsx Deletion-request workflow for authenticated users
     profile-skeleton.tsx   Shared loading skeleton for both profile routes
     contributor-badge.tsx  Bronze/Silver/Gold badge, derived from total upvotes
     follow-button.tsx      Follow/Following toggle shown on someone else's profile
@@ -71,6 +76,7 @@ src/
     browse-filters.ts     Validated server-side browse/search filters
     seo.ts                Metadata/JSON-LD helpers and description bounds
     supabase/
+      account-deletion.ts  Reader for the current user's deletion request
       client.ts           Browser Supabase client (Client Components)
       server.ts             Server Supabase client, memoized per-request via React's cache()
       public.ts             Cookie-free public client for Next Data Cache reads
@@ -83,6 +89,7 @@ src/
       follows.ts               isFollowing()
       notifications.ts         getNotifications(), getUnreadNotificationCount()
     actions/
+      account-deletion.ts   Submit/cancel manual account deletion requests
       setups.ts             Server actions: createSetup, updateSetup, toggleUpvote, rateSetup,
                             uploadSetupFile, downloadSetup -- validates game/condition/rig/tags
                             against lib/data.ts before touching the database
@@ -125,6 +132,9 @@ supabase/
     0021_insert_grants_and_rate_limits.sql          INSERT hardening + contribution throttles
     0022_setup_updated_at.sql                        edit freshness timestamp for SEO/sitemaps
     0023_profile_setup_stats.sql                     aggregate totals for paginated profiles
+    0024_setup_search_view.sql                       profile-aware setup search
+    0025_account_deletion_requests.sql               manual account deletion workflow
+    0026_content_reports.sql                          private moderation report intake
   seed.sql                          sample setups across all 8 supported games
 ```
 
@@ -137,6 +147,12 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+See [`LAUNCH_CHECKLIST.md`](./LAUNCH_CHECKLIST.md) for the deployment, CI,
+security-operations, performance, and Search Console steps that cannot be
+verified from source alone. See [`OPERATIONS.md`](./OPERATIONS.md) for
+protected deletion/report review procedures. `npm run build:budget` also runs
+the production build and checks gzipped JS/CSS chunk budgets.
 
 ## Performance and SEO notes
 
@@ -164,7 +180,12 @@ Open [http://localhost:3000](http://localhost:3000).
   for contributor-editable setup fields, so sitemap `lastModified` and
   structured-data `dateModified` do not change for counter/rating trigger
   updates. The migration also adds composite newest-first indexes and
-  `pg_trgm` indexes for browse substring searches.
+  `pg_trgm` indexes for browse substring searches. Migration `0024_setup_search_view.sql`
+  adds a security-invoker search view so author names are searchable without
+  loading every profile into the client. Migration `0025_account_deletion_requests.sql`
+  adds a user-scoped manual deletion-request workflow without exposing a
+  Supabase service key to the application. Migration `0026_content_reports.sql`
+  adds private setup/comment report intake for operator review.
 
 ## Auth: Supabase + Discord OAuth
 
@@ -284,8 +305,9 @@ things) and runs the regression checks under `supabase/testing/*.test.sql`
 — currently covering `fulfill_setup_request()`'s game/car/track matching,
 its race-condition fix, the request-reopen trigger, comment length, and
 0018's direct-API data constraints, 0020's atomic setup creation, 0021's
-INSERT grants/rate limits, 0022's setup freshness trigger, and 0023's profile
-aggregate view. Needs a reachable Postgres
+INSERT grants/rate limits, 0022's setup freshness trigger, 0023's profile
+aggregate view, 0024's author-search view, 0025's deletion-request policies,
+and 0026's moderation-report policies. Needs a reachable Postgres
 (`PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD` env vars, defaulting to
 `localhost:5432` as `postgres`) — CI runs this same script against a
 `postgres:16` service container on every push.

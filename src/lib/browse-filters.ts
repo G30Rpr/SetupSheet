@@ -56,7 +56,8 @@ export function normalizeBrowseFilters(input: unknown): BrowseFilters | null {
 /**
  * Converts the user search into a restricted PostgREST OR expression. Only
  * letters, numbers, spaces, underscores, and hyphens survive, so URL/action
- * input cannot inject commas, operators, parentheses, or wildcards.
+ * input cannot inject commas, operators, parentheses, or wildcards. The
+ * `author_username` field is supplied by the public `setup_search` view.
  */
 export function buildBrowseSearchExpression(search: string): string | null {
   const terms = search
@@ -74,6 +75,7 @@ export function buildBrowseSearchExpression(search: string): string | null {
       `car.ilike.*${term}*`,
       `track.ilike.*${term}*`,
       `description.ilike.*${term}*`,
+      `author_username.ilike.*${term}*`,
       `tags.cs.{${term}}`,
     ])
     .join(",");

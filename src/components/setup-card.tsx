@@ -13,6 +13,7 @@ import {
   Clipboard,
   ExternalLink,
   FileDown,
+  Flag,
   Gamepad2,
   History,
   MessageSquare,
@@ -361,6 +362,13 @@ export function SetupCard({
                 </button>
               </div>
             )}
+            <Link
+              href={`/report?type=setup&id=${encodeURIComponent(setup.id)}`}
+              aria-label="Report setup"
+              className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <Flag className="size-3.5" />
+            </Link>
             <button
               type="button"
               onClick={handleShare}

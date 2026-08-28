@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
   async headers() {
     const headers = [
       { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+      { key: "X-DNS-Prefetch-Control", value: "on" },
+      { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
       { key: "X-Frame-Options", value: "DENY" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       {

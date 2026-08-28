@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 import { getActionError } from "@/lib/actions/action-errors";
+import { validateFileSignature } from "@/lib/file-validation";
 import { logger } from "@/lib/logger";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -133,6 +134,9 @@ export async function uploadSetupFile(
     };
   }
 
+  const signatureError = await validateFileSignature(file, extension);
+  if (signatureError) return { path: null, fileName: null, error: signatureError };
+
   const safeFileName = sanitizeFileName(file.name);
   const path = `${user.id}/${randomUUID()}-${safeFileName}`;
   const { error } = await supabase.storage.from(SETUP_FILES_BUCKET).upload(path, file);
@@ -177,6 +181,9 @@ export async function uploadTelemetryFile(
       error: `Unsupported telemetry format. Allowed: ${ALLOWED_TELEMETRY_FILE_EXTENSIONS.join(", ")}`,
     };
   }
+
+  const signatureError = await validateFileSignature(file, extension);
+  if (signatureError) return { path: null, fileName: null, error: signatureError };
 
   const safeFileName = sanitizeFileName(file.name);
   const path = `${user.id}/telemetry-${randomUUID()}-${safeFileName}`;

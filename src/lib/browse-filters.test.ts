@@ -54,7 +54,7 @@ describe("browse filter normalization", () => {
   it("removes PostgREST operators from the server search expression", () => {
     const expression = buildBrowseSearchExpression("spa, *");
     expect(expression).toBe(
-      "game.ilike.*spa*,car.ilike.*spa*,track.ilike.*spa*,description.ilike.*spa*,tags.cs.{spa}"
+      "game.ilike.*spa*,car.ilike.*spa*,track.ilike.*spa*,description.ilike.*spa*,author_username.ilike.*spa*,tags.cs.{spa}"
     );
   });
 });

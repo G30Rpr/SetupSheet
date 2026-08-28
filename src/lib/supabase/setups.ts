@@ -76,14 +76,16 @@ const getCachedBrowseRows = unstable_cache(
     rig: string
   ): Promise<SetupRow[]> => {
     const supabase = createPublicClient();
-    let query = supabase.from("setups").select(SETUP_COLUMNS);
+    const searchExpression = buildBrowseSearchExpression(search);
+    let query = searchExpression
+      ? supabase.from("setup_search").select(SETUP_COLUMNS)
+      : supabase.from("setups").select(SETUP_COLUMNS);
 
     if (game !== ALL_BROWSE_FILTER) query = query.eq("game", game);
     if (car !== ALL_BROWSE_FILTER) query = query.eq("car", car);
     if (track !== ALL_BROWSE_FILTER) query = query.eq("track", track);
     if (condition !== ALL_BROWSE_FILTER) query = query.eq("condition", condition);
     if (rig !== ALL_BROWSE_FILTER) query = query.eq("rig_profile", rig);
-    const searchExpression = buildBrowseSearchExpression(search);
     if (searchExpression) query = query.or(searchExpression);
 
     const result = await query
@@ -477,8 +479,10 @@ export async function getSetupsAfter(
   filters: BrowseFilters = EMPTY_BROWSE_FILTERS
 ): Promise<{ setups: Setup[]; nextCursor: SetupCursor | null; error: string | null }> {
   const supabase = await createClient();
-  let query = supabase.from("setups").select(SETUP_COLUMNS);
   const searchExpression = buildBrowseSearchExpression(filters.search);
+  let query = searchExpression
+    ? supabase.from("setup_search").select(SETUP_COLUMNS)
+    : supabase.from("setups").select(SETUP_COLUMNS);
 
   // PostgREST exposes one `or` parameter. When searching, use the reliable
   // timestamp boundary and reserve that single OR expression for the search
@@ -551,14 +555,16 @@ export async function getSetupCount(filters: BrowseFilters = EMPTY_BROWSE_FILTER
   }
 
   const supabase = await createClient();
-  let query = supabase.from("setups").select("id", { count: "exact", head: true });
+  const searchExpression = buildBrowseSearchExpression(filters.search);
+  let query = searchExpression
+    ? supabase.from("setup_search").select("id", { count: "exact", head: true })
+    : supabase.from("setups").select("id", { count: "exact", head: true });
 
   if (filters.game !== ALL_BROWSE_FILTER) query = query.eq("game", filters.game);
   if (filters.car !== ALL_BROWSE_FILTER) query = query.eq("car", filters.car);
   if (filters.track !== ALL_BROWSE_FILTER) query = query.eq("track", filters.track);
   if (filters.condition !== ALL_BROWSE_FILTER) query = query.eq("condition", filters.condition);
   if (filters.rig !== ALL_BROWSE_FILTER) query = query.eq("rig_profile", filters.rig);
-  const searchExpression = buildBrowseSearchExpression(filters.search);
   if (searchExpression) query = query.or(searchExpression);
 
   const result = await query;

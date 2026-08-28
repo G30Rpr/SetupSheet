@@ -25,6 +25,15 @@ export function SiteFooter() {
               {link.label}
             </Link>
           ))}
+          <Link href="/privacy" className="hover:text-foreground transition-colors">
+            Privacy
+          </Link>
+          <Link href="/community-guidelines" className="hover:text-foreground transition-colors">
+            Guidelines
+          </Link>
+          <Link href="/terms" className="hover:text-foreground transition-colors">
+            Terms
+          </Link>
         </nav>
 
         <p className="text-xs text-muted-foreground">

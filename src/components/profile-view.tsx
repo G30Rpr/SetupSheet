@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bookmark, Calendar, Star, TrendingUp, Upload, Users } from "lucide-react";
+import { Bookmark, Calendar, Flag, Star, TrendingUp, Upload, Users } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -86,7 +86,16 @@ export function ProfileView({
         </div>
 
         {follow && (
-          <FollowButton targetUserId={follow.targetUserId} initialIsFollowing={follow.initialIsFollowing} />
+          <div className="flex items-center gap-3">
+            <FollowButton targetUserId={follow.targetUserId} initialIsFollowing={follow.initialIsFollowing} />
+            <Link
+              href={`/report?type=profile&id=${encodeURIComponent(follow.targetUserId)}`}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
+            >
+              <Flag className="size-3" />
+              Report
+            </Link>
+          </div>
         )}
 
         <div className="flex w-full flex-wrap items-center justify-around gap-4 sm:w-auto sm:justify-start sm:gap-5">
