@@ -4,42 +4,74 @@ import "./globals.css";
 
 import { AppToaster } from "@/components/app-toaster";
 import { AuthProvider } from "@/components/auth-provider";
+import { JsonLd } from "@/components/json-ld";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ThemeProvider } from "@/components/theme-provider";
-import { logger } from "@/lib/logger";
+import { DEFAULT_SITE_DESCRIPTION, absoluteUrl, fullPageTitle } from "@/lib/seo";
+import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getNotifications, getUnreadNotificationCount } from "@/lib/supabase/notifications";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
-const title = `${SITE_NAME} — Free Community Sim Racing Setups`;
-const description =
-  "Download and share free sim racing setups for iRacing, Assetto Corsa, Le Mans Ultimate, F1 25 and more. Built by the community, for the community.";
+const title = fullPageTitle("Free Community Sim Racing Setups");
+const description = DEFAULT_SITE_DESCRIPTION;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title,
+  title: {
+    default: title,
+    template: `%s — ${SITE_NAME}`,
+  },
   description,
+  applicationName: SITE_NAME,
+  category: "sports",
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  alternates: { canonical: SITE_URL },
+  icons: { icon: "/icon.svg" },
   openGraph: {
     siteName: SITE_NAME,
     type: "website",
     locale: "en_US",
     title,
     description,
+    url: SITE_URL,
+    images: [{ url: absoluteUrl("/opengraph-image"), width: 1200, height: 630, alt: title }],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
+    images: [absoluteUrl("/opengraph-image")],
   },
 };
 
 const jsonLd = {
   "@context": "https://schema.org",
-  "@type": "WebSite",
-  name: SITE_NAME,
-  url: SITE_URL,
-  description,
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}#organization`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: absoluteUrl("/icon.svg"),
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}#website`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      description,
+      publisher: { "@id": `${SITE_URL}#organization` },
+      potentialAction: {
+        "@type": "SearchAction",
+        target: `${SITE_URL}/setups?q={search_term_string}`,
+        "query-input": "required name=search_term_string",
+      },
+    },
+  ],
 };
 
 export default async function RootLayout({
@@ -47,27 +79,14 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // The one hand-authored inline <script> in this app -- everything else
-  // Next injects itself for hydration and picks up this same nonce
-  // automatically once it's present on the CSP response header (set in
-  // src/proxy.ts).
   const nonce = (await headers()).get("x-nonce") ?? undefined;
-
   const supabase = await createClient();
 
-  // A network-level failure (DNS, connection refused) throws here rather
-  // than resolving to a catchable { error } result -- without this, an
-  // unreachable Supabase project would crash the entire root layout on
-  // every page, not just degrade the data that depends on it.
-  let user = null;
-  try {
-    const {
-      data: { user: fetchedUser },
-    } = await supabase.auth.getUser();
-    user = fetchedUser;
-  } catch (error) {
-    logger.error("RootLayout: failed to fetch current user", error);
-  }
+  // A network-level auth failure is handled by getCurrentUser(), so an
+  // unreachable Supabase project degrades the layout to logged-out instead
+  // of crashing every page. The per-request cache also lets data loaders
+  // reuse this same auth lookup.
+  const user = await getCurrentUser(supabase);
 
   const [initialNotifications, initialUnreadCount] = user
     ? await Promise.all([getNotifications(user.id, 10), getUnreadNotificationCount(user.id)])
@@ -80,16 +99,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script
-          type="application/ld+json"
-          nonce={nonce}
-          // Browsers intentionally blank a script's nonce attribute once
-          // applied (so it can't be read back and leaked), which reads as a
-          // hydration mismatch to React even though nothing is actually
-          // wrong -- this is expected for every nonce'd script, not a bug.
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
+        <JsonLd data={jsonLd} />
       </head>
       <body className="flex min-h-full flex-col">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} nonce={nonce}>

@@ -2,9 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getActionError } from "@/lib/actions/action-errors";
 import { MAX_CAR_LENGTH, MAX_DESCRIPTION_LENGTH, MAX_TRACK_LENGTH, games } from "@/lib/data";
 import { logger } from "@/lib/logger";
+import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
+import { isUuid } from "@/lib/utils";
 
 export interface CreateSetupRequestInput {
   game: string;
@@ -13,23 +16,37 @@ export interface CreateSetupRequestInput {
   notes: string;
 }
 
-function validateRequestFields(input: CreateSetupRequestInput): string | null {
-  if (!games.includes(input.game as (typeof games)[number])) {
+function validateRequestFields(input: unknown): string | null {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    return "Invalid request fields.";
+  }
+
+  const fields = input as Record<string, unknown>;
+  if (
+    typeof fields.game !== "string" ||
+    typeof fields.car !== "string" ||
+    typeof fields.track !== "string" ||
+    typeof fields.notes !== "string"
+  ) {
+    return "Invalid request fields.";
+  }
+
+  if (!games.includes(fields.game as (typeof games)[number])) {
     return "Unknown game.";
   }
-  if (!input.car.trim()) {
+  if (!fields.car.trim()) {
     return "Car is required.";
   }
-  if (!input.track.trim()) {
+  if (!fields.track.trim()) {
     return "Track is required.";
   }
-  if (input.car.length > MAX_CAR_LENGTH) {
+  if (fields.car.length > MAX_CAR_LENGTH) {
     return `Car name is too long — max ${MAX_CAR_LENGTH} characters.`;
   }
-  if (input.track.length > MAX_TRACK_LENGTH) {
+  if (fields.track.length > MAX_TRACK_LENGTH) {
     return `Track name is too long — max ${MAX_TRACK_LENGTH} characters.`;
   }
-  if (input.notes.length > MAX_DESCRIPTION_LENGTH) {
+  if (fields.notes.length > MAX_DESCRIPTION_LENGTH) {
     return `Notes are too long — max ${MAX_DESCRIPTION_LENGTH} characters.`;
   }
   return null;
@@ -39,9 +56,7 @@ export async function createSetupRequest(
   input: CreateSetupRequestInput
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser(supabase);
 
   if (!user) {
     return { error: "You need to be logged in with Discord to post a request." };
@@ -55,14 +70,14 @@ export async function createSetupRequest(
   const { error } = await supabase.from("setup_requests").insert({
     requester_id: user.id,
     game: input.game,
-    car: input.car,
-    track: input.track,
+    car: input.car.trim(),
+    track: input.track.trim(),
     notes: input.notes,
   });
 
   if (error) {
     logger.error("createSetupRequest: insert failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't post the request right now.") };
   }
 
   revalidatePath("/requests");
@@ -72,23 +87,30 @@ export async function createSetupRequest(
 /** Cancels one of the current user's own open requests. */
 export async function deleteSetupRequest(requestId: string): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser(supabase);
 
   if (!user) {
     return { error: "You need to be logged in." };
   }
+  if (!isUuid(requestId)) {
+    return { error: "That request id is invalid." };
+  }
 
-  const { error } = await supabase
+  const { data: deleted, error } = await supabase
     .from("setup_requests")
     .delete()
     .eq("id", requestId)
-    .eq("requester_id", user.id);
+    .eq("requester_id", user.id)
+    .is("fulfilled_setup_id", null)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     logger.error("deleteSetupRequest: delete failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't cancel the request right now.") };
+  }
+  if (!deleted) {
+    return { error: "Request not found or already fulfilled." };
   }
 
   revalidatePath("/requests");
@@ -112,18 +134,17 @@ export async function getMyMatchingSetupsAction(
   track: string
 ): Promise<{ id: string; car: string; track: string }[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser(supabase);
 
-  if (!user) return [];
+  if (!user || typeof game !== "string" || typeof car !== "string" || typeof track !== "string") return [];
 
   const { data, error } = await supabase
     .from("setups")
     .select("id, car, track")
     .eq("user_id", user.id)
     .eq("game", game)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(500);
 
   if (error) {
     logger.error("getMyMatchingSetupsAction: failed to load setups", error);
@@ -148,12 +169,13 @@ export async function fulfillSetupRequest(
   setupId: string
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser(supabase);
 
   if (!user) {
     return { error: "You need to be logged in with Discord to fulfill a request." };
+  }
+  if (!isUuid(requestId) || !isUuid(setupId)) {
+    return { error: "That fulfillment request is invalid." };
   }
 
   const { error } = await supabase.rpc("fulfill_setup_request", {
@@ -163,7 +185,14 @@ export async function fulfillSetupRequest(
 
   if (error) {
     logger.error("fulfillSetupRequest: rpc failed", error);
-    return { error: error.message };
+    return {
+      error: getActionError(error, "Couldn't fulfill the request right now.", [
+        "Request not found",
+        "This request has already been fulfilled",
+        "You can only fulfill a request with a setup you own",
+        "That setup does not match the request's game, car, and track",
+      ]),
+    };
   }
 
   revalidatePath("/requests");

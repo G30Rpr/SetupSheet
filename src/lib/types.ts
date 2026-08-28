@@ -46,6 +46,8 @@ export interface Setup {
   authorId: string;
   authorAvatarUrl: string | null;
   uploadedAt: string;
+  /** Last public edit time; older fixtures/rows may omit it. */
+  updatedAt?: string;
   upvotes: number;
   hasUpvoted: boolean;
   /** Whether the current viewer has saved this setup to their private favorites list. */

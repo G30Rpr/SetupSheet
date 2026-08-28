@@ -5,25 +5,31 @@ import { Card } from "@/components/ui/card";
 import { DiscordLoginButton } from "@/components/auth-nav";
 import { ProfileView } from "@/components/profile-view";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/auth";
 import { getProfile } from "@/lib/supabase/profiles";
 import { getFavoritedSetups } from "@/lib/supabase/setup-favorites";
-import { getSetupsByUser } from "@/lib/supabase/setups";
+import { getProfileSetupStats, getSetupsByUserPage } from "@/lib/supabase/setups";
+import { normalizeHttpsUrl } from "@/lib/safe-url";
+import { fullPageTitle } from "@/lib/seo";
+import { getUserDisplayName } from "@/lib/user-display";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
-const title = `My Profile — ${SITE_NAME}`;
+const title = "My Profile";
+const socialTitle = fullPageTitle(title);
+const description = "Manage your SetupSheet profile, shared setups, and saved setups.";
 
 export const metadata: Metadata = {
   title,
+  description,
+  robots: { index: false, follow: false },
   alternates: { canonical: `${SITE_URL}/profile` },
-  openGraph: { title, url: "/profile", type: "website", siteName: SITE_NAME },
-  twitter: { card: "summary_large_image", title },
+  openGraph: { title: socialTitle, description, url: "/profile", type: "website", siteName: SITE_NAME },
+  twitter: { card: "summary_large_image", title: socialTitle, description },
 };
 
 export default async function ProfilePage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser(supabase);
 
   if (!user) {
     return (
@@ -33,7 +39,7 @@ export default async function ProfilePage() {
             <PenLine className="size-7" />
           </span>
           <div>
-            <h2 className="text-xl font-semibold">Log in to view your profile</h2>
+            <h1 className="text-xl font-semibold">Log in to view your profile</h1>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
               We use Discord to keep track of who uploaded what, so your
               profile and setups are scoped to your own account.
@@ -45,27 +51,27 @@ export default async function ProfilePage() {
     );
   }
 
-  const [profile, setups, favoritedSetups] = await Promise.all([
+  const [profile, setupPage, stats, favoritedSetups] = await Promise.all([
     getProfile(user.id),
-    getSetupsByUser(user.id),
+    getSetupsByUserPage(user.id),
+    getProfileSetupStats(user.id),
     getFavoritedSetups(user.id),
   ]);
 
-  const displayName =
-    profile?.username ??
-    (user.user_metadata?.full_name as string | undefined) ??
-    (user.user_metadata?.name as string | undefined) ??
-    user.email ??
-    "Racer";
-  const avatarUrl = profile?.avatarUrl ?? (user.user_metadata?.avatar_url as string | undefined);
+  const displayName = profile?.username ?? getUserDisplayName(user);
+  const avatarUrl = profile?.avatarUrl ?? normalizeHttpsUrl(user.user_metadata?.avatar_url);
 
   return (
     <ProfileView
+      key={user.id}
       displayName={displayName}
-      avatarUrl={avatarUrl}
+      avatarUrl={avatarUrl ?? undefined}
       memberSince={profile?.memberSince}
       followerCount={profile?.followerCount ?? 0}
-      setups={setups}
+      setups={setupPage.setups}
+      stats={stats}
+      pagination={{ profileId: user.id, nextCursor: setupPage.nextCursor }}
+      setupsError={setupPage.error}
       favoritedSetups={favoritedSetups}
       isOwnProfile
     />

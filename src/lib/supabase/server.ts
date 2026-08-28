@@ -2,6 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { cache } from "react";
 
+import { fetchWithTimeout } from "@/lib/supabase/fetch";
+import type { Database } from "@/lib/supabase/database.types";
+
 /**
  * Supabase client for use in Server Components, Server Actions, and Route
  * Handlers. Wrapped in React's cache() so the several calls a single
@@ -14,10 +17,11 @@ import { cache } from "react";
 export const createClient = cache(async () => {
   const cookieStore = await cookies();
 
-  return createServerClient(
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dummy.supabase.co",
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy-key",
     {
+      global: { fetch: fetchWithTimeout },
       cookies: {
         getAll() {
           return cookieStore.getAll();

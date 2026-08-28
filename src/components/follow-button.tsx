@@ -29,10 +29,15 @@ export function FollowButton({
     setIsFollowing(!wasFollowing);
 
     startTransition(async () => {
-      const result = await toggleFollow(targetUserId, wasFollowing);
-      if (result.error) {
+      try {
+        const result = await toggleFollow(targetUserId, wasFollowing);
+        if (result.error) {
+          setIsFollowing(wasFollowing);
+          toast.error(result.error);
+        }
+      } catch {
         setIsFollowing(wasFollowing);
-        toast.error(result.error);
+        toast.error("Couldn't update your follow status right now.");
       }
     });
   }

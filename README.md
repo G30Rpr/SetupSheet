@@ -23,13 +23,17 @@ dark, sim-racing themed UI (carbon black, racing green, alert red).
 - `/setups/compare` — Side-by-side tuning-value diff for two setups of the
   same game, reached by turning on "Compare setups" on `/setups` and
   picking two cards.
+- `/privacy`, `/terms`, `/community-guidelines` — Public trust, policy, and
+  moderation information.
+- `/account/data-deletion` — Authenticated manual account/data-deletion request flow.
+- `/report` — Authenticated private reporting flow for setups, comments, and profiles.
 
 ## Project structure
 
 ```
 src/
   app/
-    layout.tsx        Root layout (header + footer + fonts + metadata + notification fetch)
+    layout.tsx        Root layout (header + footer + metadata + notification fetch)
     error.tsx          Catches any client-side render error below the layout
     global-error.tsx   Last-resort fallback if the root layout itself throws
     page.tsx           Landing page
@@ -44,13 +48,18 @@ src/
     site-header.tsx     Top nav with mobile drawer (Sheet); notification bell + account
                          menu each mount once regardless of viewport
     site-footer.tsx     Footer
+    json-ld.tsx         Nonce-protected JSON-LD renderer shared by public routes
+    related-setups.tsx  Streamed below-the-fold internal setup links
     setup-card.tsx      The setup card (car/track, lap time, tags, ratings, author byline...)
     setups-browser.tsx  Client component: filter state + filtered grid
     upload-form.tsx      Upload form; drag a real ACC .json and it auto-fills the Car field
     file-dropzone.tsx    Drag-and-drop / tap-to-choose file input
+    upload-proof-section.tsx Optional lap-proof and telemetry fields
     star-rating.tsx      Pace / Predictability star rating display
     tag-badge.tsx         Setup tag → Badge color mapping
     profile-view.tsx      Shared display for both /profile and /profile/[userId]
+    profile-setups-grid.tsx Cursor-paged setup-card grid used by profiles
+    account-deletion-request.tsx Deletion-request workflow for authenticated users
     profile-skeleton.tsx   Shared loading skeleton for both profile routes
     contributor-badge.tsx  Bronze/Silver/Gold badge, derived from total upvotes
     follow-button.tsx      Follow/Following toggle shown on someone else's profile
@@ -63,18 +72,30 @@ src/
     acc-setup-parser.ts     Parses a dropped ACC .json to auto-fill the Car field
     setup-schemas.ts       Per-game setup-screen field definitions (see below)
     utils.ts              `cn()` class-merging helper, `getInitials()`
+    ui-constants.ts       Shared setup-card pagination constants
+    browse-filters.ts     Validated server-side browse/search filters
+    seo.ts                Metadata/JSON-LD helpers and description bounds
     supabase/
+      account-deletion.ts  Reader for the current user's deletion request
       client.ts           Browser Supabase client (Client Components)
-      server.ts            Server Supabase client, memoized per-request via React's cache()
-      proxy.ts               Session-refresh helper used by src/proxy.ts
-      setups.ts             getSetups(), getFeaturedSetups(), getSetupCount(), row mapping
-      leaderboard.ts          getLeaderboard() — reads the public.leaderboard view
+      server.ts             Server Supabase client, memoized per-request via React's cache()
+      public.ts             Cookie-free public client for Next Data Cache reads
+      auth-cookie.ts        Fast auth-cookie detection shared by server/proxy code
+      database.types.ts     Schema types used by all Supabase clients/queries
+      proxy.ts              Session-refresh helper used by src/proxy.ts
+      setups.ts             Public setup cache, browse/detail queries, row mapping
+      profiles.ts           Cached public profile metadata
+      leaderboard.ts          getLeaderboard() — reads the cached public.leaderboard view
       follows.ts               isFollowing()
       notifications.ts         getNotifications(), getUnreadNotificationCount()
     actions/
+      account-deletion.ts   Submit/cancel manual account deletion requests
       setups.ts             Server actions: createSetup, updateSetup, toggleUpvote, rateSetup,
                             uploadSetupFile, downloadSetup -- validates game/condition/rig/tags
                             against lib/data.ts before touching the database
+      setup-browse.ts       Keyset pagination action for loading older setups
+      profile-browse.ts     Cursor pagination action for public profile setups
+      action-errors.ts      Stable user-facing error mapping for backend failures
       follows.ts              toggleFollow
       notifications.ts         markNotificationRead, markAllNotificationsRead,
                               clearReadNotifications
@@ -99,6 +120,21 @@ supabase/
     0009_column_level_grants.sql                 column-scoped UPDATE grants on setups/profiles
     0010_notifications_delete_policy.sql          lets a user delete their own notifications
     0011_notifications_column_grant.sql            same column-scoped grant, for notifications
+    0012_setup_versions.sql                         public pre-edit version history
+    0013_setup_requests.sql                         community request board + fulfillment RPC
+    0014_setup_favorites.sql                        private saved-setups list
+    0015_setup_comments.sql                         public setup comments + owner notifications
+    0016_fulfill_request_hardening.sql              request matching/race/reopen hardening
+    0017_video_url_and_telemetry.sql                lap-proof links + telemetry attachments
+    0018_data_validation_hardening.sql              direct-API data and attachment constraints
+    0019_storage_extension_hardening.sql            Storage extension allow-list policies
+    0020_create_setup_with_rating.sql               atomic setup + initial rating transaction
+    0021_insert_grants_and_rate_limits.sql          INSERT hardening + contribution throttles
+    0022_setup_updated_at.sql                        edit freshness timestamp for SEO/sitemaps
+    0023_profile_setup_stats.sql                     aggregate totals for paginated profiles
+    0024_setup_search_view.sql                       profile-aware setup search
+    0025_account_deletion_requests.sql               manual account deletion workflow
+    0026_content_reports.sql                          private moderation report intake
   seed.sql                          sample setups across all 8 supported games
 ```
 
@@ -111,6 +147,45 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+See [`LAUNCH_CHECKLIST.md`](./LAUNCH_CHECKLIST.md) for the deployment, CI,
+security-operations, performance, and Search Console steps that cannot be
+verified from source alone. See [`OPERATIONS.md`](./OPERATIONS.md) for
+protected deletion/report review procedures. `npm run build:budget` also runs
+the production build and checks gzipped JS/CSS chunk budgets.
+
+## Performance and SEO notes
+
+- Primary public setup, profile, leaderboard, related-link, and sitemap reads use
+  a cookie-free Supabase client behind Next's Data Cache. Setup/leaderboard data
+  revalidates every 60 seconds; the sitemap revalidates hourly. Successful
+  setup/follow mutations invalidate the relevant cache tags, while viewer
+  state (upvotes, favorites, ratings, notifications) is always read from the
+  request's authenticated SSR client and is never cached.
+- The shared root layout skips Supabase auth refreshes when no `sb-...-auth-token`
+  cookie exists, avoiding a public-page timeout/round trip for anonymous
+  visitors. The page still refreshes an existing session on every request.
+- `next.config.ts` gives generated OG images and metadata endpoints CDN-safe
+  `Cache-Control` headers. Setup cards lazy-load avatars/iframes and defer
+  below-the-fold rendering; setup values, install guides, history, comments,
+  and upload rosters are code-split until needed. Profile pages send 24 setup
+  cards at a time through `profile-browse.ts`; aggregate totals come from the
+  public leaderboard view instead of serializing every card.
+- The root metadata uses a title template, canonical URLs, Open Graph/Twitter
+  cards, and a shared nonce-protected `JsonLd` component. Public setup pages
+  expose Article and BreadcrumbList data; browse, profile, leaderboard, and
+  requests pages expose CollectionPage/ProfilePage/ItemList data as
+  appropriate. User text is escaped before it enters JSON-LD.
+- `updated_at` is maintained by migration `0022_setup_updated_at.sql` only
+  for contributor-editable setup fields, so sitemap `lastModified` and
+  structured-data `dateModified` do not change for counter/rating trigger
+  updates. The migration also adds composite newest-first indexes and
+  `pg_trgm` indexes for browse substring searches. Migration `0024_setup_search_view.sql`
+  adds a security-invoker search view so author names are searchable without
+  loading every profile into the client. Migration `0025_account_deletion_requests.sql`
+  adds a user-scoped manual deletion-request workflow without exposing a
+  Supabase service key to the application. Migration `0026_content_reports.sql`
+  adds private setup/comment report intake for operator review.
 
 ## Auth: Supabase + Discord OAuth
 
@@ -195,11 +270,12 @@ don't change per-row.
 ### 1. Apply the schema
 
 In the [Supabase dashboard](https://supabase.com/dashboard) → your project →
-**SQL Editor**, paste and run the migrations **in order**:
-`supabase/migrations/0001_init_setups_schema.sql`, then
-`0002_update_games_list.sql`. (If you use the Supabase CLI locally instead,
-`supabase db push` picks up everything under `supabase/migrations/` in
-order.)
+**SQL Editor**, paste and run every file under
+`supabase/migrations/` **in numeric order**. Start with
+`0001_init_setups_schema.sql`; later migrations add ratings, storage, community
+features, lap-proof attachments, and the direct-API hardening constraints.
+(If you use the Supabase CLI locally instead, `supabase db push` picks up
+everything under `supabase/migrations/` in order.)
 
 `0001` creates:
 
@@ -227,11 +303,14 @@ migration to a throwaway Postgres database (created and dropped by the
 script, so it's safe to run against a Postgres instance you use for other
 things) and runs the regression checks under `supabase/testing/*.test.sql`
 — currently covering `fulfill_setup_request()`'s game/car/track matching,
-its race-condition fix, the request-reopen trigger, and the comment length
-constraint. Needs a reachable Postgres (`PGHOST`/`PGPORT`/`PGUSER`/
-`PGPASSWORD` env vars, defaulting to `localhost:5432` as `postgres`) — CI
-runs this same script against a `postgres:16` service container on every
-push.
+its race-condition fix, the request-reopen trigger, comment length, and
+0018's direct-API data constraints, 0020's atomic setup creation, 0021's
+INSERT grants/rate limits, 0022's setup freshness trigger, 0023's profile
+aggregate view, 0024's author-search view, 0025's deletion-request policies,
+and 0026's moderation-report policies. Needs a reachable Postgres
+(`PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD` env vars, defaulting to
+`localhost:5432` as `postgres`) — CI runs this same script against a
+`postgres:16` service container on every push.
 
 **RLS policies**, scoped with `auth.uid()`:
 
@@ -247,11 +326,11 @@ push.
 Row-level policies only restrict *which row* a user can touch — nothing
 about *which column*. `0009` and `0011` close that gap for the
 denormalized/trigger-owned columns (`setups.upvotes/downloads/pace/
-predictability/rating_count`, `profiles.follower_count`,
-`notifications.actor_id/setup_id/type`) with an explicit
+predictability/rating_count`, `profiles.follower_count`, `notifications.actor_id/setup_id/type`, and
+`setup_ratings.setup_id/created_at`) with an explicit
 `revoke ... / grant update (<allowed columns>) ...`, so a user's own
 row-level write access can't be used to fabricate a public trust signal
-like an upvote count or a fake notification.
+like an upvote count or a fake notification or move ratings between setups.
 
 Anonymous visitors can always browse (`setups` select is public) — only
 uploading, editing, and upvoting require being logged in and acting as
@@ -302,19 +381,20 @@ the schema changes — only `src/lib/setup-schemas.ts` and the seed data.
 
 ### 4. How the app talks to it
 
-- `src/lib/supabase/setups.ts` — `getSetups()` fetches all setups plus the
-  current viewer's upvote state in one server-side call, mapping DB rows to
-  the `Setup` type the UI already expects. If Supabase is unreachable or the
-  query errors, it logs and returns `[]` instead of throwing, so a backend
-  hiccup degrades to an empty browse page rather than a 500 — verified by
-  running with the Supabase host deliberately unreachable.
+- `src/lib/supabase/setups.ts` — `getSetups()` fetches the newest bounded page
+  plus the current viewer's upvote state in one server-side call, mapping DB
+  rows to the `Setup` type the UI already expects. `getSetupsAfter()` provides
+  the next keyset page for browse expansion. If Supabase is unreachable or a
+  query errors, it logs and returns an empty result instead of throwing, so a
+  backend hiccup degrades to an empty browse page rather than a 500.
 - `src/lib/actions/setups.ts` — `createSetup`, `updateSetup`, `deleteSetup`,
   `toggleUpvote`, `rateSetup`, `uploadSetupFile`, and `downloadSetup` are all
   Server Actions; each checks for a logged-in user before touching the
   database (defense in depth on top of RLS), and `createSetup`/`updateSetup`
   additionally validate `game`/`condition`/`rigProfile`/`tags` against the
   arrays in `lib/data.ts` before the query runs, so a bad value gets a clean
-  error message instead of a raw Postgres constraint violation.
+  error message instead of a raw Postgres constraint violation. Creation and
+  the initial rating are committed atomically through migration `0020`.
 - `SetupCard`'s upvote pill is a real toggle button: optimistic update on
   click, reverted if the server action errors. Clicking it while logged out
   triggers Discord login instead of failing silently. Its download button
@@ -381,6 +461,17 @@ the schema changes — only `src/lib/setup-schemas.ts` and the seed data.
   commenting on your own setup), reusing the same `notifications` table
   with another widened `type`. Rendered as a fourth expandable panel on
   `SetupCard`, alongside Setup values/How to install/Version history.
+- **Lap proof & telemetry** — migration `0017` adds optional HTTPS YouTube/
+  Twitch proof links plus bounded telemetry attachments. The web action and
+  Storage policies restrict URLs, file extensions, file sizes, and attachment
+  folders to the uploader; a `Verified Lap` badge is shown only for safe
+  proof data.
+- **Direct-write hardening** — migrations `0018` and `0019` repeat important
+  bounds at the database/Storage policy layer for clients that bypass the
+  React form. Migration `0021` also removes protected columns from direct
+  authenticated INSERTs and throttles setup/comment/request creation. Migration
+  versions are unique; `npm run test:db` fails early if a duplicate numeric
+  migration prefix is introduced.
 
 ## Deploying to Vercel
 

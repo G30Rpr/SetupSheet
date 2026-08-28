@@ -16,6 +16,7 @@ export function makeSetup(overrides: Partial<Setup> = {}): Setup {
     authorId: "user-1",
     authorAvatarUrl: null,
     uploadedAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
     upvotes: 0,
     hasUpvoted: false,
     hasFavorited: false,

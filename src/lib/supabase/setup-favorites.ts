@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getSetupsByIds } from "@/lib/supabase/setups";
 import type { Setup } from "@/lib/types";
 
+const FAVORITES_LIMIT = 200;
+
 /**
  * A user's saved setups, most-recently-favorited first, for the "Saved"
  * section on their own profile -- favorites are private (see
@@ -16,7 +18,8 @@ export async function getFavoritedSetups(userId: string): Promise<Setup[]> {
     .from("setup_favorites")
     .select("setup_id")
     .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(FAVORITES_LIMIT);
 
   const rows = unwrapList(result, "getFavoritedSetups: failed to load favorites");
   const setupIds = rows.map((row) => row.setup_id as string);

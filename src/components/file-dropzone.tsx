@@ -15,9 +15,15 @@ function formatBytes(bytes: number) {
 export function FileDropzone({
   file,
   onFileChange,
+  acceptedExtensions = ALLOWED_SETUP_FILE_EXTENSIONS,
+  helperText = ".sto, .json, .ini, .svm and more — up to 5 MB",
+  ariaLabel = "Choose a setup file",
 }: {
   file: File | null;
   onFileChange: (file: File | null) => void;
+  acceptedExtensions?: readonly string[];
+  helperText?: string;
+  ariaLabel?: string;
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -33,9 +39,13 @@ export function FileDropzone({
         <div
           role="button"
           tabIndex={0}
+          aria-label={ariaLabel}
           onClick={() => inputRef.current?.click()}
           onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              inputRef.current?.click();
+            }
           }}
           onDragOver={(e) => {
             e.preventDefault();
@@ -63,14 +73,14 @@ export function FileDropzone({
               <span className="hidden sm:inline"> or drag it here</span>
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              .sto, .json, .ini, .svm and more — up to 5 MB
+              {helperText}
             </p>
           </div>
           <input
             ref={inputRef}
             type="file"
             className="hidden"
-            accept={ALLOWED_SETUP_FILE_EXTENSIONS.join(",")}
+            accept={acceptedExtensions.join(",")}
             onChange={(e) => pickFile(e.target.files)}
           />
         </div>

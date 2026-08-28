@@ -70,8 +70,8 @@ export default async function Home() {
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
         <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-8 px-4 py-20 text-center sm:px-6 sm:py-28">
           <Badge variant="outline" className="gap-2 border-border/80 bg-secondary/50 px-3 py-1 text-xs text-muted-foreground">
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-racing-green opacity-75" />
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full animate-ping motion-reduce:animate-none rounded-full bg-racing-green opacity-75" />
               <span className="relative inline-flex size-2 rounded-full bg-racing-green" />
             </span>
             100% Free · No account required to browse
@@ -110,7 +110,8 @@ export default async function Home() {
       </section>
 
       {/* Highlights */}
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <section aria-labelledby="highlights-heading" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <h2 id="highlights-heading" className="sr-only">Why racers use SetupSheet</h2>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           {highlights.map((item) => (
             <div
@@ -130,7 +131,7 @@ export default async function Home() {
       </section>
 
       {/* Featured setups */}
-      <section className="border-t border-border/80 bg-secondary/10">
+      <section aria-labelledby="featured-heading" className="border-t border-border/80 bg-secondary/10">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -138,7 +139,7 @@ export default async function Home() {
                 <Timer className="size-4" />
                 Trending this week
               </div>
-              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              <h2 id="featured-heading" className="text-2xl font-bold tracking-tight sm:text-3xl">
                 Featured Setups
               </h2>
             </div>
@@ -180,11 +181,13 @@ export default async function Home() {
           </div>
 
           {featured.length > 0 ? (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid list-none grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {featured.map((setup) => (
-                <SetupCard key={setup.id} setup={setup} />
+                <li key={setup.id} className="min-w-0">
+                  <SetupCard setup={setup} titleLevel={3} />
+                </li>
               ))}
-            </div>
+            </ul>
           ) : (
             <EmptyState
               icon={Upload}
@@ -213,8 +216,8 @@ export default async function Home() {
                 Got a setup that&apos;s fast and safe?
               </h2>
               <p className="max-w-md text-balance text-muted-foreground">
-                Share it with the community in under a minute. No sign-up
-                friction, just drag, drop, and race.
+                Share it with the community in under a minute. Browse freely,
+                then use Discord to publish when you&apos;re ready to race.
               </p>
             </div>
             <Button asChild size="lg" className="shrink-0">

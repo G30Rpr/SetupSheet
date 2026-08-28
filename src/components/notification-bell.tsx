@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Bell } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/components/auth-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -100,7 +101,16 @@ export function NotificationBell({
       );
       setUnreadCount((n) => Math.max(n - 1, 0));
       startTransition(async () => {
-        await markNotificationRead(notification.id);
+        try {
+          const result = await markNotificationRead(notification.id);
+          if (result.error) {
+            toast.error(result.error);
+            router.refresh();
+          }
+        } catch {
+          toast.error("Couldn't update notifications right now.");
+          router.refresh();
+        }
       });
     }
     // A new-setup notification is about the actor -- go see who they are.
@@ -118,14 +128,32 @@ export function NotificationBell({
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setUnreadCount(0);
     startTransition(async () => {
-      await markAllNotificationsRead();
+      try {
+        const result = await markAllNotificationsRead();
+        if (result.error) {
+          toast.error(result.error);
+          router.refresh();
+        }
+      } catch {
+        toast.error("Couldn't update notifications right now.");
+        router.refresh();
+      }
     });
   }
 
   function handleClearRead() {
     setNotifications((prev) => prev.filter((n) => !n.read));
     startTransition(async () => {
-      await clearReadNotifications();
+      try {
+        const result = await clearReadNotifications();
+        if (result.error) {
+          toast.error(result.error);
+          router.refresh();
+        }
+      } catch {
+        toast.error("Couldn't clear notifications right now.");
+        router.refresh();
+      }
     });
   }
 

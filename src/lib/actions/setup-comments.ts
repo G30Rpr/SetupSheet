@@ -2,14 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getActionError } from "@/lib/actions/action-errors";
 import { MAX_COMMENT_LENGTH } from "@/lib/data";
 import { logger } from "@/lib/logger";
+import { getCurrentUser } from "@/lib/supabase/auth";
 import { getSetupComments } from "@/lib/supabase/setup-comments";
 import { createClient } from "@/lib/supabase/server";
 import type { SetupComment } from "@/lib/types";
+import { isUuid } from "@/lib/utils";
 
 /** A read, not a mutation -- lets the client-side comment panel fetch/refetch on demand. */
 export async function getSetupCommentsAction(setupId: string): Promise<SetupComment[]> {
+  if (!isUuid(setupId)) return [];
   return getSetupComments(setupId);
 }
 
@@ -18,12 +22,16 @@ export async function createComment(
   body: string
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser(supabase);
 
   if (!user) {
     return { error: "You need to be logged in with Discord to comment." };
+  }
+  if (!isUuid(setupId)) {
+    return { error: "That setup id is invalid." };
+  }
+  if (typeof body !== "string") {
+    return { error: "Comment is invalid." };
   }
 
   const trimmed = body.trim();
@@ -40,7 +48,7 @@ export async function createComment(
 
   if (error) {
     logger.error("createComment: insert failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't post the comment right now.") };
   }
 
   revalidatePath(`/setups/${setupId}`);
@@ -52,12 +60,13 @@ export async function deleteComment(
   setupId: string
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser(supabase);
 
   if (!user) {
     return { error: "You need to be logged in." };
+  }
+  if (!isUuid(commentId) || !isUuid(setupId)) {
+    return { error: "That comment request is invalid." };
   }
 
   const { error } = await supabase
@@ -68,7 +77,7 @@ export async function deleteComment(
 
   if (error) {
     logger.error("deleteComment: delete failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't delete the comment right now.") };
   }
 
   revalidatePath(`/setups/${setupId}`);

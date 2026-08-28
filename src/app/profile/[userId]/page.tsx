@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertCircle } from "lucide-react";
+import { notFound } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { JsonLd } from "@/components/json-ld";
 import { ProfileView } from "@/components/profile-view";
+import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isFollowing } from "@/lib/supabase/follows";
 import { getProfile } from "@/lib/supabase/profiles";
-import { getSetupsByUser } from "@/lib/supabase/setups";
+import { getProfileSetupStats, getSetupsByUserPage } from "@/lib/supabase/setups";
+import { absoluteUrl, fullPageTitle } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export async function generateMetadata({
@@ -20,17 +21,23 @@ export async function generateMetadata({
   const profile = await getProfile(userId);
 
   if (!profile) {
-    return { title: `Profile — ${SITE_NAME}`, robots: { index: false } };
+    return { title: "Profile not found", robots: { index: false, follow: false } };
   }
 
-  const title = `${profile.username} — ${SITE_NAME}`;
-  const url = `/profile/${userId}`;
+  const title = profile.username;
+  const socialTitle = fullPageTitle(title);
+  const description = `View ${profile.username}'s community sim racing setups on ${SITE_NAME}.`;
+  const url = `/profile/${encodeURIComponent(userId)}`;
+  const image = profile.avatarUrl
+    ? [{ url: profile.avatarUrl, alt: `${profile.username}'s avatar` }]
+    : [{ url: absoluteUrl("/opengraph-image"), width: 1200, height: 630, alt: socialTitle }];
 
   return {
     title,
+    description,
     alternates: { canonical: `${SITE_URL}${url}` },
-    openGraph: { title, url, type: "profile", siteName: SITE_NAME },
-    twitter: { card: "summary_large_image", title },
+    openGraph: { title: socialTitle, description, url, type: "profile", siteName: SITE_NAME, images: image },
+    twitter: { card: "summary_large_image", title: socialTitle, description, images: image.map(({ url: imageUrl }) => imageUrl) },
   };
 }
 
@@ -41,48 +48,67 @@ export default async function PublicProfilePage({
 }) {
   const { userId } = await params;
   const supabase = await createClient();
+  const [user, profile] = await Promise.all([
+    getCurrentUser(supabase),
+    getProfile(userId),
+  ]);
 
-  const [
-    {
-      data: { user },
-    },
-    profile,
-    setups,
-  ] = await Promise.all([supabase.auth.getUser(), getProfile(userId), getSetupsByUser(userId)]);
+  if (!profile) notFound();
 
-  if (!profile) {
-    return (
-      <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
-        <Card className="items-center gap-4 border-racing-red/30 px-6 py-14 text-center">
-          <span className="flex size-14 items-center justify-center rounded-full bg-racing-red/15 text-red-400 ring-1 ring-inset ring-racing-red/30">
-            <AlertCircle className="size-7" />
-          </span>
-          <div>
-            <h2 className="text-xl font-semibold">Profile not found</h2>
-            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-              This user may not exist, or the link is incorrect.
-            </p>
-          </div>
-          <Button asChild variant="outline">
-            <Link href="/leaderboard">Back to Leaderboard</Link>
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
+  const [setupPage, stats] = await Promise.all([
+    getSetupsByUserPage(userId),
+    getProfileSetupStats(userId),
+  ]);
   const viewerIsOwner = user?.id === userId;
   const viewerFollowsThem = !viewerIsOwner && (await isFollowing(user?.id ?? null, userId));
+  const profileUrl = absoluteUrl(`/profile/${encodeURIComponent(userId)}`);
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    url: profileUrl,
+    name: `${profile.username} on ${SITE_NAME}`,
+    isPartOf: { "@id": `${SITE_URL}#website` },
+    mainEntity: {
+      "@type": "Person",
+      name: profile.username,
+      url: profileUrl,
+      ...(profile.avatarUrl ? { image: profile.avatarUrl } : {}),
+      memberOf: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    },
+  };
 
   return (
-    <ProfileView
-      displayName={profile.username}
-      avatarUrl={profile.avatarUrl ?? undefined}
-      memberSince={profile.memberSince}
-      followerCount={profile.followerCount}
-      follow={viewerIsOwner ? undefined : { targetUserId: userId, initialIsFollowing: viewerFollowsThem }}
-      setups={setups}
-      isOwnProfile={viewerIsOwner}
-    />
+    <>
+      <JsonLd data={jsonLd} />
+      <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-6 sm:pt-14">
+        <nav aria-label="Breadcrumb" className="mb-6">
+          <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+            <li>
+              <Link href="/" className="transition-colors hover:text-foreground">Home</Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <Link href="/leaderboard" className="transition-colors hover:text-foreground">Leaderboard</Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page" className="max-w-[14rem] truncate text-foreground">{profile.username}</li>
+          </ol>
+        </nav>
+      </div>
+      <ProfileView
+        key={userId}
+        displayName={profile.username}
+        avatarUrl={profile.avatarUrl ?? undefined}
+        memberSince={profile.memberSince}
+        followerCount={profile.followerCount}
+        follow={viewerIsOwner ? undefined : { targetUserId: userId, initialIsFollowing: viewerFollowsThem }}
+        setups={setupPage.setups}
+        stats={stats}
+        pagination={{ profileId: userId, nextCursor: setupPage.nextCursor }}
+        setupsError={setupPage.error}
+        isOwnProfile={viewerIsOwner}
+      />
+    </>
   );
 }

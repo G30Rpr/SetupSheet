@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bookmark, Calendar, Star, TrendingUp, Upload, Users } from "lucide-react";
+import { Bookmark, Calendar, Flag, Star, TrendingUp, Upload, Users } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,9 @@ import { Card } from "@/components/ui/card";
 import { ContributorBadge } from "@/components/contributor-badge";
 import { EmptyState } from "@/components/empty-state";
 import { FollowButton } from "@/components/follow-button";
-import { SetupCard } from "@/components/setup-card";
+import { ProfileSetupsGrid, type ProfilePagination } from "@/components/profile-setups-grid";
 import { getInitials } from "@/lib/utils";
+import type { ProfileSetupStats } from "@/lib/supabase/setups";
 import type { Setup } from "@/lib/types";
 
 function formatDate(dateStr: string) {
@@ -34,6 +35,9 @@ export function ProfileView({
   followerCount,
   follow,
   setups,
+  stats,
+  pagination,
+  setupsError,
   isOwnProfile,
   favoritedSetups,
 }: {
@@ -44,12 +48,19 @@ export function ProfileView({
   /** Present only when viewing someone else's profile -- renders a Follow button. */
   follow?: { targetUserId: string; initialIsFollowing: boolean };
   setups: Setup[];
+  /** Full-profile aggregates loaded separately from the paginated setup cards. */
+  stats?: ProfileSetupStats | null;
+  /** Cursor metadata for the public/own setup list. */
+  pagination?: ProfilePagination;
+  /** Non-null when the initial profile setup page could not be loaded. */
+  setupsError?: string | null;
   isOwnProfile: boolean;
   /** Present only on your own profile -- favorites are private, so a public visitor never sees this section. */
   favoritedSetups?: Setup[];
 }) {
-  const totalUpvotes = setups.reduce((sum, s) => sum + s.upvotes, 0);
-  const totalRatings = setups.reduce((sum, s) => sum + s.ratingCount, 0);
+  const setupCount = stats?.setupCount ?? setups.length;
+  const totalUpvotes = stats?.totalUpvotes ?? setups.reduce((sum, s) => sum + s.upvotes, 0);
+  const totalRatings = stats?.totalRatings ?? setups.reduce((sum, s) => sum + s.ratingCount, 0);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -75,12 +86,21 @@ export function ProfileView({
         </div>
 
         {follow && (
-          <FollowButton targetUserId={follow.targetUserId} initialIsFollowing={follow.initialIsFollowing} />
+          <div className="flex items-center gap-3">
+            <FollowButton targetUserId={follow.targetUserId} initialIsFollowing={follow.initialIsFollowing} />
+            <Link
+              href={`/report?type=profile&id=${encodeURIComponent(follow.targetUserId)}`}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
+            >
+              <Flag className="size-3" />
+              Report
+            </Link>
+          </div>
         )}
 
-        <div className="flex items-center gap-5">
+        <div className="flex w-full flex-wrap items-center justify-around gap-4 sm:w-auto sm:justify-start sm:gap-5">
           <div className="flex flex-col items-center">
-            <span className="font-mono text-lg font-semibold tabular-nums">{setups.length}</span>
+            <span className="font-mono text-lg font-semibold tabular-nums">{setupCount}</span>
             <span className="text-xs text-muted-foreground">Setups</span>
           </div>
           <div className="flex flex-col items-center">
@@ -107,6 +127,18 @@ export function ProfileView({
         </div>
       </Card>
 
+      {pagination?.nextCursor && (
+        <p className="-mt-4 mb-5 text-xs text-muted-foreground">
+          Showing the most recent setups first. Load more to see the rest.
+        </p>
+      )}
+
+      {setupsError && (
+        <p role="alert" className="-mt-4 mb-5 text-sm text-racing-red">
+          {setupsError}
+        </p>
+      )}
+
       <div className="mb-5 flex items-center justify-between">
         <h2 className="text-xl font-semibold tracking-tight">
           {isOwnProfile ? "Your Setups" : `${displayName}'s Setups`}
@@ -121,12 +153,12 @@ export function ProfileView({
         )}
       </div>
 
-      {setups.length > 0 ? (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {setups.map((setup) => (
-            <SetupCard key={setup.id} setup={setup} />
-          ))}
-        </div>
+      {setupsError ? null : setups.length > 0 ? (
+        <ProfileSetupsGrid
+          key={`${pagination?.profileId ?? "saved"}:${setups[0]?.id ?? "no-setups"}`}
+          setups={setups}
+          pagination={pagination}
+        />
       ) : (
         <EmptyState
           icon={Upload}
@@ -154,11 +186,7 @@ export function ProfileView({
             <Bookmark className="size-4.5 fill-current text-racing-cyan" />
             Saved Setups
           </h2>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {favoritedSetups.map((setup) => (
-              <SetupCard key={setup.id} setup={setup} />
-            ))}
-          </div>
+          <ProfileSetupsGrid key={favoritedSetups[0]?.id ?? "no-saved-setups"} setups={favoritedSetups} />
         </div>
       )}
     </div>

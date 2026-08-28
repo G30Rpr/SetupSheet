@@ -28,7 +28,13 @@ export function useUndoableDelete() {
       }
     }
     window.addEventListener("pagehide", flushPending);
-    return () => window.removeEventListener("pagehide", flushPending);
+    return () => {
+      window.removeEventListener("pagehide", flushPending);
+      // Client-side navigation unmounts the card without firing pagehide.
+      // Commit any pending deletion there as well, otherwise the item would
+      // disappear from the old page but never be removed from the database.
+      flushPending();
+    };
   }, []);
 
   function run({

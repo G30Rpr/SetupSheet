@@ -51,13 +51,18 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
       message: `Cancelled request for ${request.car} @ ${request.track}`,
       onUndo: () => setIsCancelled(false),
       commit: async () => {
-        const result = await deleteSetupRequest(request.id);
-        if (result.error) {
+        try {
+          const result = await deleteSetupRequest(request.id);
+          if (result.error) {
+            setIsCancelled(false);
+            toast.error(result.error);
+            return;
+          }
+          router.refresh();
+        } catch {
           setIsCancelled(false);
-          toast.error(result.error);
-          return;
+          toast.error("Couldn't cancel this request right now.");
         }
-        router.refresh();
       },
     });
   }
@@ -67,30 +72,40 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
       void signInWithDiscord();
       return;
     }
+    setError(null);
     setShowPicker(true);
     if (candidates === null) {
-      getMyMatchingSetupsAction(request.game, request.car, request.track).then(setCandidates);
+      getMyMatchingSetupsAction(request.game, request.car, request.track)
+        .then(setCandidates)
+        .catch(() => {
+          setCandidates([]);
+          setError("Couldn't load your setups right now.");
+        });
     }
   }
 
   function handleFulfill() {
     if (!selectedSetupId) return;
     startTransition(async () => {
-      const result = await fulfillSetupRequest(request.id, selectedSetupId);
-      if (result.error) {
-        setError(result.error);
-        return;
+      try {
+        const result = await fulfillSetupRequest(request.id, selectedSetupId);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        setShowPicker(false);
+        toast.success("Request fulfilled — thanks for sharing!");
+        router.refresh();
+      } catch {
+        setError("Couldn't fulfill this request right now. Please try again.");
       }
-      setShowPicker(false);
-      toast.success("Request fulfilled — thanks for sharing!");
-      router.refresh();
     });
   }
 
   if (isCancelled) return null;
 
   return (
-    <Card className={cn("gap-2.5 px-4 py-3.5", isFulfilled && "opacity-70")}>
+    <Card as="article" className={cn("gap-2.5 px-4 py-3.5", isFulfilled && "opacity-70")}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -110,7 +125,7 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
             type="button"
             onClick={handleDelete}
             aria-label="Cancel request"
-            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-red-400 disabled:opacity-60"
+            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-racing-red disabled:opacity-60"
           >
             <Trash2 className="size-3.5" />
           </button>
@@ -148,9 +163,9 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
               .
             </p>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <Select value={selectedSetupId} onValueChange={setSelectedSetupId}>
-                <SelectTrigger className="w-full max-w-[240px]">
+                <SelectTrigger className="w-full sm:max-w-[240px]">
                   <SelectValue placeholder="Pick your setup" />
                 </SelectTrigger>
                 <SelectContent>
@@ -166,7 +181,11 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
               </Button>
             </div>
           )}
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && (
+            <p role="alert" className="text-xs text-racing-red">
+              {error}
+            </p>
+          )}
         </div>
       ) : null}
     </Card>

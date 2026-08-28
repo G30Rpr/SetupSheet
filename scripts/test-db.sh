@@ -30,6 +30,18 @@ echo "Created scratch database $DB_NAME"
 
 psql -d "$DB_NAME" -v ON_ERROR_STOP=1 -f supabase/testing/shim.sql >/dev/null
 
+# Supabase migration versions are the numeric filename prefix, not the full
+# filename. Two files with the same prefix can appear to work in this raw
+# psql harness while the Supabase migration runner rejects the duplicate (or
+# applies an unpredictable one first), so fail early and explicitly.
+duplicate_versions=$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' \
+  | sed -n 's/^\([0-9][0-9]*\)_.*/\1/p' \
+  | sort | uniq -d)
+if [[ -n "$duplicate_versions" ]]; then
+  echo "Duplicate migration version(s): $duplicate_versions" >&2
+  exit 1
+fi
+
 for migration in supabase/migrations/*.sql; do
   echo "Applying $migration"
   psql -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null

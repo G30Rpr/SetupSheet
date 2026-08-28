@@ -1,4 +1,4 @@
--- 0016_video_url_and_telemetry.sql
+-- 0017_video_url_and_telemetry.sql
 -- Adds support for verified hotlap video URLs (YouTube/Twitch) and telemetry file attachments (.ld, .ibt, etc.)
 
 alter table public.setups add column if not exists video_url text;

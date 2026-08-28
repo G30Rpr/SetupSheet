@@ -1,3 +1,6 @@
+import { normalizeHttpsUrl } from "@/lib/safe-url";
+import { getCurrentUser } from "@/lib/supabase/auth";
+import { sanitizeDisplayName } from "@/lib/user-display";
 import { unwrapList } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
 import type { SetupComment } from "@/lib/types";
@@ -22,8 +25,8 @@ interface SetupCommentRow {
 export async function getSetupComments(setupId: string): Promise<SetupComment[]> {
   const supabase = await createClient();
 
-  const [{ data: { user } }, result] = await Promise.all([
-    supabase.auth.getUser(),
+  const [user, result] = await Promise.all([
+    getCurrentUser(supabase),
     supabase
       .from("setup_comments")
       .select("id, setup_id, user_id, body, created_at")
@@ -49,8 +52,8 @@ export async function getSetupComments(setupId: string): Promise<SetupComment[]>
       id: row.id,
       setupId: row.setup_id,
       userId: row.user_id,
-      username: profile?.username ?? "Racer",
-      avatarUrl: profile?.avatar_url ?? null,
+      username: sanitizeDisplayName(profile?.username),
+      avatarUrl: normalizeHttpsUrl(profile?.avatar_url),
       body: row.body,
       createdAt: row.created_at,
       isOwner: user?.id === row.user_id,

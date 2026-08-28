@@ -1,9 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
+import { getActionError } from "@/lib/actions/action-errors";
 import { logger } from "@/lib/logger";
+import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
+import { isUuid } from "@/lib/utils";
 
 /** Follows or unfollows targetUserId as the current user. */
 export async function toggleFollow(
@@ -11,12 +14,13 @@ export async function toggleFollow(
   isCurrentlyFollowing: boolean
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser(supabase);
 
   if (!user) {
     return { error: "You need to be logged in with Discord to follow." };
+  }
+  if (!isUuid(targetUserId) || typeof isCurrentlyFollowing !== "boolean") {
+    return { error: "That follow request is invalid." };
   }
 
   if (user.id === targetUserId) {
@@ -33,9 +37,10 @@ export async function toggleFollow(
 
   if (error) {
     logger.error("toggleFollow: mutation failed", error);
-    return { error: error.message };
+    return { error: getActionError(error, "Couldn't update your follow status.") };
   }
 
+  revalidateTag("public-profiles", "max");
   revalidatePath(`/profile/${targetUserId}`);
   return { error: null };
 }

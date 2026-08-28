@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 import { loadGoogleFont } from "@/lib/og-fonts";
-import { getSetupById } from "@/lib/supabase/setups";
+import { getSetupSeoData } from "@/lib/supabase/setups";
 import { SITE_NAME } from "@/lib/site";
 
 export const size = { width: 1200, height: 630 };
@@ -36,7 +36,7 @@ function chip(label: string, color: string, border: string) {
 export default async function Image({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [setup, inter600, inter500, inter400, jetbrainsMono600] = await Promise.all([
-    getSetupById(id),
+    getSetupSeoData(id),
     loadGoogleFont("Inter", 600),
     loadGoogleFont("Inter", 500),
     loadGoogleFont("Inter", 400),

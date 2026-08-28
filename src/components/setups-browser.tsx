@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { GitCompare, Search, SearchX, SlidersHorizontal, Upload, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -16,9 +16,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SetupCard } from "@/components/setup-card";
+import { loadMoreSetups } from "@/lib/actions/setup-browse";
 import { conditions, games, getCarsForGame, getTracksForGame, rigProfiles } from "@/lib/data";
 import { ALL, filterAndSortSetups, getSearchSuggestions, type SortOption } from "@/lib/filter-setups";
+import type { BrowseFilters } from "@/lib/browse-filters";
 import { isTypingTarget } from "@/lib/is-typing-target";
+import { SETUP_CARD_PAGE_SIZE } from "@/lib/ui-constants";
+import type { SetupCursor } from "@/lib/supabase/setups";
+import { cn } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
 const sortOptions: { value: SortOption; label: string }[] = [
@@ -34,24 +39,41 @@ const SORT_VALUES = sortOptions.map((option) => option.value);
 // Caps how many SetupCards (each with its own lazy-loaded panels) mount at
 // once -- without this, a large/filtered-open result set renders every
 // match in one giant grid.
-const PAGE_SIZE = 24;
 
 // Only the filters/sort, never page -- restoring an old page number without
 // the matching result set to scroll through would be more confusing than
 // useful.
 const LAST_FILTERS_KEY = "setupsheet:last-filters";
 
-export function SetupsBrowser({ setups }: { setups: Setup[] }) {
-  const router = useRouter();
-  const pathname = usePathname();
+export function SetupsBrowser({
+  setups,
+  totalCount,
+  initialFilters,
+}: {
+  setups: Setup[];
+  totalCount: number;
+  initialFilters: BrowseFilters;
+}) {
   const searchParams = useSearchParams();
+  const [additionalSetups, setAdditionalSetups] = useState<Setup[]>([]);
+  const [remoteCursor, setRemoteCursor] = useState<SetupCursor | null>(() => {
+    const lastSetup = setups.at(-1);
+    return lastSetup ? { createdAt: lastSetup.uploadedAt, id: lastSetup.id } : null;
+  });
+  const [remoteError, setRemoteError] = useState<string | null>(null);
+  const [isLoadingOlder, startLoadingOlder] = useTransition();
+  const loadedSetups = useMemo(
+    () => [...setups, ...additionalSetups],
+    [setups, additionalSetups]
+  );
+  const hasMoreRemote = Boolean(remoteCursor && loadedSetups.length < totalCount);
 
-  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
-  const [game, setGame] = useState<string>(() => searchParams.get("game") ?? ALL);
-  const [car, setCar] = useState<string>(() => searchParams.get("car") ?? ALL);
-  const [track, setTrack] = useState<string>(() => searchParams.get("track") ?? ALL);
-  const [condition, setCondition] = useState<string>(() => searchParams.get("condition") ?? ALL);
-  const [rig, setRig] = useState<string>(() => searchParams.get("rig") ?? ALL);
+  const [search, setSearch] = useState(initialFilters.search);
+  const [game, setGame] = useState<string>(initialFilters.game);
+  const [car, setCar] = useState<string>(initialFilters.car);
+  const [track, setTrack] = useState<string>(initialFilters.track);
+  const [condition, setCondition] = useState<string>(initialFilters.condition);
+  const [rig, setRig] = useState<string>(initialFilters.rig);
   const [sort, setSort] = useState<SortOption>(() => {
     const fromUrl = searchParams.get("sort");
     return (SORT_VALUES as string[]).includes(fromUrl ?? "") ? (fromUrl as SortOption) : "newest";
@@ -105,7 +127,14 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
       if (page > 1) params.set("page", String(page));
 
       const query = params.toString();
-      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+      const url = new URL(window.location.href);
+      url.search = query;
+      // These filters are applied entirely in this client component. Using
+      // Next router.replace here would trigger a full RSC request (and reload
+      // up to 500 setups) on every debounce while the user types. Native
+      // history integration updates the shareable URL without rerendering the
+      // server page; a real navigation/refresh still reads the query normally.
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 
       localStorage.setItem(
         LAST_FILTERS_KEY,
@@ -114,7 +143,7 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
     }, 300);
 
     return () => clearTimeout(id);
-  }, [search, game, car, track, condition, rig, sort, page, pathname, router]);
+  }, [search, game, car, track, condition, rig, sort, page]);
 
   // Jump back to page 1 whenever a filter/search/sort actually changes --
   // skipped on mount so restoring ?page=N from a shared/bookmarked URL
@@ -162,23 +191,31 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
   }, []);
 
   const carOptions = useMemo(
-    () => getCarsForGame(setups, game === ALL ? undefined : game),
-    [setups, game]
+    () => getCarsForGame(loadedSetups, game === ALL ? undefined : game),
+    [loadedSetups, game]
   );
   const trackOptions = useMemo(
-    () => getTracksForGame(setups, game === ALL ? undefined : game),
-    [setups, game]
+    () => getTracksForGame(loadedSetups, game === ALL ? undefined : game),
+    [loadedSetups, game]
   );
 
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const suggestions = useMemo(() => getSearchSuggestions(setups, search), [setups, search]);
-
-  const filtered = useMemo(
-    () => filterAndSortSetups(setups, { search, game, car, track, condition, rig }, sort),
-    [setups, search, game, car, track, condition, rig, sort]
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const suggestions = useMemo(
+    () => getSearchSuggestions(loadedSetups, search),
+    [loadedSetups, search]
   );
 
-  const visibleSetups = filtered.slice(0, page * PAGE_SIZE);
+  // Fuzzy matching includes bounded edit-distance work for every loaded
+  // setup. Defer that derived list so the text field remains responsive on
+  // lower-powered phones as the browse index grows.
+  const deferredSearch = useDeferredValue(search);
+  const filtered = useMemo(
+    () => filterAndSortSetups(loadedSetups, { search: deferredSearch, game, car, track, condition, rig }, sort),
+    [loadedSetups, deferredSearch, game, car, track, condition, rig, sort]
+  );
+
+  const visibleSetups = filtered.slice(0, page * SETUP_CARD_PAGE_SIZE);
   const hasMore = filtered.length > visibleSetups.length;
 
   const hasActiveFilters =
@@ -199,6 +236,46 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
     setTrack(ALL);
   }
 
+  function handleLoadOlder() {
+    if (!remoteCursor || isLoadingOlder) return;
+    const cursor = remoteCursor;
+    setRemoteError(null);
+
+    startLoadingOlder(async () => {
+      try {
+        const result = await loadMoreSetups(cursor, {
+          search,
+          game,
+          car,
+          track,
+          condition,
+          rig,
+        });
+        if (result.error) {
+          setRemoteError(result.error);
+          return;
+        }
+
+        setAdditionalSetups((previous) => {
+          const knownIds = new Set([...setups, ...previous].map((setup) => setup.id));
+          return [
+            ...previous,
+            ...result.setups.filter((setup) => !knownIds.has(setup.id)),
+          ];
+        });
+        const nextCursor = result.nextCursor;
+        setRemoteCursor(
+          nextCursor &&
+            (nextCursor.id !== cursor.id || nextCursor.createdAt !== cursor.createdAt)
+            ? nextCursor
+            : null
+        );
+      } catch {
+        setRemoteError("Couldn't load older setups right now.");
+      }
+    });
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-xl border border-border/80 bg-card p-4 sm:p-5">
@@ -207,15 +284,45 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
           <Input
             ref={searchInputRef}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setActiveSuggestionIndex(-1);
+            }}
             onFocus={() => setShowSuggestions(true)}
             onBlur={() => setShowSuggestions(false)}
             onKeyDown={(e) => {
-              if (e.key === "Escape") e.currentTarget.blur();
+              if (e.key === "Escape") {
+                setActiveSuggestionIndex(-1);
+                e.currentTarget.blur();
+              } else if (e.key === "ArrowDown" && suggestions.length > 0) {
+                e.preventDefault();
+                setShowSuggestions(true);
+                setActiveSuggestionIndex((index) => (index + 1) % suggestions.length);
+              } else if (e.key === "ArrowUp" && suggestions.length > 0) {
+                e.preventDefault();
+                setShowSuggestions(true);
+                setActiveSuggestionIndex((index) =>
+                  index <= 0 ? suggestions.length - 1 : index - 1
+                );
+              } else if (e.key === "Enter" && activeSuggestionIndex >= 0) {
+                e.preventDefault();
+                setSearch(suggestions[activeSuggestionIndex]);
+                setActiveSuggestionIndex(-1);
+                setShowSuggestions(false);
+              }
             }}
             placeholder="Search by car, track, game, or tag..."
             className="pl-9 pr-9"
+            role="combobox"
             aria-label="Search setups"
+            aria-autocomplete="list"
+            aria-expanded={showSuggestions && suggestions.length > 0}
+            aria-controls="setup-search-suggestions"
+            aria-activedescendant={
+              activeSuggestionIndex >= 0
+                ? `setup-search-suggestion-${activeSuggestionIndex}`
+                : undefined
+            }
           />
           {!search && (
             <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border/80 bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
@@ -224,21 +331,33 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
           )}
 
           {showSuggestions && suggestions.length > 0 && (
-            <ul className="absolute z-10 mt-1.5 w-full overflow-hidden rounded-md border border-border/80 bg-popover shadow-lg">
-              {suggestions.map((suggestion) => (
+            <ul
+              id="setup-search-suggestions"
+              role="listbox"
+              className="absolute z-10 mt-1.5 w-full overflow-hidden rounded-md border border-border/80 bg-popover shadow-lg"
+            >
+              {suggestions.map((suggestion, index) => (
                 <li key={suggestion}>
                   <button
+                    id={`setup-search-suggestion-${index}`}
                     type="button"
+                    role="option"
+                    aria-selected={activeSuggestionIndex === index}
                     // onMouseDown (not onClick) fires before the input's
                     // onBlur, and preventDefault stops that blur from
                     // happening at all -- otherwise the dropdown would
                     // close itself before the click could register.
                     onMouseDown={(e) => e.preventDefault()}
+                    onMouseEnter={() => setActiveSuggestionIndex(index)}
                     onClick={() => {
                       setSearch(suggestion);
+                      setActiveSuggestionIndex(-1);
                       setShowSuggestions(false);
                     }}
-                    className="w-full truncate px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-accent"
+                    className={cn(
+                      "w-full truncate px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-accent",
+                      activeSuggestionIndex === index && "bg-accent"
+                    )}
                   >
                     {suggestion}
                   </button>
@@ -355,28 +474,32 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
         </div>
       )}
 
+      <h2 id="setup-results-heading" className="sr-only">Setup results</h2>
       {filtered.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {visibleSetups.map((setup) => (
-              <SetupCard
-                key={setup.id}
-                setup={setup}
-                compareSelected={compareIds.includes(setup.id)}
-                onToggleCompare={compareMode ? () => toggleCompareSelect(setup.id) : undefined}
-              />
-            ))}
-          </div>
+          <section aria-labelledby="setup-results-heading" aria-busy={deferredSearch !== search}>
+            <ul className="grid list-none grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {visibleSetups.map((setup) => (
+                <li key={setup.id} className="min-w-0">
+                  <SetupCard
+                    setup={setup}
+                    compareSelected={compareIds.includes(setup.id)}
+                    onToggleCompare={compareMode ? () => toggleCompareSelect(setup.id) : undefined}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
 
           {hasMore && (
             <div className="flex justify-center">
               <Button variant="outline" onClick={() => setPage((p) => p + 1)}>
-                Load {Math.min(PAGE_SIZE, filtered.length - visibleSetups.length)} more
+                Load {Math.min(SETUP_CARD_PAGE_SIZE, filtered.length - visibleSetups.length)} more
               </Button>
             </div>
           )}
         </>
-      ) : setups.length === 0 ? (
+      ) : loadedSetups.length === 0 ? (
         <EmptyState
           icon={Upload}
           title="No setups yet"
@@ -399,6 +522,19 @@ export function SetupsBrowser({ setups }: { setups: Setup[] }) {
           }
         />
       )}
+
+      {hasMoreRemote && (
+        <div className="flex flex-col items-center gap-2">
+          <Button variant="outline" onClick={handleLoadOlder} disabled={isLoadingOlder}>
+            {isLoadingOlder ? "Loading older setups..." : "Load older setups"}
+          </Button>
+          {remoteError && (
+            <p role="alert" className="text-sm text-racing-red">
+              {remoteError}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -416,11 +552,13 @@ function FilterSelect({
   options: string[];
   placeholder: string;
 }) {
+  const id = `filter-${label.toLowerCase()}`;
+
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <label htmlFor={id} className="text-xs font-medium text-muted-foreground">{label}</label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger id={id} className="w-full">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
