@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { setupOgImageSegment } from "@/lib/setup-og-image-path";
+import { isUuid } from "@/lib/utils";
 import { updateSession } from "@/lib/supabase/proxy";
 
 // Least-privilege CSP for what this app actually does: same-origin pages
@@ -56,6 +58,18 @@ export async function proxy(request: NextRequest) {
     redirectUrl.pathname = "/auth/callback";
     redirectUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(redirectUrl);
+  }
+
+  // `/setups/<id>/opengraph-image` renders a Satori PNG for any string it is
+  // given, and next.config.ts lets the result be CDN-cached for 24 h per URL.
+  // Real setup ids are UUIDs, so anything else is either a typo or someone
+  // discovering that arbitrary paths buy them free image renders plus one
+  // `unstable_cache` entry each. Refuse it as a plain 404 -- no page render, no
+  // edge cache entry, no CPU -- and let the already-200 page own the "not found"
+  // copy the visitor actually sees.
+  const ogImageSegment = setupOgImageSegment(pathname);
+  if (ogImageSegment !== null && !isUuid(ogImageSegment)) {
+    return new NextResponse(null, { status: 404 });
   }
 
   const nonce = crypto.randomUUID();
