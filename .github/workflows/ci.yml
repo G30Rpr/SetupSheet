@@ -26,8 +26,19 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      # `next build` type-checks too, but only when it can resolve TypeScript and
+      # it reports the first error after a long build; a separate step names the
+      # job that failed.
+      - run: npm run typecheck
       - run: npm run test
       - run: npm run build
+      # The chunk budget script that exists in the repo but nothing ran, so
+      # bundle growth was only ever caught by someone remembering to.
+      - run: node scripts/check-performance-budget.mjs
+      # Fails on a high/critical advisory in the whole tree (dev deps included: a
+      # build-time RCE is still an RCE on the deploy machine). Prod-only view:
+      # `npm audit --omit=dev`, which is clean today.
+      - run: npm audit --audit-level=high
 
   e2e:
     runs-on: ubuntu-latest
