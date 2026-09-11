@@ -96,13 +96,33 @@ GET /totally-bogus-page                          -> 404   (framework 404, as exp
 
 All three are **build/dev-time, not shipped runtime**, and none is currently reachable in this repo's usage — but the `@vitest/mocker` one is a real file-read primitive in a test runner that executes arbitrary repo code, and the last audit's "0 vulnerabilities" claim shows the gap: `.github/workflows/ci.yml` never runs `npm audit`, so drift is invisible until someone re-reads the lockfile.
 
+GitHub-side, this is invisible as well as un-gated: `GET
+/repos/G30Rpr/SetupSheet/dependabot/alerts` returns `403 Dependabot alerts are
+disabled for this repository`, and `code-scanning/alerts` returns `403 Code
+scanning is not enabled`. So there is no alert in the Security tab for anyone to
+act on, and no SARIF pipeline that would create one.
+
 **Fix:** `npm audit fix` (it resolves all four), then add a CI step in the `lint-test-build` job: `- run: npm audit --audit-level=high` (plus `--omit=dev` once dev-only noise is triaged) and record the result in release notes. Keep the existing `overrides` block.
 
 ### 2.4 The SQL layer is still never executed anywhere in this environment
 
 `supabase/migrations/0023`–`0026` (the `leaderboard`/`setup_search` views, `updated_at`, deletion-request and report tables) are the load-bearing half of the security model, and the trust boundary is Postgres — not the React code. `scripts/test-db.sh` is well written (fresh scratch DB, duplicate-version guard, `ON_ERROR_STOP`, nine `.test.sql` files), but this sandbox has no `psql` and no Docker, so **zero SQL assertions were run by this audit**. Same for `npx playwright test`.
 
-**Fix:** nothing in-repo; the gate is "CI `db-migrations` and `e2e` jobs green on the release commit." Add the two missing pieces while you are there: `pg_dump --schema-only` diff against the live project in that job (catches hand-edits), and `supabase db push --dry-run` where a project link exists. Also worth noting for whoever runs the CI job: `0024` uses `gin_trgm_ops` and relies on `0022` having created `pg_trgm`, so migrations **must** be applied in numeric order — the harness does, but a hand-run in the SQL editor may not.
+**Status — retracted in part, and the underlying gate was worse than reported.** The
+claim "never executed anywhere" was true of *this sandbox* only: `.github/workflows/ci.yml`
+has a `db-migrations` job that applies all migrations to `postgres:16` and runs
+`supabase/testing/*.test.sql`. What the API shows instead is that the job has been
+**failing on every branch for 13 days, including the merged default branch** — the SQL
+gate exists and nobody was reading it. Root cause and fix are in §9; the harness itself is
+fine.
+
+This audit subsequently ran the suite locally: with no `apt` and no `psql`, a real
+Postgres 18.4 cluster came from the `@embedded-postgres/linux-x64` npm package plus a
+statement-splitting Node harness that reproduces `psql -f` semantics (each statement its
+own implicit transaction — which matters, see §9). All 28 migrations and all 11 test files
+apply and pass at `3ceef48`; `scripts/test-db.sh` itself still needs `psql` to run.
+
+**Fix (remaining):** add the missing pieces while you are there: `pg_dump --schema-only` diff against the live project in that job (catches hand-edits), and `supabase db push --dry-run` where a project link exists. Also worth noting for whoever runs the CI job: `0024` uses `gin_trgm_ops` and relies on `0022` having created `pg_trgm`, so migrations **must** be applied in numeric order — the harness does, but a hand-run in the SQL editor may not.
 
 ---
 
@@ -348,9 +368,61 @@ everything in §2 (Critical), and §4.2/§4.4–§4.8 plus all Low items.
 New tests: `src/lib/cache-tags.test.ts` (6), `src/components/setups-browser.test.tsx` (2),
 `supabase/testing/zzzzzz_most_wanted.test.sql`, `supabase/testing/zzzzzzz_setup_files_gc.test.sql`.
 Unit suite: 29 files / 142 tests. `npm run lint`, `tsc --noEmit`, `npm run build` (23
-routes) and `node scripts/check-performance-budget.mjs` (403.7 KiB gzip) all pass.
-`npm run test:db` and `npm run test:e2e` were **not** executed here: this sandbox has no
-Postgres and no browser binary, so the two SQL test files are unrun — they were written
-against `supabase/testing/shim.sql` and the fixtures' existing conventions (including
-pinning `auth.uid()` so 0021's rate-limit triggers see each file's own user), but CI is
-the first place they actually execute.
+routes) and `node scripts/check-performance-budget.mjs` (403.7 KiB gzip) all pass. The SQL
+suite was then run locally against a real cluster and `npm run test:e2e` ran in CI — see §9
+for how, and for the two pre-existing failures that turned up (both now fixed, CI green).
+
+---
+
+## 9. GitHub-side status (2026-09-11, `gh api` + `gh run`)
+
+Everything below was read from the live repo, not inferred from CI files.
+
+| Item | State |
+| --- | --- |
+| Default branch | `SetUpSheet` (not `main`) — every workflow trigger, docs link and PR base has to use that exact casing |
+| CI on `SetUpSheet` (`ff0920d`) | `lint-test-build` ✓ · `db-migrations` **✗** · `e2e` **✗** · `Supabase Preview` **✗** |
+| Run history (last 20) | 17 `failure`, 3 `success` — red has been the norm, which is why a red merge looks normal |
+| PRs | #1–#4 all merged, none open; **#4 merged with `db-migrations` and `e2e` failing** → no required-status check on the default branch |
+| Issues | 0 open |
+| Dependabot | **alerts disabled** → the §2.3 advisories are not tracked anywhere |
+| Code scanning | **not enabled** |
+| Environments | `Preview`, `Production` exist; deployment status is not readable with the agent token (`403`) |
+| Non-workflow checks | `Vercel Preview Comments` (App) succeeds; `Supabase Preview` (App) fails on the default branch and skips on branches — configured outside this repo, so it needs Settings → Environments/Integrations, not a PR |
+| Branch hygiene | merged `arena/01a044ba-setupsheet` still on the remote; no auto-delete after merge |
+
+### The two red jobs, root-caused
+
+**`db-migrations` — a tautologically failing test, fixed in `d77cbda`.**
+`supabase/testing/zz_setup_updated_at.test.sql` wrapped the insert, the edit and the
+comparison in one `do $$ … $$` block. `touch_setup_updated_at()` (0022) stamps `now()`,
+and `now()` is frozen for the whole transaction, so `after_edit <= before_edit` was true
+*whatever the trigger did* — `pg_sleep(0.02)` inside the same transaction cannot move it.
+Since a `do` block is a single psql statement, the assertion also never got the separate
+transactions it silently assumed. The file now uses one statement per transaction with a
+temp table to carry values, and both original assertions still bite (an edit must advance
+`updated_at`; a counter-only update must not).
+
+**`e2e` — the spec clicked the wrong combobox, fixed in `3ceef48`.**
+`e2e/setups-browse.spec.ts` used `getByRole("combobox").first()`, but `/setups` renders the
+header-search input with `role="combobox"` (for its suggestion listbox) *before* the filter
+selects, so the click landed on search, whose options never populate with no reachable
+Supabase — `getByRole("option")` timed out for a reason unrelated to the filter controls the
+test claims to cover. It now targets `#filter-game`, the element its own `<label for>` points
+at. This is the failure that survived PR #4's "audit hardening" (the search combobox landed
+in the same round).
+
+**Also fixed here, self-inflicted:** the first `/requests` rewrite rendered an error card
+*instead of* the empty state, which broke `e2e/requests-board.spec.ts`'s documented
+graceful-degradation contract. The page now shows the empty state **plus** an inline
+`role="alert"` notice, and the spec asserts both — an outage no longer reads as a quiet
+board, and the repo's "degrade, don't error" convention holds.
+
+### Current state of this work
+
+`arena/01a08cdc-setupsheet` @ `3ceef48` (3 commits: the remediation, the `updated_at` test
+fix, this CI/spec pair) — **first fully green CI run on the repo in two weeks**
+([run 34605525262](https://github.com/G30Rpr/SetupSheet/actions/runs/34605525262)):
+`lint-test-build` ✓, `db-migrations` ✓ (including the two new `.test.sql` files), `e2e` ✓
+(14/14). No PR opened yet; the §2.1–§2.4 Criticals other than the CI gate items above are
+still open.
