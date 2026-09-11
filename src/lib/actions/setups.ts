@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
 
+import { tagsForContentMutation, tagsForCounterMutation } from "@/lib/cache-tags";
 import { getActionError } from "@/lib/actions/action-errors";
 import { validateFileSignature } from "@/lib/file-validation";
 import { logger } from "@/lib/logger";
@@ -45,8 +46,24 @@ export interface CreateSetupInput {
   telemetryFileName?: string | null;
 }
 
-function revalidatePublicSetupData() {
-  revalidateTag("public-setups", "max");
+/**
+ * A setup row was created, edited, or deleted. Everything derived from setup
+ * content moves with it -- including the sitemap document, whose `lastModified`
+ * advances on every contributor-visible edit.
+ */
+function revalidateSetupContent() {
+  for (const tag of tagsForContentMutation()) revalidateTag(tag, "max");
+}
+
+/**
+ * Only a denormalized counter moved (upvote, rating average). The setup row is
+ * unchanged, so content-only caches -- the total count, the SEO row, related
+ * links, and the 24,000-row sitemap walk -- deliberately stay warm. Upvotes
+ * are the most frequent write on the site; invalidating the sitemap for each of
+ * them made the hourly cache meaningless.
+ */
+function revalidateSetupCounters() {
+  for (const tag of tagsForCounterMutation()) revalidateTag(tag, "max");
 }
 
 export interface UpdateSetupInput {
@@ -198,6 +215,35 @@ export async function uploadTelemetryFile(
 }
 
 /**
+ * Best-effort removal of Storage objects uploaded during a submit that then
+ * failed (validation error, rate limit, dropped connection). Without this,
+ * every abandoned upload stays in the public `setup-files` bucket forever --
+ * nothing else ever deletes an object whose setup row never materialised.
+ *
+ * The caller can only ever name paths inside its own folder: `isOwnedStoragePath`
+ * rejects anything else here, and the owner-scoped Storage delete policy (0004)
+ * rejects it again in the database. Failures are logged and swallowed -- cleanup must
+ * never turn a successful save into an error, and the sweeper in
+ * 0028_setup_files_gc.sql is the durable backstop.
+ */
+export async function discardUploadedFiles(paths: unknown): Promise<{ error: null }> {
+  const supabase = await createClient();
+  const user = await getCurrentUser(supabase);
+  if (!user || !Array.isArray(paths)) return { error: null };
+
+  const owned = paths
+    .filter((path): path is string => typeof path === "string")
+    .filter((path) => isOwnedStoragePath(path, user.id))
+    .slice(0, 4);
+  if (owned.length === 0) return { error: null };
+
+  const { error } = await supabase.storage.from(SETUP_FILES_BUCKET).remove(owned);
+  if (error) logger.warn("discardUploadedFiles: cleanup failed", error);
+
+  return { error: null };
+}
+
+/**
  * Inserts the setup row and seeds the uploader's rating through one database
  * function. The RPC is an invoker function: auth.uid(), RLS, and the schema
  * constraints still authorize/validate the caller, while PostgreSQL makes
@@ -267,7 +313,7 @@ export async function createSetup(
     return { error: getActionError(error, "Couldn't publish the setup right now.") };
   }
 
-  revalidatePublicSetupData();
+  revalidateSetupContent();
   revalidatePath("/setups");
   revalidatePath("/");
   return { error: null };
@@ -405,7 +451,7 @@ export async function updateSetup(
     if (removeError) logger.warn("updateSetup: failed to remove old telemetry file", removeError);
   }
 
-  revalidatePublicSetupData();
+  revalidateSetupContent();
   revalidatePath("/setups");
   revalidatePath(`/setups/${setupId}`);
   revalidatePath("/");
@@ -467,7 +513,7 @@ export async function deleteSetup(setupId: string): Promise<{ error: string | nu
     if (removeError) logger.warn("deleteSetup: failed to remove attached files", removeError);
   }
 
-  revalidatePublicSetupData();
+  revalidateSetupContent();
   revalidatePath("/setups");
   revalidatePath(`/setups/${setupId}`);
   revalidatePath("/");
@@ -502,7 +548,7 @@ export async function toggleUpvote(
     return { error: getActionError(error, "Couldn't update the upvote right now.") };
   }
 
-  revalidatePublicSetupData();
+  revalidateSetupCounters();
   revalidatePath("/setups");
   revalidatePath("/");
   return { error: null };
@@ -540,7 +586,7 @@ export async function rateSetup(
     return { error: getActionError(error, "Couldn't save your rating right now.") };
   }
 
-  revalidatePublicSetupData();
+  revalidateSetupCounters();
   revalidatePath("/setups");
   revalidatePath("/");
   return { error: null };

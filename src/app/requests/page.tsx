@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { Flame, MessageSquare } from "lucide-react";
+import { Flame, MessageSquare, TriangleAlert } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { JsonLd } from "@/components/json-ld";
-import { SetupRequestCard } from "@/components/setup-request-card";
+import { SetupRequestsList } from "@/components/setup-requests-list";
 import { fullPageTitle } from "@/lib/seo";
 import { SetupRequestForm } from "@/components/setup-request-form";
-import { getAllSetupRequests, getMostWantedRequests } from "@/lib/supabase/setup-requests";
+import { getMostWantedRequests, getSetupRequestsPage } from "@/lib/supabase/setup-requests";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const title = "Setup Requests";
@@ -25,10 +25,11 @@ export const metadata: Metadata = {
 };
 
 export default async function RequestsPage() {
-  const [mostWanted, requests] = await Promise.all([
+  const [mostWanted, requestPage] = await Promise.all([
     getMostWantedRequests(5),
-    getAllSetupRequests(),
+    getSetupRequestsPage(),
   ]);
+  const isEmpty = requestPage.open.length === 0 && requestPage.fulfilled.length === 0;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -79,20 +80,26 @@ export default async function RequestsPage() {
         <h2 id="request-list-heading" className="mb-4 text-xl font-semibold tracking-tight">
           Community requests
         </h2>
-        {requests.length === 0 ? (
+        {requestPage.error ? (
+          // Distinct from the empty state below: a board that failed to load and
+          // a board with nothing on it read the same if both say "no requests
+          // yet", and only one of them is worth acting on.
+          <Card className="mx-auto w-full max-w-xl items-center gap-3 border-racing-red/30 px-6 py-12 text-center">
+            <span className="flex size-12 items-center justify-center rounded-full bg-racing-red/15 text-racing-red ring-1 ring-inset ring-racing-red/30">
+              <TriangleAlert className="size-5" />
+            </span>
+            <p role="alert" className="text-sm text-muted-foreground">
+              {requestPage.error}
+            </p>
+          </Card>
+        ) : isEmpty ? (
           <EmptyState
             icon={MessageSquare}
             title="No requests yet"
             description="Be the first to ask the community for a setup."
           />
         ) : (
-          <ul className="flex flex-col gap-3">
-            {requests.map((request) => (
-              <li key={request.id}>
-                <SetupRequestCard request={request} />
-              </li>
-            ))}
-          </ul>
+          <SetupRequestsList initialPage={requestPage} />
         )}
       </section>
     </div>

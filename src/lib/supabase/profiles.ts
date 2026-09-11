@@ -1,4 +1,6 @@
 import { unstable_cache } from "next/cache";
+
+import { CACHE_TAG } from "@/lib/cache-tags";
 import { cache } from "react";
 
 import { unwrapSingle } from "@/lib/supabase/query-helpers";
@@ -26,7 +28,7 @@ const getCachedProfileRow = unstable_cache(
     return unwrapSingle(result, "getCachedProfileRow: failed to load profile");
   },
   ["profile-by-id"],
-  { revalidate: 60, tags: ["public-profiles"] }
+  { revalidate: 60, tags: [CACHE_TAG.publicProfiles] }
 );
 
 /**

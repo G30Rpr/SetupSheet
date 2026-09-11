@@ -7,7 +7,57 @@ import { MAX_CAR_LENGTH, MAX_DESCRIPTION_LENGTH, MAX_TRACK_LENGTH, games } from 
 import { logger } from "@/lib/logger";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
+import {
+  getSetupRequestsPage,
+  type SetupRequestCursor,
+  type SetupRequestsPage,
+} from "@/lib/supabase/setup-requests";
 import { isUuid } from "@/lib/utils";
+
+const ISO_CURSOR_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/;
+
+/** A client-supplied keyset cursor is a query string, so validate it first. */
+function isValidRequestCursor(cursor: unknown): cursor is SetupRequestCursor {
+  if (typeof cursor !== "object" || cursor === null || Array.isArray(cursor)) return false;
+  const fields = cursor as Record<string, unknown>;
+
+  return (
+    typeof fields.createdAt === "string" &&
+    fields.createdAt.length <= 64 &&
+    ISO_CURSOR_PATTERN.test(fields.createdAt) &&
+    !Number.isNaN(Date.parse(fields.createdAt)) &&
+    isUuid(fields.id)
+  );
+}
+
+/** Next page of open requests for the board's "load more" control. */
+export async function loadMoreSetupRequests(
+  cursor: SetupRequestCursor
+): Promise<SetupRequestsPage> {
+  if (!isValidRequestCursor(cursor)) {
+    return {
+      open: [],
+      fulfilled: [],
+      openTotal: 0,
+      nextCursor: null,
+      error: "That requests page request is invalid.",
+    };
+  }
+
+  try {
+    return await getSetupRequestsPage(cursor);
+  } catch (error) {
+    logger.error("loadMoreSetupRequests: unhandled failure", error);
+    return {
+      open: [],
+      fulfilled: [],
+      openTotal: 0,
+      nextCursor: null,
+      error: "Couldn't load more requests right now.",
+    };
+  }
+}
 
 export interface CreateSetupRequestInput {
   game: string;

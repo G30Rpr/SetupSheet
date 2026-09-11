@@ -7,7 +7,7 @@ test("requests board renders empty state and post-a-request form with no reachab
 
   await expect(page.getByRole("heading", { name: "Setup Requests" })).toBeVisible();
 
-  // No live Supabase project is reachable here, so getAllSetupRequests()
+  // No live Supabase project is reachable here, so getSetupRequestsPage()
   // and getMostWantedRequests() both return [] -- the "no requests yet"
   // empty state, not a populated list.
   await expect(page.getByText("No requests yet")).toBeVisible();

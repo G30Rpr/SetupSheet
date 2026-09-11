@@ -115,8 +115,8 @@ export interface SetupVersion {
 export interface SetupRequest {
   id: string;
   requesterId: string;
+  /** Display name resolved from `profiles` at read time (no avatar on this surface). */
   requesterUsername: string;
-  requesterAvatarUrl: string | null;
   game: Game;
   car: string;
   track: string;

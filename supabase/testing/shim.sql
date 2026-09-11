@@ -46,7 +46,10 @@ create table if not exists storage.objects (
   id uuid primary key default gen_random_uuid(),
   bucket_id text,
   name text,
-  owner uuid
+  owner uuid,
+  -- Supabase's real storage.objects has created_at/updated_at; 0028's retention
+  -- helpers read created_at, so the stand-in has to carry it too.
+  created_at timestamptz not null default now()
 );
 create or replace function storage.foldername(name text) returns text[]
 language sql immutable as $$ select string_to_array(name, '/') $$;
