@@ -76,6 +76,35 @@ GET /totally-bogus-page                          -> 404   (framework 404, as exp
 2. **Guard the page render on shape too** — validate the id in `generateMetadata`/page and short-circuit for non-UUID input. Note the framework nuance: because the root layout is dynamic and streams, a mid-render `notFound()` cannot change an already-flushed status; Next does not expose a supported "set HTTP status from a Server Component" API in 16.3 (only `headers`/`cookies`/`draftMode` in `next/headers`). So for *valid-UUID-but-missing* rows, the honest options are (a) keep the streamed 404 UI with `noindex, nofollow` (already emitted) and accept status 200, or (b) serve `/setups/[id]` through a Route Handler-shaped path that can set the status. Pick (a) and document it, or pick (b) — but don't leave the code comment claiming "proper `notFound()` paths" as if the status were correct.
 3. In `src/app/setups/[id]/page.tsx`, the not-found `generateMetadata` branch must not advertise an `og:image` (a live request proved it does: `og:image: https://setupsheet.app/setups/not-a-uuid/opengraph-image?…`), and should not emit `alternates.canonical` — it currently resolves to the site root (`<link rel="canonical" href="https://setupsheet.app">` on a not-found page), which is worse than emitting nothing.
 
+**Status — fixed in part, verified against a production build (`2026-09-11).** Two commits:
+
+* `src/lib/setup-og-image-path.ts` + `src/proxy.ts`: a `/setups/<seg>/opengraph-image`
+  request whose segment is not a UUID is answered `new NextResponse(null, { status: 404 })`
+  in middleware. Measured on `next start` after this change:
+  `/setups/not-a-uuid/opengraph-image -> 404, 0 bytes` (was `200 image/png, 27,761 B` with
+  `s-maxage=86400`), while a real id still returns `200 image/png`. The render-and-cache
+  oracle and the per-junk-id `unstable_cache` entry are both gone.
+* `src/app/setups/[id]/page.tsx` and `src/app/profile/[userId]/page.tsx` short-circuit
+  non-UUID params before any lookup, and the **site-wide `alternates.canonical` was removed
+  from `src/app/layout.tsx`** — that inheritance is what put
+  `canonical → https://setupsheet.app` on a not-found page. Verified: not-found pages now
+  emit no canonical, `/` keeps its own.
+
+Two parts of the recommendation need correcting:
+
+1. The `og:image` on a not-found setup page is **not** emitted by the page's
+   `generateMetadata` (that branch already returns only a title + robots). Next attaches
+   the route's own `opengraph-image.tsx` to every page under that segment through
+   `generateImageMetadata`, with its build-time hash as a query token, so no page-level
+   return value can suppress it. The middleware guard is therefore the fix that matters
+   (the tag now points at a URL that 404s with zero work), and the earlier "don't emit
+   og:image" instruction is not implementable as written.
+2. The HTTP status for *valid-but-missing* ids stays 200. This revision of Next exposes no
+   supported status setter from a Server Component, so `noindex, nofollow` (present, verified)
+   is the crawler-facing contract. If a hard 404 is ever required, the page has to move behind
+   a Route Handler-shaped response or the layout has to stop streaming — a much larger change
+   than this finding warrants.
+
 ### 2.2 Upload path is unbounded: no rate limit, no bucket limits, no cleanup
 
 * `src/lib/actions/setups.ts:104-196` (`uploadSetupFile`, `uploadTelemetryFile`) — authenticated, size- and extension-checked, but **not rate-limited and not tied to a successful setup row**. The DB rate limits in `0021_insert_grants_and_rate_limits.sql` cover `setups`/`setup_comments`/`setup_requests` inserts only. One account can therefore POST millions of objects.
@@ -83,6 +112,24 @@ GET /totally-bogus-page                          -> 404   (framework 404, as exp
 * Orphan lifecycle: see §4.1 — nothing ever deletes an object whose row never materialised.
 
 **Fix:** add a per-user upload limiter (same advisory-lock trigger pattern as `0021`, on a tiny `storage`-adjacent counter table, or a Vercel/CDN edge limit), set `file_size_limit`/`allowed_mime_types` on the bucket in a new migration, and add a nightly sweeper that deletes `setup-files` objects with no matching `setups.file_path`/`telemetry_file_path` older than 24 h.
+
+**Status — partially fixed (`2026-09-11`).** `0029_storage_bucket_limits.sql` sets
+`storage.buckets.file_size_limit = 10485760` for `setup-files`, so a caller that skips the
+Server Actions is now bounded by Storage itself, not just by app code; it is idempotent
+(guarded `update`) and covered by `supabase/testing/zzzzzzzz_bucket_limits.test.sql`.
+`supabase/testing/shim.sql` gained the `file_size_limit` / `allowed_mime_types` columns the
+real Supabase schema carries, which is what lets that test run in the CI harness at all.
+Deliberately **no** `allowed_mime_types`: Supabase compares it to the client-sent
+Content-Type, which for `.sto`/`.ini`/`.csv` is frequently `application/octet-stream` or
+empty, so an allow-list would reject legitimate uploads without adding anything the 0019
+extension policy and `src/lib/file-validation.ts` do not already cover.
+
+Still open, and the reason this Critical is not closed: **no per-user upload rate limit.**
+The `0021` advisory-lock triggers cover `setups`/`setup_comments`/`setup_requests` inserts
+only, so `uploadSetupFile`/`uploadTelemetryFile` remain unlimited at the application layer —
+the edge/WAF limit in `LAUNCH_CHECKLIST.md` is currently the only thing in front of them.
+The orphan half of this finding is closed from the other direction (§4.1's cleanup plus
+`orphaned_setup_files()`), except that nothing schedules the sweep yet.
 
 ### 2.3 Dependency vulnerabilities have crept back in, and no gate would have noticed
 
@@ -103,6 +150,20 @@ scanning is not enabled`. So there is no alert in the Security tab for anyone to
 act on, and no SARIF pipeline that would create one.
 
 **Fix:** `npm audit fix` (it resolves all four), then add a CI step in the `lint-test-build` job: `- run: npm audit --audit-level=high` (plus `--omit=dev` once dev-only noise is triaged) and record the result in release notes. Keep the existing `overrides` block.
+
+**Status — gate added (`2026-09-11`).** `package.json` has a `typecheck` script and
+`.github/workflows/ci.yml`'s `lint-test-build` job now runs, in order: `npm run lint`,
+`npm run typecheck`, `npm run test`, `npm run build`, `node scripts/check-performance-budget.mjs`,
+`npm audit --audit-level=high`. The budget script existed with no gate, and the audit had no
+CI step at all, so both were drift-shaped-by-default. `.github/dependabot.yml` adds weekly
+npm updates (minor/patch grouped, majors individual) and monthly actions bumps.
+`npm audit fix` itself **crashes** in this environment (`Cannot read properties of null
+(reading 'edgesOut')`), so the fixes landed as `overrides` entries —
+`browserslist ^4.28.9` (the high) and `baseline-browser-mapping ^2.11.22` — which is also
+the durable form: a future transitive resolution can't reintroduce the vulnerable range.
+After that: `npm audit --audit-level=high` exits 0, `npm audit --omit=dev` is clean, and the
+two remaining moderates are `vitest`/`@vitest/mocker` (fixed only by the 5.x major, which is
+not a release-week change).
 
 ### 2.4 The SQL layer is still never executed anywhere in this environment
 
@@ -215,7 +276,7 @@ Deleting a setup does best-effort Storage cleanup (`src/lib/actions/setups.ts`, 
 adds two `security definer`, service-role-only enumerators: `orphaned_setup_files(grace)`
 (older than 24h, referenced by no `setups` *or* `setup_versions` path) and
 `setup_files_for_user(uid)` (everything under a departed account's folder).
-`supabase/OPERATIONS.md` documents the account-deletion runbook around them, and
+`OPERATIONS.md` (repo root) documents the account-deletion runbook around them, and
 `supabase/testing/zzzzzzz_setup_files_gc.test.sql` pins the enumeration.
 
 The earlier draft of this recommendation said to `delete from storage.objects`
@@ -361,7 +422,7 @@ everything in §2 (Critical), and §4.2/§4.4–§4.8 plus all Low items.
 | 3.1 tag granularity | Fixed | `src/lib/cache-tags.ts`, `src/lib/supabase/setups.ts`, `leaderboard.ts`, `profiles.ts`, `src/lib/actions/setups.ts`, `follows.ts` |
 | 3.2 most-wanted window | Fixed | `supabase/migrations/0027_most_wanted_requests.sql`, `src/lib/supabase/setup-requests.ts`, `database.types.ts` |
 | 3.3 requests board | Fixed | `src/lib/supabase/setup-requests.ts`, `src/lib/actions/setup-requests.ts`, `src/components/setup-requests-list.tsx`, `src/app/requests/page.tsx` |
-| 3.4 files after deletion | Fixed (sweep scheduling open) | `supabase/migrations/0028_setup_files_gc.sql`, `supabase/OPERATIONS.md`, `supabase/testing/shim.sql` |
+| 3.4 files after deletion | Fixed (sweep scheduling open) | `supabase/migrations/0028_setup_files_gc.sql`, `OPERATIONS.md`, `supabase/testing/shim.sql` |
 | 4.1 orphaned failed uploads | Fixed | `src/lib/actions/setups.ts` (`discardUploadedFiles`), `src/components/upload-form.tsx` |
 | 4.3 browse paging | Fixed (search-mode cursor edge left) | `src/lib/supabase/setups.ts`, `src/components/setups-browser.tsx` |
 
@@ -426,3 +487,58 @@ fix, this CI/spec pair) — **first fully green CI run on the repo in two weeks*
 `lint-test-build` ✓, `db-migrations` ✓ (including the two new `.test.sql` files), `e2e` ✓
 (14/14). No PR opened yet; the §2.1–§2.4 Criticals other than the CI gate items above are
 still open.
+
+---
+
+## 10. Pre-merge audit of the GitHub side (2026-09-11, for PR #5)
+
+Scope: every branch, every check, the repo settings the agent token can read, and the live
+site. Nothing below is inferred from files — `gh api` output or a local production build.
+
+### Branches
+
+| Branch | vs `SetUpSheet` | State |
+| --- | --- | --- |
+| `SetUpSheet` (default) | — | `ff0920d` = merge of PR #4; **CI red on `db-migrations`, `e2e`, and the `Supabase Preview` app check** |
+| `arena/01a08cdc-setupsheet` | +4 / −0 | This audit's remediation + the two CI fixes. **All three CI jobs green.** 0 behind ⇒ merges as a fast-forward, no conflicts possible |
+| `arena/01a044ba-setupsheet` | 0 / −1 | Fully merged (PR #4). Delete; it is only noise now |
+
+`gh pr list --state all`: #1–#4, all merged, **no PR has ever had a review decision**
+(`reviewDecision` empty on all four), #3 was merged by the agent app itself, and #4 (+7,451 /
+−1,497 over 144 files) was merged with two failing checks. No tags and **no releases exist**,
+so the live site has no version marker to compare against or roll back to.
+
+### Live site (probed through the fetch proxy; direct TLS from this sandbox is blocked)
+
+* `https://setupsheet.app/setups` — healthy: "20 setups shared by the community", cards with
+  verified lap times, ratings, report links ⇒ PR #4's features are deployed, so the code
+  running in production is the commit whose CI was red.
+* `https://setupsheet.app/setups/not-a-uuid` — renders "Setup not found" ⇒ §2.1's soft-404 is
+  live today (the local probe confirms the same shape and shows what this branch changes).
+
+### Things to do on the GitHub side, in order, for #5
+
+1. Merge `arena/01a08cdc-setupsheet` (fast-forward, green checks) — or wait for the run on
+   the newest head, which is the one that includes the CI-gate changes.
+2. **Apply `0027`, `0028`, `0029` to the production project first**, then deploy
+   (`LAUNCH_CHECKLIST.md` has the verify-SQL block). A missing view degrades gracefully — the
+   Most-wanted panel just disappears — which is exactly the kind of silent gap worth avoiding
+   at a release.
+3. Tag the deployed commit (`git tag v0.5.0 && gh release create`) so the next audit can
+   diff production against a named version instead of guessing from `pushed_at`.
+4. Settings, not code: enable Dependabot (alerts are currently *disabled*), enable code
+   scanning or record the accepted gap, and mark `lint-test-build` / `e2e` / `db-migrations`
+   as required for the default branch.
+5. Delete `arena/01a044ba-setupsheet`.
+
+### What this branch changes that a reviewer should look at hardest
+
+* `supabase/testing/zz_setup_updated_at.test.sql` — the only file here whose *previous*
+  version was asserting nothing (tautological failure inside a single `DO` block).
+* `src/proxy.ts` — new edge behaviour on every request that matches the OG path; it returns a
+  bodyless 404 before the nonce/CSP pipeline runs, which is intentional (no page, no cache
+  entry) but is the one place this PR touches all traffic.
+* `package.json` / `package-lock.json` — `overrides` for `browserslist` +
+  `baseline-browser-mapping`; production tree audits clean afterwards.
+* `src/app/layout.tsx` — removal of the inherited canonical, which affects every route that
+  does not declare one (`/_not-found`, `/auth/*`).
