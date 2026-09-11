@@ -40,7 +40,11 @@ create schema if not exists storage;
 create table if not exists storage.buckets (
   id text primary key,
   name text not null,
-  public boolean not null default false
+  public boolean not null default false,
+  -- Real Supabase carries these two on storage.buckets and 0029 writes
+  -- file_size_limit, so the stand-in has to have them to be a usable harness.
+  file_size_limit bigint,
+  allowed_mime_types text[]
 );
 create table if not exists storage.objects (
   id uuid primary key default gen_random_uuid(),
