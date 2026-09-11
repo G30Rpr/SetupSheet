@@ -80,19 +80,17 @@ export default async function RequestsPage() {
         <h2 id="request-list-heading" className="mb-4 text-xl font-semibold tracking-tight">
           Community requests
         </h2>
-        {requestPage.error ? (
-          // Distinct from the empty state below: a board that failed to load and
-          // a board with nothing on it read the same if both say "no requests
-          // yet", and only one of them is worth acting on.
-          <Card className="mx-auto w-full max-w-xl items-center gap-3 border-racing-red/30 px-6 py-12 text-center">
-            <span className="flex size-12 items-center justify-center rounded-full bg-racing-red/15 text-racing-red ring-1 ring-inset ring-racing-red/30">
-              <TriangleAlert className="size-5" />
-            </span>
-            <p role="alert" className="text-sm text-muted-foreground">
-              {requestPage.error}
-            </p>
-          </Card>
-        ) : isEmpty ? (
+        {requestPage.error && (
+          // Every public reader degrades to an empty result rather than an
+          // error page, so an unreachable database has to say so *on* the empty
+          // state -- otherwise an outage is indistinguishable from "nobody has
+          // posted a request yet" and the only clue is a board that looks calm.
+          <p role="alert" className="mb-4 flex items-center gap-2 text-sm text-racing-red">
+            <TriangleAlert className="size-4 shrink-0" aria-hidden="true" />
+            {requestPage.error}
+          </p>
+        )}
+        {isEmpty ? (
           <EmptyState
             icon={MessageSquare}
             title="No requests yet"
