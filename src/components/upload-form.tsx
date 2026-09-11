@@ -34,7 +34,14 @@ import {
 import { SetupValuesFields, type SetupValues } from "@/components/setup-values-fields";
 import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
-import { createSetup, updateSetup, uploadSetupFile, uploadTelemetryFile } from "@/lib/actions/setups";
+import {
+  createSetup,
+  discardUploadedFiles,
+  updateSetup,
+  uploadSetupFile,
+  uploadTelemetryFile,
+} from "@/lib/actions/setups";
+import { logger } from "@/lib/logger";
 import { parseAccSetupFile } from "@/lib/acc-setup-parser";
 import { validateVideoUrl } from "@/lib/video-url";
 import { normalizeSetupValues } from "@/lib/setup-values";
@@ -348,21 +355,29 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     });
 
     startTransition(async () => {
+      // Declared outside the try so the catch below can still clean up objects
+      // that were uploaded before the throw.
+      const uploadedPaths: string[] = [];
       try {
         const [fileFields, telemetryFields] = await Promise.all([
           resolveFileFields(),
           resolveTelemetryFields(),
         ]);
 
-        if (fileFields.error) {
-          setError(fileFields.error);
-          toast.error(fileFields.error);
-          return;
-        }
+        // Both uploads run in parallel, so one can succeed while the other
+        // fails. Track whatever actually landed in Storage: any path not
+        // attached to a saved row is handed back for cleanup below.
+        uploadedPaths.push(
+          ...[fileFields.filePath, telemetryFields.telemetryFilePath].filter(
+            (path): path is string => typeof path === "string"
+          )
+        );
 
-        if (telemetryFields.error) {
-          setError(telemetryFields.error);
-          toast.error(telemetryFields.error);
+        if (fileFields.error || telemetryFields.error) {
+          const message = fileFields.error ?? telemetryFields.error ?? "Failed to upload file.";
+          setError(message);
+          toast.error(message);
+          if (uploadedPaths.length > 0) void discardUploadedFiles(uploadedPaths);
           return;
         }
 
@@ -387,6 +402,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           if (result.error) {
             setError(result.error);
             toast.error(result.error);
+            if (uploadedPaths.length > 0) void discardUploadedFiles(uploadedPaths);
           } else {
             toast.success("Setup updated");
             router.push("/setups");
@@ -416,14 +432,19 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
         if (result.error) {
           setError(result.error);
           toast.error(result.error);
+          if (uploadedPaths.length > 0) void discardUploadedFiles(uploadedPaths);
         } else {
           if (user) localStorage.removeItem(draftKey(user.id));
           setStatus("success");
         }
-      } catch {
+      } catch (cause) {
         const message = "Something went wrong while saving the setup. Please try again.";
         setError(message);
         toast.error(message);
+        // The uploads already succeeded but the row write threw, so the new
+        // objects are unreachable from any setup: don't leave them public.
+        if (uploadedPaths.length > 0) void discardUploadedFiles(uploadedPaths);
+        logger.error("UploadForm: submit failed", cause);
       }
     });
   }

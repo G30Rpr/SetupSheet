@@ -381,6 +381,17 @@ export type Database = {
       };
     };
     Views: {
+      setup_requests_most_wanted: {
+        Row: {
+          game: string;
+          car: string;
+          track: string;
+          request_count: number;
+          oldest_request_at: string;
+          newest_request_at: string;
+        };
+        Relationships: Relationships;
+      };
       leaderboard: {
         Row: {
           user_id: string;

@@ -11,6 +11,7 @@ import { getProfile } from "@/lib/supabase/profiles";
 import { getProfileSetupStats, getSetupsByUserPage } from "@/lib/supabase/setups";
 import { absoluteUrl, fullPageTitle } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { isUuid } from "@/lib/utils";
 
 export async function generateMetadata({
   params,
@@ -18,6 +19,13 @@ export async function generateMetadata({
   params: Promise<{ userId: string }>;
 }): Promise<Metadata> {
   const { userId } = await params;
+  // Shape guard before any lookup; see the same note in
+  // src/app/setups/[id]/page.tsx (a mid-render notFound() cannot set the HTTP
+  // status while the layout streams, so noindex is what does the work here).
+  if (!isUuid(userId)) {
+    return { title: "Profile not found", robots: { index: false, follow: false } };
+  }
+
   const profile = await getProfile(userId);
 
   if (!profile) {
@@ -47,6 +55,8 @@ export default async function PublicProfilePage({
   params: Promise<{ userId: string }>;
 }) {
   const { userId } = await params;
+  if (!isUuid(userId)) notFound();
+
   const supabase = await createClient();
   const [user, profile] = await Promise.all([
     getCurrentUser(supabase),

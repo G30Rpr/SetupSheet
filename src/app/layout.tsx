@@ -29,7 +29,12 @@ export const metadata: Metadata = {
   authors: [{ name: SITE_NAME, url: SITE_URL }],
   creator: SITE_NAME,
   publisher: SITE_NAME,
-  alternates: { canonical: SITE_URL },
+  // No `alternates.canonical` here on purpose. Metadata set on the root layout
+  // is inherited by every route that does not override it -- which includes the
+  // not-found branches, /_not-found and /auth/* -- so a site-wide canonical made
+  // every one of those pages tell crawlers "the canonical copy of this URL is the
+  // homepage". Each page that wants a canonical declares its own (see page.tsx
+  // and the route pages); nothing else needs a fallback.
   icons: { icon: "/icon.svg" },
   openGraph: {
     siteName: SITE_NAME,

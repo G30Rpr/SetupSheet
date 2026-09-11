@@ -16,7 +16,12 @@ test("browse page renders empty state and filter controls with no reachable Supa
     await expect(page.getByText(label, { exact: true })).toBeVisible();
   }
 
-  const gameTrigger = page.getByRole("combobox").first();
+  // Targeted by id on purpose: the search box is also a combobox
+  // (aria-controls="setup-search-suggestions"), and it comes first in the DOM,
+  // so getByRole("combobox").first() clicks *that*, and with no setups data its
+  // suggestion listbox stays empty -- the assertion below then fails for the
+  // wrong reason.
+  const gameTrigger = page.locator("#filter-game");
   await gameTrigger.click();
   await expect(page.getByRole("option").first()).toBeVisible();
   await page.keyboard.press("Escape");

@@ -1,6 +1,13 @@
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
 
+import {
+  CACHE_TAG,
+  SETUP_CONTENT_TAGS,
+  SETUP_ROW_TAGS,
+  SETUP_SITEMAP_TAGS,
+} from "@/lib/cache-tags";
+
 import { logger } from "@/lib/logger";
 import { unwrapCount, unwrapList, unwrapSingle } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
@@ -44,6 +51,14 @@ const SETUP_COLUMNS =
  * larger than any realistic filtered/browsed result set today.
  */
 export const SETUPS_BROWSE_LIMIT = 500;
+
+/**
+ * Rows per "load older" click. Deliberately a multiple of the rendered card
+ * page rather than another full `SETUPS_BROWSE_LIMIT` slice: each row here is
+ * hydrated with viewer state and an author join, then crosses the RSC boundary,
+ * so fetching 500 at a time made one click cost what the whole first page cost.
+ */
+export const SETUPS_BROWSE_PAGE_SIZE = SETUP_CARD_PAGE_SIZE * 4;
 export interface SetupCursor {
   createdAt: string;
   id: string;
@@ -64,7 +79,13 @@ export interface ProfileSetupPage {
 }
 
 const PUBLIC_DATA_REVALIDATE_SECONDS = 60;
-const PUBLIC_SETUP_CACHE_TAG = "public-setups";
+
+/**
+ * Public reads are grouped into three invalidation classes so that the
+ * highest-frequency mutation on the site (an upvote) cannot drop caches that
+ * only change when a setup row itself changes. See src/lib/cache-tags.ts.
+ */
+const PROFILE_STATS_TAGS = [...SETUP_ROW_TAGS, CACHE_TAG.publicProfiles];
 
 const getCachedBrowseRows = unstable_cache(
   async (
@@ -96,7 +117,7 @@ const getCachedBrowseRows = unstable_cache(
     return unwrapList(result, "getCachedBrowseRows: failed to load setups");
   },
   ["setups-browse"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [PUBLIC_SETUP_CACHE_TAG] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
 );
 
 const getCachedFeaturedRows = unstable_cache(
@@ -111,7 +132,7 @@ const getCachedFeaturedRows = unstable_cache(
     return unwrapList(result, "getCachedFeaturedRows: failed to load setups");
   },
   ["setups-featured"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [PUBLIC_SETUP_CACHE_TAG] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
 );
 
 const getCachedSetupCount = unstable_cache(
@@ -121,7 +142,7 @@ const getCachedSetupCount = unstable_cache(
     return unwrapCount(result, "getCachedSetupCount: failed to count setups");
   },
   ["setups-count"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [PUBLIC_SETUP_CACHE_TAG] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] }
 );
 
 interface CachedProfileSetupPage {
@@ -157,7 +178,7 @@ const getCachedProfileSetupPage = unstable_cache(
     };
   },
   ["setups-profile-page"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [PUBLIC_SETUP_CACHE_TAG] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
 );
 
 const getCachedProfileSetupStats = unstable_cache(
@@ -178,7 +199,7 @@ const getCachedProfileSetupStats = unstable_cache(
     };
   },
   ["profile-setup-stats"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [PUBLIC_SETUP_CACHE_TAG, "public-profiles"] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: PROFILE_STATS_TAGS }
 );
 
 const getCachedSetupRowById = unstable_cache(
@@ -192,7 +213,7 @@ const getCachedSetupRowById = unstable_cache(
     return unwrapSingle(result, "getCachedSetupRowById: failed to load setup");
   },
   ["setup-by-id"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [PUBLIC_SETUP_CACHE_TAG] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
 );
 
 const getCachedAuthorName = unstable_cache(
@@ -203,7 +224,7 @@ const getCachedAuthorName = unstable_cache(
     return sanitizeDisplayName(row?.username);
   },
   ["setup-author-name"],
-  { revalidate: 60, tags: ["public-profiles"] }
+  { revalidate: 60, tags: [CACHE_TAG.publicProfiles] }
 );
 
 type SetupSeoRow = Pick<
@@ -223,7 +244,7 @@ const getCachedSetupSeoRow = unstable_cache(
     return unwrapSingle(result, "getCachedSetupSeoRow: failed to load setup");
   },
   ["setup-seo-by-id"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [PUBLIC_SETUP_CACHE_TAG] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] }
 );
 
 const SITEMAP_SETUP_LIMIT = 24_000;
@@ -266,7 +287,7 @@ const getCachedSitemapRows = unstable_cache(
     return rows;
   },
   ["setups-sitemap"],
-  { revalidate: 3600, tags: [PUBLIC_SETUP_CACHE_TAG] }
+  { revalidate: 3600, tags: [...SETUP_SITEMAP_TAGS] }
 );
 
 interface RelatedSetupRow {
@@ -290,7 +311,7 @@ const getCachedRelatedRows = unstable_cache(
     return unwrapList(result, "getCachedRelatedRows: failed to load setups");
   },
   ["setups-related"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [PUBLIC_SETUP_CACHE_TAG] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] }
 );
 
 interface Viewer {
@@ -505,7 +526,7 @@ export async function getSetupsAfter(
   const result = await query
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
-    .limit(SETUPS_BROWSE_LIMIT);
+    .limit(SETUPS_BROWSE_PAGE_SIZE);
 
   const rows = unwrapList(result, "getSetupsAfter: failed to load older setups");
   if (result.error) {
@@ -516,8 +537,9 @@ export async function getSetupsAfter(
   const lastRow = rows.at(-1);
   return {
     setups,
+    // A short page is the end of the catalog; no cursor means no further click.
     nextCursor:
-      rows.length === SETUPS_BROWSE_LIMIT && lastRow
+      rows.length === SETUPS_BROWSE_PAGE_SIZE && lastRow
         ? { createdAt: lastRow.created_at, id: lastRow.id }
         : null,
     error: null,

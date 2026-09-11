@@ -1,6 +1,7 @@
-import { sanitizeDisplayName } from "@/lib/user-display";
-import { unwrapList } from "@/lib/supabase/query-helpers";
+import { logger } from "@/lib/logger";
+import { unwrapCount, unwrapList } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeDisplayName } from "@/lib/user-display";
 import type { Game, MostWantedEntry, SetupRequest } from "@/lib/types";
 
 interface SetupRequestRow {
@@ -19,31 +20,44 @@ interface SetupRequestRow {
 const SETUP_REQUEST_COLUMNS =
   "id, requester_id, game, car, track, notes, fulfilled_setup_id, fulfilled_by, fulfilled_at, created_at";
 
+/** Open requests handed to the page at a time. */
+export const REQUESTS_PAGE_SIZE = 25;
+/** Fulfilled requests shown once, as a "recently answered" strip. */
+export const FULFILLED_PREVIEW_SIZE = 10;
+
+export interface SetupRequestCursor {
+  createdAt: string;
+  id: string;
+}
+
+export interface SetupRequestsPage {
+  open: SetupRequest[];
+  fulfilled: SetupRequest[];
+  /** Exact number of open requests, so the board can say what it truncated. */
+  openTotal: number;
+  nextCursor: SetupRequestCursor | null;
+  error: string | null;
+}
+
 /**
- * Every request, newest first, open ones ahead of fulfilled ones -- flat
- * query + in-memory joins for requester/fulfiller names and the fulfilling
- * setup's car/track, same reasoning as getNotifications in
- * lib/supabase/notifications.ts (no PostgREST embedded-resource joins).
+ * Resolves requester/fulfiller names and the fulfilling setup's car/track for a
+ * mixed batch of request rows with two flat queries, same reasoning as
+ * getNotifications in lib/supabase/notifications.ts (no PostgREST
+ * embedded-resource joins, which depend on the API schema cache).
  */
-export async function getAllSetupRequests(limit = 100): Promise<SetupRequest[]> {
-  const supabase = await createClient();
-
-  const result = await supabase
-    .from("setup_requests")
-    .select(SETUP_REQUEST_COLUMNS)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  const rows = unwrapList(result, "getAllSetupRequests: failed to load setup requests");
-  const typedRows = rows as unknown as SetupRequestRow[];
+async function hydrateSetupRequestRows(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  rows: SetupRequestRow[]
+): Promise<SetupRequest[]> {
+  if (rows.length === 0) return [];
 
   const profileIds = Array.from(
     new Set(
-      typedRows.flatMap((r) => [r.requester_id, r.fulfilled_by].filter((id): id is string => Boolean(id)))
+      rows.flatMap((row) => [row.requester_id, row.fulfilled_by].filter((id): id is string => Boolean(id)))
     )
   );
   const fulfilledSetupIds = Array.from(
-    new Set(typedRows.map((r) => r.fulfilled_setup_id).filter((id): id is string => Boolean(id)))
+    new Set(rows.map((row) => row.fulfilled_setup_id).filter((id): id is string => Boolean(id)))
   );
 
   const [{ data: profiles }, { data: setups }] = await Promise.all([
@@ -58,13 +72,12 @@ export async function getAllSetupRequests(limit = 100): Promise<SetupRequest[]> 
   const usernameById = new Map((profiles ?? []).map((p) => [p.id, p.username]));
   const setupById = new Map((setups ?? []).map((s) => [s.id, s]));
 
-  const requests = typedRows.map((row): SetupRequest => {
+  return rows.map((row) => {
     const fulfilledSetup = row.fulfilled_setup_id ? setupById.get(row.fulfilled_setup_id) : undefined;
     return {
       id: row.id,
       requesterId: row.requester_id,
       requesterUsername: sanitizeDisplayName(usernameById.get(row.requester_id)),
-      requesterAvatarUrl: null,
       game: row.game as Game,
       car: row.car,
       track: row.track,
@@ -79,60 +92,134 @@ export async function getAllSetupRequests(limit = 100): Promise<SetupRequest[]> 
       fulfilledAt: row.fulfilled_at,
     };
   });
+}
 
-  return requests.sort((a, b) => {
-    if (Boolean(a.fulfilledSetupId) !== Boolean(b.fulfilledSetupId)) {
-      return a.fulfilledSetupId ? 1 : -1;
-    }
-    const aTime = a.fulfilledAt ?? a.createdAt;
-    const bTime = b.fulfilledAt ?? b.createdAt;
-    return aTime < bTime ? 1 : aTime > bTime ? -1 : 0;
-  });
+/** Keyset boundary for "older than this row", deterministic on equal timestamps. */
+function buildRequestCursorFilter(cursor: SetupRequestCursor): string {
+  return `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`;
 }
 
 /**
- * Groups open requests by (game, car, track) -- the community's actual
- * demand signal for what to upload next, ranked by how many people are
- * asking. Grouped/counted client-side rather than via a SQL view, same
- * scale-appropriate tradeoff as the rest of this data layer (see
- * getProfileSitemapEntries's dedup-in-JS comment).
+ * One page of the requests board, ordered by real state rather than by which
+ * rows happened to fall inside an arbitrary fetch window.
+ *
+ * The previous reader pulled the 100 newest rows of any status and then sorted
+ * open ones to the front in JavaScript, so as soon as the newest 100 requests
+ * were mostly answered, genuinely open requests silently disappeared from the
+ * board with no pagination to reach them. Open requests are now their own
+ * keyset-paginated query (backed by the partial index from 0013/0027) and
+ * fulfilled ones become a short, explicitly labelled preview on the first page.
  */
-export async function getMostWantedRequests(limit = 10): Promise<MostWantedEntry[]> {
+export async function getSetupRequestsPage(
+  cursor: SetupRequestCursor | null = null
+): Promise<SetupRequestsPage> {
   const supabase = await createClient();
 
-  const result = await supabase
+  let openQuery = supabase
     .from("setup_requests")
-    .select("game, car, track, created_at")
+    .select(SETUP_REQUEST_COLUMNS)
     .is("fulfilled_setup_id", null)
-    .order("created_at", { ascending: true })
-    .limit(500);
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(REQUESTS_PAGE_SIZE + 1);
+  if (cursor) openQuery = openQuery.or(buildRequestCursorFilter(cursor));
 
-  const rows = unwrapList(result, "getMostWantedRequests: failed to load setup requests");
+  const [openResult, fulfilledResult, countResult] = await Promise.all([
+    openQuery,
+    cursor
+      ? Promise.resolve(null)
+      : supabase
+          .from("setup_requests")
+          .select(SETUP_REQUEST_COLUMNS)
+          .not("fulfilled_setup_id", "is", null)
+          .order("fulfilled_at", { ascending: false })
+          .limit(FULFILLED_PREVIEW_SIZE),
+    supabase
+      .from("setup_requests")
+      .select("id", { count: "exact", head: true })
+      .is("fulfilled_setup_id", null),
+  ]);
 
-  const groups = new Map<string, MostWantedEntry>();
-  for (const row of rows as { game: string; car: string; track: string; created_at: string }[]) {
-    const key = JSON.stringify([row.game, row.car, row.track]);
-    const existing = groups.get(key);
-    if (existing) {
-      existing.requestCount += 1;
-    } else {
-      groups.set(key, {
-        game: row.game as Game,
-        car: row.car,
-        track: row.track,
-        requestCount: 1,
-        oldestRequestAt: row.created_at,
-      });
-    }
+  if (openResult.error) {
+    // Logged here rather than left to unwrapList: this branch has to fail the
+    // whole page (a silently empty board would look like "no requests"), so the
+    // underlying PostgREST error is the only thing that makes it debuggable.
+    logger.error("getSetupRequestsPage: failed to load open requests", openResult.error);
+    return {
+      open: [],
+      fulfilled: [],
+      openTotal: 0,
+      nextCursor: null,
+      error: "Couldn't load the requests board right now.",
+    };
   }
 
-  return Array.from(groups.values())
-    .sort((a, b) => {
-      const countDifference = b.requestCount - a.requestCount;
-      if (countDifference !== 0) return countDifference;
-      if (a.oldestRequestAt < b.oldestRequestAt) return -1;
-      if (a.oldestRequestAt > b.oldestRequestAt) return 1;
-      return 0;
-    })
-    .slice(0, limit);
+  const openFetched = unwrapList(
+    openResult,
+    "getSetupRequestsPage: failed to load open requests"
+  ) as unknown as SetupRequestRow[];
+  // One row past the page size is fetched purely as a "there is more" signal.
+  const hasMoreOpen = openFetched.length > REQUESTS_PAGE_SIZE;
+  const openRows = openFetched.slice(0, REQUESTS_PAGE_SIZE);
+  const fulfilledRows = (fulfilledResult
+    ? (unwrapList(fulfilledResult, "getSetupRequestsPage: failed to load fulfilled requests") as unknown as SetupRequestRow[])
+    : []
+  ).slice(0, FULFILLED_PREVIEW_SIZE);
+
+  // Both lists share one hydration pass so the page costs two extra flat
+  // queries total, not four.
+  const hydrated = await hydrateSetupRequestRows(supabase, [...openRows, ...fulfilledRows]);
+  const openIds = new Set(openRows.map((row) => row.id));
+  const [open, fulfilled] = hydrated.reduce(
+    (acc, request) => {
+      acc[openIds.has(request.id) ? 0 : 1].push(request);
+      return acc;
+    },
+    [[] as SetupRequest[], [] as SetupRequest[]]
+  );
+
+  const lastRow = openRows.at(-1);
+  return {
+    open,
+    fulfilled,
+    openTotal: unwrapCount(countResult, "getSetupRequestsPage: failed to count open requests"),
+    nextCursor:
+      hasMoreOpen && lastRow
+        ? { createdAt: lastRow.created_at, id: lastRow.id }
+        : null,
+    error: null,
+  };
+}
+
+/**
+ * "Most wanted": open requests grouped by (game, car, track) inside the
+ * board's rolling 90-day window, ranked by demand. The grouping, window, and
+ * ordering all live in the `setup_requests_most_wanted` view
+ * (0027_most_wanted_requests.sql), so this reads only the summary rows it
+ * renders instead of pulling request bodies into React to count them -- and,
+ * unlike the old client-side version, it never freezes when the board grows.
+ */
+export async function getMostWantedRequests(limit = 5): Promise<MostWantedEntry[]> {
+  const supabase = await createClient();
+  const capped = Math.min(Math.max(limit, 1), 25);
+
+  const result = await supabase
+    .from("setup_requests_most_wanted")
+    .select("game, car, track, request_count, oldest_request_at")
+    .order("request_count", { ascending: false })
+    .order("oldest_request_at", { ascending: true })
+    .limit(capped);
+
+  const rows = unwrapList(
+    result,
+    "getMostWantedRequests: failed to load most-wanted aggregates"
+  );
+
+  return rows.map((row) => ({
+    game: row.game as Game,
+    car: row.car,
+    track: row.track,
+    requestCount: row.request_count,
+    oldestRequestAt: row.oldest_request_at,
+  }));
 }

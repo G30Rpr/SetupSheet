@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { Flame, MessageSquare } from "lucide-react";
+import { Flame, MessageSquare, TriangleAlert } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { JsonLd } from "@/components/json-ld";
-import { SetupRequestCard } from "@/components/setup-request-card";
+import { SetupRequestsList } from "@/components/setup-requests-list";
 import { fullPageTitle } from "@/lib/seo";
 import { SetupRequestForm } from "@/components/setup-request-form";
-import { getAllSetupRequests, getMostWantedRequests } from "@/lib/supabase/setup-requests";
+import { getMostWantedRequests, getSetupRequestsPage } from "@/lib/supabase/setup-requests";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const title = "Setup Requests";
@@ -25,10 +25,11 @@ export const metadata: Metadata = {
 };
 
 export default async function RequestsPage() {
-  const [mostWanted, requests] = await Promise.all([
+  const [mostWanted, requestPage] = await Promise.all([
     getMostWantedRequests(5),
-    getAllSetupRequests(),
+    getSetupRequestsPage(),
   ]);
+  const isEmpty = requestPage.open.length === 0 && requestPage.fulfilled.length === 0;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -79,20 +80,24 @@ export default async function RequestsPage() {
         <h2 id="request-list-heading" className="mb-4 text-xl font-semibold tracking-tight">
           Community requests
         </h2>
-        {requests.length === 0 ? (
+        {requestPage.error && (
+          // Every public reader degrades to an empty result rather than an
+          // error page, so an unreachable database has to say so *on* the empty
+          // state -- otherwise an outage is indistinguishable from "nobody has
+          // posted a request yet" and the only clue is a board that looks calm.
+          <p role="alert" className="mb-4 flex items-center gap-2 text-sm text-racing-red">
+            <TriangleAlert className="size-4 shrink-0" aria-hidden="true" />
+            {requestPage.error}
+          </p>
+        )}
+        {isEmpty ? (
           <EmptyState
             icon={MessageSquare}
             title="No requests yet"
             description="Be the first to ask the community for a setup."
           />
         ) : (
-          <ul className="flex flex-col gap-3">
-            {requests.map((request) => (
-              <li key={request.id}>
-                <SetupRequestCard request={request} />
-              </li>
-            ))}
-          </ul>
+          <SetupRequestsList initialPage={requestPage} />
         )}
       </section>
     </div>

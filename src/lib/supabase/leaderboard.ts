@@ -1,5 +1,7 @@
 import { unstable_cache } from "next/cache";
 
+import { CACHE_TAG, SETUP_ROW_TAGS } from "@/lib/cache-tags";
+
 import { normalizeHttpsUrl } from "@/lib/safe-url";
 import { createPublicClient } from "@/lib/supabase/public";
 import { unwrapList } from "@/lib/supabase/query-helpers";
@@ -25,14 +27,14 @@ const getCachedLeaderboardRows = unstable_cache(
     return unwrapList(result, "getCachedLeaderboardRows: failed to load leaderboard");
   },
   ["leaderboard"],
-  { revalidate: 60, tags: ["public-setups", "public-profiles"] }
+  { revalidate: 60, tags: [...SETUP_ROW_TAGS, CACHE_TAG.publicProfiles] }
 );
 
 /**
  * Top contributors ranked by total upvotes across all their setups, via the
  * public.leaderboard view (see migrations/0006_leaderboard_view.sql).
- * Public rows are briefly cached across requests; mutations invalidate the
- * same tags used by setup/profile readers.
+ * Public rows are briefly cached across requests; content and counter
+ * mutations invalidate this ranking (upvotes decide its order).
  */
 export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
   const rows = await getCachedLeaderboardRows(limit);

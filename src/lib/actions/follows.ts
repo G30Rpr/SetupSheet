@@ -2,6 +2,7 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 
+import { tagsForProfileMutation } from "@/lib/cache-tags";
 import { getActionError } from "@/lib/actions/action-errors";
 import { logger } from "@/lib/logger";
 import { getCurrentUser } from "@/lib/supabase/auth";
@@ -40,7 +41,7 @@ export async function toggleFollow(
     return { error: getActionError(error, "Couldn't update your follow status.") };
   }
 
-  revalidateTag("public-profiles", "max");
+  for (const tag of tagsForProfileMutation()) revalidateTag(tag, "max");
   revalidatePath(`/profile/${targetUserId}`);
   return { error: null };
 }

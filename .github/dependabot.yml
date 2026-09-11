@@ -1,0 +1,35 @@
+# Dependency updates. On a private repo the alerts/updates surface still needs
+# the feature switched on under Settings → Code and automation → Security &
+# analysis (it is currently off here — `GET /dependabot/alerts` returns
+# "Dependabot alerts are disabled for this repository"), but this file is what
+# defines the cadence and grouping once it is.
+#
+# The gate that does not depend on any plan or setting is the
+# `npm audit --audit-level=high` step in .github/workflows/ci.yml.
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    groups:
+      # One PR for routine minor/patch bumps; majors stay separate so they get
+      # read individually (next/vitest majors are where the breakage lives).
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly

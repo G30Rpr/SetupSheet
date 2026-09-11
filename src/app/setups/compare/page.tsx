@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/empty-state";
 import { SetupValuesDiff } from "@/components/setup-values-diff";
 import { getSetupsByIds } from "@/lib/supabase/setups";
 import { fullPageTitle } from "@/lib/seo";
-import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { SITE_NAME } from "@/lib/site";
 
 const title = "Compare Setups";
 const socialTitle = fullPageTitle(title);
@@ -18,7 +18,8 @@ export const metadata: Metadata = {
   title,
   description,
   robots: { index: false, follow: false },
-  alternates: { canonical: `${SITE_URL}/setups/compare` },
+  // No `alternates.canonical`: a canonical that points at a noindex page asks a
+  // crawler to consolidate onto a URL it is simultaneously told to drop.
   openGraph: { title: socialTitle, description, url: "/setups/compare", type: "website", siteName: SITE_NAME },
   twitter: { card: "summary_large_image", title: socialTitle, description },
 };

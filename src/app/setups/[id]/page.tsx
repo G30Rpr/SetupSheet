@@ -9,6 +9,25 @@ import { SetupCard } from "@/components/setup-card";
 import { getSetupById, getSetupSeoData } from "@/lib/supabase/setups";
 import { absoluteUrl, fullPageTitle, truncateMetaDescription } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { isUuid } from "@/lib/utils";
+
+/**
+ * Shape guard, not a lookup: setup ids are UUIDs, so a path like
+ * `/setups/not-a-uuid` can never resolve. Checking the shape first keeps junk
+ * traffic from spending a `unstable_cache` entry and a PostgREST round trip per
+ * distinct string. `src/proxy.ts` does the same for the OG-image route, which is
+ * the expensive one.
+ *
+ * Deliberately *not* `notFound()` here: the root layout is dynamic and streams,
+ * so the document status is already committed as 200 by the time a page throws,
+ * and Next 16 exposes no supported way to set it from a Server Component. The
+ * noindex directive is what actually keeps these URLs out of the index, and the
+ * response carries no canonical/og:image for a page that has no content.
+ */
+const NOT_FOUND_METADATA = {
+  title: "Setup not found",
+  robots: { index: false, follow: false },
+} satisfies Metadata;
 
 export async function generateMetadata({
   params,
@@ -16,11 +35,11 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
+  if (!isUuid(id)) return NOT_FOUND_METADATA;
+
   const setup = await getSetupSeoData(id);
 
-  if (!setup) {
-    return { title: "Setup not found", robots: { index: false, follow: false } };
-  }
+  if (!setup) return NOT_FOUND_METADATA;
 
   const title = `${setup.car} @ ${setup.track}`;
   const socialTitle = fullPageTitle(title);
@@ -29,6 +48,12 @@ export async function generateMetadata({
       `A free ${setup.game} setup for the ${setup.car} at ${setup.track}, shared by ${setup.author}.`
   );
   const url = `/setups/${encodeURIComponent(id)}`;
+  // The OG route is CDN-cacheable for a day per URL (next.config.ts), so the URL
+  // has to change when the setup does -- otherwise an edited setup keeps serving
+  // its old card image to every unfurling bot for 24h.
+  const ogImageUrl = absoluteUrl(
+    `${url}/opengraph-image?v=${encodeURIComponent(ogImageVersion(setup, id))}`
+  );
 
   return {
     title,
@@ -43,10 +68,16 @@ export async function generateMetadata({
       publishedTime: setup.createdAt,
       modifiedTime: setup.updatedAt,
       authors: [setup.author],
-      images: [{ url: absoluteUrl(`${url}/opengraph-image`), width: 1200, height: 630, alt: socialTitle }],
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: socialTitle }],
     },
-    twitter: { card: "summary_large_image", title: socialTitle, description, images: [absoluteUrl(`${url}/opengraph-image`)] },
+    twitter: { card: "summary_large_image", title: socialTitle, description, images: [ogImageUrl] },
   };
+}
+
+/** Cache-busting token for the OG image: the setup's last edit, or its id. */
+function ogImageVersion(setup: { updatedAt: string; createdAt: string }, fallbackId: string): string {
+  const parsed = Date.parse(setup.updatedAt || setup.createdAt);
+  return Number.isNaN(parsed) ? fallbackId : String(parsed);
 }
 
 export default async function SetupDetailPage({
@@ -55,6 +86,10 @@ export default async function SetupDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  // See NOT_FOUND_METADATA above for why this is notFound() here but a plain
+  // metadata short-circuit in generateMetadata.
+  if (!isUuid(id)) notFound();
+
   const setup = await getSetupById(id);
 
   if (!setup) notFound();

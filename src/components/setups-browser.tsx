@@ -60,8 +60,10 @@ export function SetupsBrowser({
     const lastSetup = setups.at(-1);
     return lastSetup ? { createdAt: lastSetup.uploadedAt, id: lastSetup.id } : null;
   });
+
   const [remoteError, setRemoteError] = useState<string | null>(null);
   const [isLoadingOlder, startLoadingOlder] = useTransition();
+
   const loadedSetups = useMemo(
     () => [...setups, ...additionalSetups],
     [setups, additionalSetups]
@@ -74,6 +76,27 @@ export function SetupsBrowser({
   const [track, setTrack] = useState<string>(initialFilters.track);
   const [condition, setCondition] = useState<string>(initialFilters.condition);
   const [rig, setRig] = useState<string>(initialFilters.rig);
+  // Both the appended pages and the keyset cursor describe one specific query.
+  // Filters are applied client-side over the server-rendered index, so the
+  // moment any filter changes, rows appended under the previous filters are a
+  // different result set and the cursor points into the wrong ordering -- using
+  // either can duplicate or silently skip setups. Re-seeding from the current
+  // server index on every filter/index change is what keeps "load older"
+  // honest. (Adjusting state during render rather than in an effect, so the
+  // first paint after the change already reflects it -- same pattern as
+  // NotificationBell.)
+  const filterSignature = JSON.stringify([search, game, car, track, condition, rig]);
+  const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
+  const [prevSetups, setPrevSetups] = useState(setups);
+  if (prevFilterSignature !== filterSignature || prevSetups !== setups) {
+    setPrevFilterSignature(filterSignature);
+    setPrevSetups(setups);
+    setAdditionalSetups([]);
+    setRemoteError(null);
+    const lastSetup = setups.at(-1);
+    setRemoteCursor(lastSetup ? { createdAt: lastSetup.uploadedAt, id: lastSetup.id } : null);
+  }
+
   const [sort, setSort] = useState<SortOption>(() => {
     const fromUrl = searchParams.get("sort");
     return (SORT_VALUES as string[]).includes(fromUrl ?? "") ? (fromUrl as SortOption) : "newest";
