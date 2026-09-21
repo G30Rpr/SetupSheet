@@ -109,6 +109,7 @@ export function SetupCard({
   linkTitle = true,
   titleLevel = 2,
   compareSelected = false,
+  installGuideOpen = false,
   onToggleCompare,
 }: {
   setup: Setup;
@@ -118,6 +119,12 @@ export function SetupCard({
   titleLevel?: 2 | 3;
   /** Whether this card is one of the (up to 2) setups picked for the comparison tool. */
   compareSelected?: boolean;
+  /**
+   * Opens the install guide on first render. The detail page turns this on:
+   * installing is the second half of the job there, and on a browse grid it
+   * would crowd out the comparison.
+   */
+  installGuideOpen?: boolean;
   /** Presence of this prop is what turns on the compare-mode checkbox -- omit it entirely on the detail/profile call sites. */
   onToggleCompare?: () => void;
 }) {
@@ -125,7 +132,7 @@ export function SetupCard({
   const Title = titleLevel === 3 ? "h3" : "h2";
   const [showValues, setShowValues] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
-  const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(installGuideOpen);
   const [showHistory, setShowHistory] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [upvotes, setUpvotes] = useState(setup.upvotes);

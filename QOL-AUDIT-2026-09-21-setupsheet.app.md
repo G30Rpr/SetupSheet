@@ -388,4 +388,19 @@ Debugging note for future slices: **CI's e2e job is the only place a real browse
 
 CI after the fix: `e2e` pass, `lint-test-build` pass, `db-migrations` pass, Vercel pass.
 
-Still queued: **Slice B** (install-assist: numbered install section, copy-path buttons, downloadable install bundle) and **Slice C** (Rig Mode, QR handoff via `uqr`, print/PDF stylesheet).
+### Slice B — install last-mile (shipped)
+
+Scope: Q4, Q10 from section 6, plus the `{car}`/`{track}` placeholder problem that made the existing guides harder to follow than they looked.
+
+| Item | What changed | Verification |
+|---|---|---|
+| **Q4 install guide promoted and made actionable** | `resolveInstallGuide()` fills each guide's `{car}`/`{track}` from the setup, so the panel now shows a real path (`Documents\Assetto Corsa Competizione\Setups\Ford Mustang GT3\Zandvoort`) with a **Copy** button, instead of a template full of angle brackets. Placeholders the site genuinely cannot know (the Windows username in AMS2's profile folder, the Steam library in LMU's path) are left visible and explained by a per-game note rather than guessed at. The panel is expanded by default on the detail page (`installGuideOpen`) and stays collapsed on browse cards. Manual-entry titles (GT7, F1 25, AC EVO) now point at the existing **Copy values** button instead of leaving the reader to work it out. | 5 component tests (copy writes the full path and confirms, bundle link, manual-entry branch, unresolved-placeholder branch, nothing-to-bundle branch) + 5 guide-resolution tests, including one that walks every supported game and requires a folder and an extension from anything claiming file import |
+| **Q10 install bundle** | `GET /api/setups/<id>/bundle` returns one download containing the setup file, the values as text and a README with the resolved path, the steps and the source link. Built on a ~120-line STORE-only ZIP writer (no compression dependency, additive to the budget: +2.8 KiB gzip). A route handler rather than a Server Action so the browser streams it to disk with real progress instead of base64-inflating a 5 MB setup by a third through an RSC payload. Public, like every other download on the site. | 6 route tests (invalid id, unknown setup, nothing to bundle, happy path with all three entries, storage-fetch failure still yielding a README, values-only setup) + 10 zip tests that re-parse the archive independently |
+
+**The zip writer bug worth remembering.** The first archive passed my own round-trip test and was rejected by `unzip -t`: *"invalid zip file with overlapped components (possible zip bomb)"*. The writer set general-purpose flag bit 3, which promises a trailing data descriptor, while writing real sizes into the local header and no descriptor at all. My test had asserted that same flag was set — the second time in two slices that a test agreed with the implementation instead of the spec. Fixed to bit 11 only (UTF-8 names), and verification now runs an **external** tool: `unzip -t` reports "No errors detected", `unzip -l` lists all three entries, and Python's `zipfile.testzip()` returns `None` with correct sizes and a correctly-decoded Unicode entry name.
+
+Gates after the slice: `tsc --noEmit` clean · `eslint` clean · **45 files / 257 tests pass** (was 41/231) · `next build` passes · performance budget **35 chunks / 409.8 KiB gzip** (was 34/405.9). Live: `/api/setups/not-a-uuid/bundle` → 400, `/api/setups/<uuid>/bundle` with the database unreachable → 404, and the lazy install-guide chunk ships the new panel.
+
+Not verifiable in this environment: the bundle's happy path over HTTP end-to-end (the sandbox has no reachable database, so no setup row can exist to bundle). The route test exercises the same code with a stubbed storage fetch, and the archive it produces is the one validated externally by `unzip`/`zipfile`.
+
+Still queued: **Slice C** (Rig Mode, QR handoff via `uqr`, print/PDF stylesheet).
