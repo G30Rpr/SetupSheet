@@ -127,7 +127,7 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
           {visibleComments.map((comment) => (
             <li key={comment.id} className="flex items-start gap-2">
               <Avatar className="size-6 shrink-0 ring-1 ring-border">
-                <AvatarImage src={comment.avatarUrl ?? undefined} alt={comment.username} />
+                <AvatarImage src={comment.avatarUrl ?? undefined} alt="" />
                 <AvatarFallback className="bg-racing-green/15 text-[9px] text-racing-green">
                   {getInitials(comment.username)}
                 </AvatarFallback>

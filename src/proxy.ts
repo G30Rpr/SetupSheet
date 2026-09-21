@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { setupOgImageSegment } from "@/lib/setup-og-image-path";
+import { unresolvableIdSegment } from "@/lib/id-route-guard";
 import { isUuid } from "@/lib/utils";
 import { updateSession } from "@/lib/supabase/proxy";
 
@@ -41,6 +42,11 @@ function buildCsp(nonce: string) {
     "form-action 'self'",
     "base-uri 'self'",
     "object-src 'none'",
+    // Without a reporting directive, a policy that is too tight (broken
+    // feature) or too loose (missed an origin) is invisible in production.
+    // Reports go to the same-origin route handler, which logs them.
+    "report-uri /api/csp-report",
+    "report-to csp-endpoint",
   ].join("; ");
 }
 
@@ -69,6 +75,20 @@ export async function proxy(request: NextRequest) {
   // copy the visitor actually sees.
   const ogImageSegment = setupOgImageSegment(pathname);
   if (ogImageSegment !== null && !isUuid(ogImageSegment)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  // `/setups/<id>` and `/profile/<id>` only ever resolve for UUIDs. A path
+  // segment that cannot be one (a truncated share link, a typo, a crawler
+  // inventing URLs) previously fell through to the streamed page and came back
+  // as HTTP 200 with a "not found" body -- a soft 404 that wastes crawl budget
+  // and tells search engines a dead URL is live. The root layout is dynamic and
+  // streams, so a `notFound()` inside the page cannot change a status that has
+  // already been flushed; refusing the request here is the only place the real
+  // status can still be set. Same shape-guard idea as the OG-image check above,
+  // and it costs nothing: no render, no database round trip.
+  const notFoundSegment = unresolvableIdSegment(pathname);
+  if (notFoundSegment !== null) {
     return new NextResponse(null, { status: 404 });
   }
 

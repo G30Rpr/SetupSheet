@@ -68,7 +68,9 @@ export function UserMenu() {
           aria-label="Account menu"
         >
           <Avatar className="ring-1 ring-border transition-colors hover:ring-racing-coral/50">
-            <AvatarImage src={avatarUrl ?? undefined} alt={displayName} />
+            {/* Decorative: the trigger has an accessible name and the menu shows the
+                display name in text, so repeating it here is a duplicate. */}
+            <AvatarImage src={avatarUrl ?? undefined} alt="" />
             <AvatarFallback className="bg-racing-coral/15 text-racing-coral">
               {getInitials(displayName)}
             </AvatarFallback>

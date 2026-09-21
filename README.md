@@ -49,10 +49,14 @@ src/
                          menu each mount once regardless of viewport
     site-footer.tsx     Footer
     json-ld.tsx         Nonce-protected JSON-LD renderer shared by public routes
+    telemetry-provider.tsx  Field Core Web Vitals (LCP/INP/CLS/TTFB/FCP) + client-error
+                            reporting to the structured log stream; no third-party scripts
     related-setups.tsx  Streamed below-the-fold internal setup links
     setup-card.tsx      The setup card (car/track, lap time, tags, ratings, author byline...)
     setups-browser.tsx  Client component: filter state + filtered grid
-    upload-form.tsx      Upload form; drag a real ACC .json and it auto-fills the Car field
+    upload-form.tsx      Upload form; drag a real ACC .json and it auto-fills the Car field.
+                         Files go browser -> Supabase Storage with a signed URL minted
+                         by createUploadTarget (see below), with live status text.
     file-dropzone.tsx    Drag-and-drop / tap-to-choose file input
     upload-proof-section.tsx Optional lap-proof and telemetry fields
     star-rating.tsx      Pace / Predictability star rating display
@@ -70,6 +74,12 @@ src/
                            setupTags) + helpers -- also what server actions validate against
     badges.ts              Bronze/Silver/Gold upvote thresholds
     acc-setup-parser.ts     Parses a dropped ACC .json to auto-fill the Car field
+    upload-client.ts        Browser-side direct-to-Storage upload (signed URL, progress,
+                            signature pre-check, post-upload verification)
+    upload-targets.ts       Pure upload validation + object-path derivation, shared by the
+                            browser and the Server Action so both enforce identical rules
+    id-route-guard.ts       Shape guard answering a real 404 for /setups/<junk> and
+                            /profile/<junk> in src/proxy.ts (the page can only render one)
     setup-schemas.ts       Per-game setup-screen field definitions (see below)
     utils.ts              `cn()` class-merging helper, `getInitials()`
     ui-constants.ts       Shared setup-card pagination constants

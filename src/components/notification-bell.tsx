@@ -168,7 +168,10 @@ export function NotificationBell({
         >
           <Bell className="size-5" />
           {unreadCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-racing-red text-[10px] font-bold text-white">
+            // racing-red-foreground, not text-white: the red is light enough
+            // now that a white digit on it misses AA (10px bold is not "large
+            // text"). The token flips per theme along with the surface.
+            <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-racing-red text-[10px] font-bold text-racing-red-foreground">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
@@ -200,7 +203,7 @@ export function NotificationBell({
               className={cn("flex items-start gap-2.5 py-2", !n.read && "bg-racing-green/5")}
             >
               <Avatar className="size-8 shrink-0 ring-1 ring-border">
-                <AvatarImage src={n.actorAvatarUrl ?? undefined} alt={n.actorUsername} />
+                <AvatarImage src={n.actorAvatarUrl ?? undefined} alt="" />
                 <AvatarFallback className="bg-racing-green/15 text-xs text-racing-green">
                   {getInitials(n.actorUsername)}
                 </AvatarFallback>

@@ -57,23 +57,32 @@ export function SetupCardFooter({
       {/* Pace & Predictability (community average) + upvotes */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <div className="flex w-full items-center gap-2">
-            <span className="w-24 shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
-              Pace
-            </span>
-            <RatingBar value={setup.pace} color="coral" className="max-w-[150px]" />
-          </div>
-          <div className="flex w-full items-center gap-2">
-            <span className="w-24 shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
-              Predictability
-            </span>
-            <RatingBar value={setup.predictability} color="cyan" className="max-w-[150px]" />
-          </div>
-          <p className="pl-[102px] text-[11px] text-muted-foreground/70">
-            {setup.ratingCount === 0
-              ? "Not yet rated"
-              : `${setup.ratingCount} ${setup.ratingCount === 1 ? "rating" : "ratings"}`}
-          </p>
+          {setup.ratingCount === 0 ? (
+            // No fabricated 0% bars for an unrated setup -- two empty bars read
+            // as "rated badly" rather than "nobody has rated this yet".
+            <p className="text-xs text-muted-foreground">
+              Not yet rated — be the first to say how it drives.
+            </p>
+          ) : (
+            <>
+              <div className="flex w-full items-center gap-2">
+                <span className="w-24 shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Pace
+                </span>
+                <RatingBar value={setup.pace} color="coral" className="max-w-[150px]" />
+              </div>
+              <div className="flex w-full items-center gap-2">
+                <span className="w-24 shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Predictability
+                </span>
+                <RatingBar value={setup.predictability} color="cyan" className="max-w-[150px]" />
+              </div>
+              <p className="pl-[102px] text-[11px] text-muted-foreground/70">
+                {setup.ratingCount} {setup.ratingCount === 1 ? "rating" : "ratings"} · average out of
+                5
+              </p>
+            </>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <button
@@ -96,7 +105,12 @@ export function SetupCardFooter({
             onClick={onUpvote}
             disabled={isPending}
             aria-pressed={hasUpvoted}
-            aria-label={hasUpvoted ? "Remove upvote" : "Upvote"}
+            aria-label={
+              hasUpvoted
+                ? `Remove your upvote — ${upvotes} so far`
+                : `Upvote this setup — ${upvotes} so far`
+            }
+            title={hasUpvoted ? "Remove your upvote" : "Upvote this setup"}
             className={cn(
               "flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium transition-colors disabled:opacity-60",
               hasUpvoted
@@ -105,7 +119,15 @@ export function SetupCardFooter({
             )}
           >
             <TrendingUp className="size-3.5" />
-            <span className="font-mono tabular-nums">{upvotes}</span>
+            {/* A bare number next to an icon read as an unlabelled counter. */}
+            {upvotes > 0 ? (
+              <span className="text-xs font-medium">
+                <span className="font-mono tabular-nums">{upvotes}</span>{" "}
+                {upvotes === 1 ? "upvote" : "upvotes"}
+              </span>
+            ) : (
+              <span className="text-xs font-medium">Upvote</span>
+            )}
           </button>
         </div>
       </div>

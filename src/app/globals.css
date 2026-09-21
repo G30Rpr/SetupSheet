@@ -26,7 +26,7 @@
   --popover: oklch(0.19 0.006 260);
   --popover-foreground: oklch(0.96 0.004 260);
 
-  --primary: oklch(0.62 0.19 25);
+  --primary: oklch(0.66 0.19 25);
   /* Dark coral is light enough that near-white button text misses AA;
      use a dark foreground here while keeping the light theme's white text. */
   --primary-foreground: oklch(0.15 0.004 260);
@@ -37,21 +37,33 @@
   --muted: oklch(0.22 0.006 260);
   --muted-foreground: oklch(0.62 0.014 260);
 
-  --accent: oklch(0.27 0.01 260);
+  /* Darkened from 0.27: dropdown/menu rows hover on this surface, and at
+     0.27 --muted-foreground and the accent text tokens fell below AA (4.14 and
+     4.41 against it). */
+  --accent: oklch(0.23 0.01 260);
   --accent-foreground: oklch(0.96 0.004 260);
 
-  --destructive: oklch(0.54 0.22 27);
-  --destructive-foreground: oklch(0.97 0.01 27);
+  /* 0.54 measured 3.29-3.49:1 as text on card/background (>4.5 needed). The
+     lighter red keeps the destructive button readable by pairing it with a
+     dark label, the same way the coral primary button works. */
+  --destructive: oklch(0.66 0.20 27);
+  --destructive-foreground: oklch(0.15 0.02 27);
 
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.62 0.19 25 / 55%);
+  /* Fully opaque and lighter than the old primary@55% (which cleared 3:1 by
+     0.02 against the card). SC 1.4.11 wants a visible indicator, not one that
+     barely qualifies. */
+  --ring: oklch(0.72 0.20 27);
 
-  --racing-red: oklch(0.58 0.22 27);
-  --racing-red-foreground: oklch(0.97 0.01 27);
+  /* Error/alert text: 0.58 measured 3.62-4.14:1 on card/muted (>4.5 needed).
+     The foreground is now a dark label for the light-red solid badge, matching
+     --destructive-foreground. */
+  --racing-red: oklch(0.66 0.20 27);
+  --racing-red-foreground: oklch(0.15 0.02 27);
   --racing-green: oklch(0.72 0.19 149);
   --racing-amber: oklch(0.79 0.16 80);
-  --racing-coral: oklch(0.62 0.19 25);
+  --racing-coral: oklch(0.66 0.19 25);
   --racing-cyan: oklch(0.62 0.19 200);
 
   --chart-1: oklch(0.62 0.19 25);
@@ -76,7 +88,7 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.01 260);
 
-  --primary: oklch(0.56 0.2 25);
+  --primary: oklch(0.54 0.20 25);
   --primary-foreground: oklch(0.99 0.005 25);
 
   --secondary: oklch(0.95 0.006 260);
@@ -93,14 +105,17 @@
 
   --border: oklch(0 0 0 / 10%);
   --input: oklch(0 0 0 / 14%);
-  --ring: oklch(0.56 0.2 25 / 45%);
+  /* Was primary@45%, which composited to ~1.56:1 -- the focus indicator was
+     effectively invisible in light mode. Opaque, and >=5:1 against every
+     surface it can outline. */
+  --ring: oklch(0.50 0.20 25);
 
   --racing-red: oklch(0.54 0.22 27);
   --racing-red-foreground: oklch(0.99 0.01 27);
-  --racing-green: oklch(0.52 0.16 149);
-  --racing-amber: oklch(0.54 0.15 80);
-  --racing-coral: oklch(0.56 0.2 25);
-  --racing-cyan: oklch(0.48 0.13 200);
+  --racing-green: oklch(0.49 0.16 149);
+  --racing-amber: oklch(0.52 0.15 80);
+  --racing-coral: oklch(0.54 0.19 25);
+  --racing-cyan: oklch(0.47 0.13 200);
 
   --chart-1: oklch(0.56 0.2 25);
   --chart-2: oklch(0.54 0.22 27);

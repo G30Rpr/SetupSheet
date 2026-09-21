@@ -102,6 +102,23 @@ export default async function SetupDetailPage({
     setup.description || `A free ${setup.game} setup for the ${setup.car} at ${setup.track}.`
   );
 
+  // The visible card shows a Pace and a Predictability average from real
+  // first-party ratings, each 1-5. `ratingValue` is their mean so the number
+  // in a rich result matches what the page shows, and the count gates emission
+  // entirely: AggregateRating with zero ratings is invalid markup and Google
+  // treats a rating with no raters as spam.
+  const ratingCount = setup.ratingCount ?? 0;
+  const aggregateRating =
+    ratingCount > 0
+      ? {
+          "@type": "AggregateRating",
+          ratingValue: Number(((setup.pace + setup.predictability) / 2).toFixed(1)),
+          bestRating: 5,
+          worstRating: 1,
+          ratingCount,
+        }
+      : undefined;
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -119,6 +136,7 @@ export default async function SetupDetailPage({
         isAccessibleForFree: true,
         inLanguage: "en-US",
         keywords: [setup.game, setup.car, setup.track, setup.condition],
+        ...(aggregateRating ? { aggregateRating } : {}),
       },
       {
         "@type": "BreadcrumbList",

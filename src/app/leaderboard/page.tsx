@@ -100,7 +100,7 @@ export default async function LeaderboardPage() {
                     </span>
 
                     <Avatar className="size-10 shrink-0 ring-1 ring-border">
-                      <AvatarImage src={entry.avatarUrl ?? undefined} alt={entry.username} />
+                      <AvatarImage src={entry.avatarUrl ?? undefined} alt="" />
                       <AvatarFallback className="bg-racing-coral/15 text-sm text-racing-coral">
                         {getInitials(entry.username)}
                       </AvatarFallback>
