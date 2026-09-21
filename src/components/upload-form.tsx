@@ -34,13 +34,8 @@ import {
 import { SetupValuesFields, type SetupValues } from "@/components/setup-values-fields";
 import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  createSetup,
-  discardUploadedFiles,
-  updateSetup,
-  uploadSetupFile,
-  uploadTelemetryFile,
-} from "@/lib/actions/setups";
+import { createSetup, discardUploadedFiles, updateSetup } from "@/lib/actions/setups";
+import { uploadFileDirectly } from "@/lib/upload-client";
 import { logger } from "@/lib/logger";
 import { parseAccSetupFile } from "@/lib/acc-setup-parser";
 import { validateVideoUrl } from "@/lib/video-url";
@@ -117,6 +112,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   const [predictability, setPredictability] = useState(3);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "success">("idle");
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Loaded once on mount rather than gated behind game selection: this still
@@ -293,9 +289,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     }
 
     if (file) {
-      const fileFormData = new FormData();
-      fileFormData.append("file", file);
-      const result = await uploadSetupFile(fileFormData);
+      const result = await uploadFileDirectly("setup", file, user?.id ?? null, setUploadPercent);
       if (result.error || !result.path) {
         return { error: result.error ?? "Failed to upload file." };
       }
@@ -315,9 +309,12 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     error?: string;
   }> {
     if (telemetryFile) {
-      const fileFormData = new FormData();
-      fileFormData.append("file", telemetryFile);
-      const result = await uploadTelemetryFile(fileFormData);
+      const result = await uploadFileDirectly(
+        "telemetry",
+        telemetryFile,
+        user?.id ?? null,
+        setUploadPercent
+      );
       if (result.error || !result.path) {
         return { error: result.error ?? "Failed to upload telemetry file." };
       }
@@ -445,6 +442,10 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
         // objects are unreachable from any setup: don't leave them public.
         if (uploadedPaths.length > 0) void discardUploadedFiles(uploadedPaths);
         logger.error("UploadForm: submit failed", cause);
+      } finally {
+        // Doubles as the "upload finished" signal for the button label, and
+        // stops a stale percentage being shown on a retry.
+        setUploadPercent(null);
       }
     });
   }
@@ -778,7 +779,13 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
         {isPending ? (
           <>
             <Loader2 className="animate-spin" />
-            {isEditing ? "Saving..." : "Submitting..."}
+            {uploadPercent !== null
+              ? uploadPercent >= 100
+                ? "Finishing up..."
+                : "Uploading file..."
+              : isEditing
+                ? "Saving..."
+                : "Submitting..."}
           </>
         ) : isEditing ? (
           <>

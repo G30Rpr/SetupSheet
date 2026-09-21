@@ -387,7 +387,9 @@ export function SetupCard({
           className="flex w-fit items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           <Avatar className="size-5">
-            <AvatarImage src={setup.authorAvatarUrl ?? undefined} alt={setup.author} />
+            {/* alt="": the byline link renders the author name as text right beside
+              this avatar, so a name here announces it twice, once per card. */}
+            <AvatarImage src={setup.authorAvatarUrl ?? undefined} alt="" />
             <AvatarFallback className="bg-racing-coral/15 text-[9px] text-racing-coral">
               {getInitials(setup.author)}
             </AvatarFallback>

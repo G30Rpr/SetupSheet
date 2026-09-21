@@ -66,7 +66,7 @@ export function ProfileView({
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
       <Card className="mb-8 flex-row flex-wrap items-center gap-5 px-5 py-6 sm:px-8">
         <Avatar className="size-16 ring-1 ring-border">
-          <AvatarImage src={avatarUrl} alt={displayName} />
+          <AvatarImage src={avatarUrl} alt="" />
           <AvatarFallback className="bg-racing-coral/15 text-lg text-racing-coral">
             {getInitials(displayName)}
           </AvatarFallback>

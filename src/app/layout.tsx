@@ -8,6 +8,7 @@ import { JsonLd } from "@/components/json-ld";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ThemeProvider } from "@/components/theme-provider";
+import { TelemetryProvider } from "@/components/telemetry-provider";
 import { DEFAULT_SITE_DESCRIPTION, absoluteUrl, fullPageTitle } from "@/lib/seo";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -107,16 +108,34 @@ export default async function RootLayout({
         <JsonLd data={jsonLd} />
       </head>
       <body className="flex min-h-full flex-col">
+        {/* SC 2.4.1: the header carries a logo, up to eight nav links, a search
+            box, theme toggle, notification bell and account menu, and it is
+            sticky on every page -- without this, keyboard users tab through all
+            of it to reach the content. Rendered before the header so it is the
+            first focusable element; visible only once focused. */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground focus:outline-2 focus:outline-offset-2 focus:outline-ring"
+        >
+          Skip to main content
+        </a>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} nonce={nonce}>
           <AuthProvider initialUser={user}>
             <SiteHeader
               initialNotifications={initialNotifications}
               initialUnreadCount={initialUnreadCount}
             />
-            <main className="flex-1">{children}</main>
+            {/* tabIndex={-1} so the skip link moves focus here instead of
+                only scrolling, which is what makes it work for screen readers
+                as well as keyboard users. */}
+            <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
+              {children}
+            </main>
             <SiteFooter />
           </AuthProvider>
           <AppToaster />
+          {/* Field Core Web Vitals + client error reporting; renders nothing. */}
+          <TelemetryProvider />
         </ThemeProvider>
       </body>
     </html>

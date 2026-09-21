@@ -1,11 +1,9 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 import { tagsForContentMutation, tagsForCounterMutation } from "@/lib/cache-tags";
 import { getActionError } from "@/lib/actions/action-errors";
-import { validateFileSignature } from "@/lib/file-validation";
 import { logger } from "@/lib/logger";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -15,12 +13,11 @@ import {
   ALLOWED_TELEMETRY_FILE_EXTENSIONS,
   getFileExtension,
   isOwnedStoragePath,
-  MAX_SETUP_FILE_BYTES,
   MAX_STORED_FILE_NAME_LENGTH,
-  MAX_TELEMETRY_FILE_BYTES,
   sanitizeFileName,
   SETUP_FILES_BUCKET,
 } from "@/lib/storage";
+import { describeUploadTarget, isUploadKind, type UploadKind } from "@/lib/upload-targets";
 import { normalizeSetupValues } from "@/lib/setup-values";
 import type { SetupValues } from "@/lib/types";
 import { validateSetupFields } from "@/lib/validate-setup-fields";
@@ -118,100 +115,119 @@ function validateRating(value: unknown): boolean {
   return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 5;
 }
 
-/** Uploads a setup file to Storage under the current user's own folder. */
-export async function uploadSetupFile(
-  formData: FormData
-): Promise<{ path: string | null; fileName: string | null; error: string | null }> {
+/**
+ * Mints a signed, single-use Supabase Storage upload URL for a file the
+ * browser is about to send **directly to Storage**, instead of proxying the
+ * bytes through this Server Action.
+ *
+ * Why direct: Next's Server Action body limit defaults to 1 MB, so any real
+ * setup .json/.sto (or a telemetry pack) failed with an opaque 500 before the
+ * action's own 5 MB / 10 MB validation was ever reached. Raising
+ * `serverActions.bodySizeLimit` cannot fix it either -- Vercel caps a
+ * serverless function's request body at ~4.5 MB, below both advertised
+ * limits. Uploading straight to Storage removes the function from the data
+ * path entirely.
+ *
+ * The returned path is built here, never supplied by the caller, so it is
+ * always `<userId>/<id>-<name>` inside the caller's own folder -- the same
+ * shape the 0004/0019 Storage policies require.
+ */
+export async function createUploadTarget(
+  kind: UploadKind,
+  fileName: string,
+  fileSize: number
+): Promise<{
+  path: string | null;
+  fileName: string | null;
+  token: string | null;
+  error: string | null;
+}> {
+  const empty = { path: null, fileName: null, token: null };
+
+  if (!isUploadKind(kind)) return { ...empty, error: "Unsupported upload type." };
+
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
 
   if (!user) {
     return {
-      path: null,
-      fileName: null,
+      ...empty,
       error: "You need to be logged in with Discord to upload a file.",
     };
   }
 
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { path: null, fileName: null, error: "No file selected." };
+  const { target, error } = describeUploadTarget(kind, fileName, fileSize, user.id);
+  if (!target) return { ...empty, error };
+
+  const { data, error: signError } = await supabase.storage
+    .from(SETUP_FILES_BUCKET)
+    .createSignedUploadUrl(target.path);
+
+  if (signError || !data?.token) {
+    logger.error("createUploadTarget: failed to sign upload url", signError);
+    return { ...empty, error: "Couldn't start the upload. Please try again." };
   }
 
-  if (file.size > MAX_SETUP_FILE_BYTES) {
-    return { path: null, fileName: null, error: "File is too large — max 5 MB." };
-  }
-
-  const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
-  if (!ALLOWED_SETUP_FILE_EXTENSIONS.includes(extension)) {
-    return {
-      path: null,
-      fileName: null,
-      error: `Unsupported file type. Allowed: ${ALLOWED_SETUP_FILE_EXTENSIONS.join(", ")}`,
-    };
-  }
-
-  const signatureError = await validateFileSignature(file, extension);
-  if (signatureError) return { path: null, fileName: null, error: signatureError };
-
-  const safeFileName = sanitizeFileName(file.name);
-  const path = `${user.id}/${randomUUID()}-${safeFileName}`;
-  const { error } = await supabase.storage.from(SETUP_FILES_BUCKET).upload(path, file);
-
-  if (error) {
-    logger.error("uploadSetupFile: upload failed", error);
-    return { path: null, fileName: null, error: "Setup file upload failed. Please try again." };
-  }
-
-  return { path, fileName: safeFileName, error: null };
+  return { path: target.path, fileName: target.fileName, token: data.token, error: null };
 }
 
-/** Uploads a telemetry/data file (.ld, .ibt, .vbo, etc.) to Storage under user folder. */
-export async function uploadTelemetryFile(
-  formData: FormData
+/**
+ * Post-upload confirmation. The browser has already PUT the bytes to Storage,
+ * so this re-validates what actually landed before the path is ever attached
+ * to a setup row: the object must exist, be non-empty, be within the size
+ * limit for its kind, live in a path this user owns, and carry an allowed
+ * extension. Storage policy and the bucket's own 10 MiB `file_size_limit` are
+ * the outer boundary; this is the app-level check that also produces a
+ * user-facing error instead of a silent orphan.
+ *
+ * Returns the canonical `{ path, fileName }` pair to hand to
+ * createSetup/updateSetup, or an error naming what was wrong.
+ */
+export async function verifyUploadedFile(
+  kind: UploadKind,
+  path: unknown,
+  fileName: unknown
 ): Promise<{ path: string | null; fileName: string | null; error: string | null }> {
+  const empty = { path: null, fileName: null };
+
+  if (!isUploadKind(kind)) return { ...empty, error: "Unsupported upload type." };
+
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
 
   if (!user) {
     return {
-      path: null,
-      fileName: null,
-      error: "You need to be logged in with Discord to upload telemetry.",
+      ...empty,
+      error: "You need to be logged in with Discord to upload a file.",
     };
   }
 
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { path: null, fileName: null, error: "No telemetry file selected." };
+  if (typeof path !== "string" || !isOwnedStoragePath(path, user.id)) {
+    return { ...empty, error: "That upload doesn't belong to your account." };
   }
 
-  if (file.size > MAX_TELEMETRY_FILE_BYTES) {
-    return { path: null, fileName: null, error: "Telemetry file is too large — max 10 MB." };
+  if (typeof fileName !== "string" || fileName.length === 0) {
+    return { ...empty, error: "That upload is missing a filename." };
   }
 
-  const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
-  if (!ALLOWED_TELEMETRY_FILE_EXTENSIONS.includes(extension)) {
-    return {
-      path: null,
-      fileName: null,
-      error: `Unsupported telemetry format. Allowed: ${ALLOWED_TELEMETRY_FILE_EXTENSIONS.join(", ")}`,
-    };
+  const { data, error: infoError } = await supabase.storage
+    .from(SETUP_FILES_BUCKET)
+    .info(path);
+
+  if (infoError || !data) {
+    logger.error("verifyUploadedFile: storage info lookup failed", infoError);
+    return { ...empty, error: "That upload didn't finish. Please try again." };
   }
 
-  const signatureError = await validateFileSignature(file, extension);
-  if (signatureError) return { path: null, fileName: null, error: signatureError };
+  // One validation pass, against the size Storage actually reports rather than
+  // the size the browser claimed. This is the same rule set the signed URL was
+  // minted under, so a caller that lied about the size, or PUT different bytes
+  // than it declared, is caught here before the path reaches a setup row.
+  const size = typeof data.size === "number" ? data.size : 0;
+  const { target, error } = describeUploadTarget(kind, fileName, size, user.id);
+  if (!target) return { ...empty, error };
 
-  const safeFileName = sanitizeFileName(file.name);
-  const path = `${user.id}/telemetry-${randomUUID()}-${safeFileName}`;
-  const { error } = await supabase.storage.from(SETUP_FILES_BUCKET).upload(path, file);
-
-  if (error) {
-    logger.error("uploadTelemetryFile: upload failed", error);
-    return { path: null, fileName: null, error: "Telemetry file upload failed. Please try again." };
-  }
-
-  return { path, fileName: safeFileName, error: null };
+  return { path, fileName: target.fileName, error: null };
 }
 
 /**

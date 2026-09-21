@@ -7,6 +7,19 @@ import type { NextConfig } from "next";
 // here.
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  experimental: {
+    // Server Action request bodies default to 1 MB. File uploads no longer
+    // travel through an action -- the browser PUTs straight to Supabase
+    // Storage with a signed URL (src/lib/upload-client.ts), because Vercel
+    // caps a serverless function's request body at ~4.5 MB and could never
+    // carry the advertised 5 MB / 10 MB files. This stays as headroom for
+    // form submits with large text fields, and to turn any future oversized
+    // POST into an explicit 413 instead of a confusing failure. Keep it well
+    // under the platform ceiling.
+    serverActions: {
+      bodySizeLimit: "2mb",
+    },
+  },
   async headers() {
     const headers = [
       { key: "X-Content-Type-Options", value: "nosniff" },
@@ -18,6 +31,11 @@ const nextConfig: NextConfig = {
       {
         key: "Permissions-Policy",
         value: "camera=(), microphone=(), geolocation=()",
+      },
+      // Endpoint for the CSP `report-to` directive set in src/proxy.ts.
+      {
+        key: "Reporting-Endpoints",
+        value: 'csp-endpoint="/api/csp-report"',
       },
       // HSTS on an HTTP localhost development server makes browsers rewrite
       // future local URLs to HTTPS. Only advertise it for real production

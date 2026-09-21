@@ -47,18 +47,30 @@ const SETUP_COLUMNS =
  * needs the full matching set in memory to work correctly -- unlike
  * getFeaturedSetups()/the sitemap queries, it can't just take a small
  * fixed-size slice. This caps the pathological case (an unbounded table
- * scan once the community grows into the thousands) while still being far
- * larger than any realistic filtered/browsed result set today.
+ * scan once the community grows into the thousands).
+ *
+ * 128, down from 500, because every one of these rows crosses the RSC boundary
+ * into a client component and is serialized in full: a Setup averages ~3 KiB
+ * (a 74-field Le Mans Ultimate `setup_values` map alone is ~1.7 KiB), so the
+ * old cap could put ~1.5 MiB of JSON into a single /setups response. At 128 the
+ * worst case is ~0.5 MiB, and setups older than the index stay reachable
+ * through the keyset "load older" pagination below. `payload-budget.test.ts`
+ * fails if per-setup size or this multiplier grows past the budget again.
+ *
+ * The structural follow-up is to stop shipping `setupValues` in list payloads
+ * at all (~57% of each row) and fetch them when a card's values panel or
+ * export action is used.
  */
-export const SETUPS_BROWSE_LIMIT = 500;
+export const SETUPS_BROWSE_LIMIT = 128;
 
 /**
  * Rows per "load older" click. Deliberately a multiple of the rendered card
  * page rather than another full `SETUPS_BROWSE_LIMIT` slice: each row here is
- * hydrated with viewer state and an author join, then crosses the RSC boundary,
- * so fetching 500 at a time made one click cost what the whole first page cost.
+ * hydrated with viewer state and an author join, then crosses the RSC boundary
+ * (~3 KiB each), so one click must not cost what the whole first page cost.
+ * 48 keeps a click at roughly two screens of new cards (~48 x 3 KiB).
  */
-export const SETUPS_BROWSE_PAGE_SIZE = SETUP_CARD_PAGE_SIZE * 4;
+export const SETUPS_BROWSE_PAGE_SIZE = SETUP_CARD_PAGE_SIZE * 2;
 export interface SetupCursor {
   createdAt: string;
   id: string;

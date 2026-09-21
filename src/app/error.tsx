@@ -5,7 +5,7 @@ import { AlertTriangle, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { logger } from "@/lib/logger";
+import { reportClientError } from "@/components/telemetry-provider";
 
 /**
  * Catches any client-side rendering error below the root layout. Without
@@ -21,7 +21,10 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    logger.error("Unhandled application error:", error);
+    // Reports to the structured log stream *and* the telemetry channel, so a
+    // client crash is visible without a third-party error-tracking SDK.
+    reportClientError("Unhandled application error:", error.digest);
+    console.error(error);
   }, [error]);
 
   return (
