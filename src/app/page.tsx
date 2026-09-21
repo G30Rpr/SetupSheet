@@ -39,9 +39,9 @@ const colorClasses = {
 const highlights = [
   {
     icon: ShieldCheck,
-    title: "Safe & rated",
+    title: "Rated, not ranked by hype",
     description:
-      "Every setup shows Pace and Predictability ratings so you know exactly what you're getting before you download.",
+      "Setups carry community Pace and Predictability scores, plus a rig profile — so you can see how a setup actually behaves. New ones show as unrated until racers have run them.",
     color: "coral",
   },
   {
@@ -137,7 +137,7 @@ export default async function Home() {
             <div>
               <div className="mb-2 flex items-center gap-2 text-sm font-medium text-racing-coral">
                 <Timer className="size-4" />
-                Trending this week
+                Most upvoted
               </div>
               <h2 id="featured-heading" className="text-2xl font-bold tracking-tight sm:text-3xl">
                 Featured Setups

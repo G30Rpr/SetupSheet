@@ -107,7 +107,7 @@ const getCachedBrowseRows = unstable_cache(
     track: string,
     condition: string,
     rig: string
-  ): Promise<SetupRow[]> => {
+  ): Promise<{ rows: SetupRow[]; failed: boolean }> => {
     const supabase = createPublicClient();
     const searchExpression = buildBrowseSearchExpression(search);
     let query = searchExpression
@@ -126,7 +126,14 @@ const getCachedBrowseRows = unstable_cache(
       .order("id", { ascending: false })
       .limit(SETUPS_BROWSE_LIMIT);
 
-    return unwrapList(result, "getCachedBrowseRows: failed to load setups");
+    // `failed` is reported rather than swallowed into an empty array: a browse
+    // grid that can't tell "no matches" from "the database is unreachable"
+    // renders an outage as a quiet, empty community.
+    if (result.error || !result.data) {
+      logger.error("getCachedBrowseRows: failed to load setups", result.error);
+      return { rows: [], failed: true };
+    }
+    return { rows: result.data, failed: false };
   },
   ["setups-browse"],
   { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
@@ -490,9 +497,11 @@ async function hydrateSetupRows(
  * Supabase's own migration tooling. Flat queries + in-memory joins side-step
  * that failure mode entirely.
  */
-export async function getSetups(filters: BrowseFilters = EMPTY_BROWSE_FILTERS): Promise<Setup[]> {
+export async function getSetups(
+  filters: BrowseFilters = EMPTY_BROWSE_FILTERS
+): Promise<{ setups: Setup[]; failed: boolean }> {
   const supabase = await createClient();
-  const rows = await getCachedBrowseRows(
+  const { rows, failed } = await getCachedBrowseRows(
     filters.search,
     filters.game,
     filters.car,
@@ -500,7 +509,11 @@ export async function getSetups(filters: BrowseFilters = EMPTY_BROWSE_FILTERS): 
     filters.condition,
     filters.rig
   );
-  return hydrateSetupRows(supabase, rows);
+
+  // Skip the hydration queries entirely when the rows read failed -- the
+  // caller renders a retry state instead of an empty grid.
+  if (failed) return { setups: [], failed: true };
+  return { setups: await hydrateSetupRows(supabase, rows), failed: false };
 }
 
 /**

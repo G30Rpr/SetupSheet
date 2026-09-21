@@ -81,6 +81,9 @@ export function filterAndSortSetups(
   });
 
   switch (sort) {
+    // Surfaced in the UI as "Most upvoted": the value name is kept for URL
+    // compatibility with links that already carry ?sort=trending, and there is
+    // deliberately no recency weighting here.
     case "trending":
       return [...results].sort((a, b) => b.upvotes - a.upvotes);
     case "mostDownloaded":

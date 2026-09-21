@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { GitCompare, Search, SearchX, SlidersHorizontal, Upload, X } from "lucide-react";
+import { GitCompare, Search, SearchX, SlidersHorizontal, TriangleAlert, Upload, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
+import { RetryButton } from "@/components/retry-button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -26,12 +27,15 @@ import type { SetupCursor } from "@/lib/supabase/setups";
 import { cn } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
-const sortOptions: { value: SortOption; label: string }[] = [
-  { value: "newest", label: "Newest" },
-  { value: "trending", label: "Trending" },
-  { value: "mostDownloaded", label: "Most Downloaded" },
-  { value: "safest", label: "Safest" },
-  { value: "fastest", label: "Fastest" },
+export const sortOptions: { value: SortOption; label: string }[] = [
+  { value: "newest", label: "Newest first" },
+  // Value stays "trending" so existing bookmarked/shared ?sort= URLs keep
+  // working, but it sorts by raw upvote count -- calling that "Trending"
+  // implied a recency weighting the sort doesn't do.
+  { value: "trending", label: "Most upvoted" },
+  { value: "mostDownloaded", label: "Most downloaded" },
+  { value: "safest", label: "Safest (predictability)" },
+  { value: "fastest", label: "Fastest lap time" },
 ];
 
 const SORT_VALUES = sortOptions.map((option) => option.value);
@@ -49,10 +53,14 @@ export function SetupsBrowser({
   setups,
   totalCount,
   initialFilters,
+  loadFailed = false,
 }: {
   setups: Setup[];
   totalCount: number;
   initialFilters: BrowseFilters;
+  /** True when the server's browse read failed -- the grid is empty because the
+   *  database was unreachable, not because nothing matched. */
+  loadFailed?: boolean;
 }) {
   const searchParams = useSearchParams();
   const [additionalSetups, setAdditionalSetups] = useState<Setup[]>([]);
@@ -444,13 +452,18 @@ export function SetupsBrowser({
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          {hasMore
-            ? `Showing ${visibleSetups.length} of ${filtered.length} setups`
-            : `${filtered.length} ${filtered.length === 1 ? "setup" : "setups"} found`}
-        </p>
+        {/* buttons stay put when the count is hidden */}
+        {/* No result count while the read is failing: "0 setups found" next to
+            an error state reads as a filter problem. */}
+        {!loadFailed && (
+          <p className="text-sm text-muted-foreground">
+            {hasMore
+              ? `Showing ${visibleSetups.length} of ${filtered.length} setups`
+              : `${filtered.length} ${filtered.length === 1 ? "setup" : "setups"} found`}
+          </p>
+        )}
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={cn("flex flex-wrap items-center gap-2", loadFailed && "sm:ml-auto")}>
           <Button
             variant={compareMode ? "default" : "outline"}
             size="sm"
@@ -522,6 +535,15 @@ export function SetupsBrowser({
             </div>
           )}
         </>
+      ) : loadFailed && loadedSetups.length === 0 ? (
+        // Empty grid + failed read is an outage, not a quiet community.
+        <EmptyState
+          tone="error"
+          icon={TriangleAlert}
+          title="Couldn't load setups"
+          description="We couldn't reach the setup library just now — this isn't a filter problem. Nothing you've saved or uploaded is affected."
+          action={<RetryButton />}
+        />
       ) : loadedSetups.length === 0 ? (
         <EmptyState
           icon={Upload}
@@ -552,9 +574,12 @@ export function SetupsBrowser({
             {isLoadingOlder ? "Loading older setups..." : "Load older setups"}
           </Button>
           {remoteError && (
-            <p role="alert" className="text-sm text-racing-red">
-              {remoteError}
-            </p>
+            <div className="flex flex-col items-center gap-2 text-center">
+              <p role="alert" className="text-sm text-racing-red">
+                {remoteError}
+              </p>
+              <RetryButton label="Retry loading older setups" onRetry={handleLoadOlder} />
+            </div>
           )}
         </div>
       )}

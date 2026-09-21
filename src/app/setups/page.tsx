@@ -53,7 +53,10 @@ export default async function SetupsPage({
   // Keep the global count separate from the filtered setup page. The browser
   // can change filters without a server navigation, so it needs a global
   // upper bound to know whether an older-page request may still be useful.
-  const [setups, totalCount] = await Promise.all([getSetups(filters), getSetupCount()]);
+  const [{ setups, failed: loadFailed }, totalCount] = await Promise.all([
+    getSetups(filters),
+    getSetupCount(),
+  ]);
   // getSetups() caps at SETUPS_BROWSE_LIMIT -- search and filtering run
   // client-side over whatever it fetched, so once the community actually
   // grows past that cap, both stop covering the oldest setups too (not
@@ -86,10 +89,12 @@ export default async function SetupsPage({
           Browse Setups
         </h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
-          {totalCount} setups shared by the community. Filter by game, car,
-          track, or track condition to find your next fast lap.
+          {loadFailed
+            ? "Community setups, filtered by game, car, track and condition."
+            : `${totalCount} setups shared by the community. Filter by game, car,
+          track, or track condition to find your next fast lap.`}
         </p>
-        {isCapped && (
+        {isCapped && !loadFailed && (
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
             Showing the {SETUPS_BROWSE_LIMIT} most recent setups first. Use
             “Load older setups” below to expand search and filters to all {totalCount}.
@@ -102,6 +107,7 @@ export default async function SetupsPage({
         setups={setups}
         totalCount={totalCount}
         initialFilters={filters}
+        loadFailed={loadFailed}
       />
     </div>
   );

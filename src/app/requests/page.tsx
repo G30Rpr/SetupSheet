@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { JsonLd } from "@/components/json-ld";
+import { RetryButton } from "@/components/retry-button";
 import { SetupRequestsList } from "@/components/setup-requests-list";
 import { fullPageTitle } from "@/lib/seo";
 import { SetupRequestForm } from "@/components/setup-request-form";
@@ -80,22 +81,32 @@ export default async function RequestsPage() {
         <h2 id="request-list-heading" className="mb-4 text-xl font-semibold tracking-tight">
           Community requests
         </h2>
-        {requestPage.error && (
-          // Every public reader degrades to an empty result rather than an
-          // error page, so an unreachable database has to say so *on* the empty
-          // state -- otherwise an outage is indistinguishable from "nobody has
-          // posted a request yet" and the only clue is a board that looks calm.
+        {/* Every public reader degrades to an empty result rather than an error
+            page, so a failed read has to be told apart from a genuinely quiet
+            board -- otherwise "nobody has posted yet" and "the database is
+            unreachable" render identically. */}
+        {requestPage.error && !isEmpty && (
           <p role="alert" className="mb-4 flex items-center gap-2 text-sm text-racing-red">
             <TriangleAlert className="size-4 shrink-0" aria-hidden="true" />
             {requestPage.error}
           </p>
         )}
         {isEmpty ? (
-          <EmptyState
-            icon={MessageSquare}
-            title="No requests yet"
-            description="Be the first to ask the community for a setup."
-          />
+          requestPage.error ? (
+            <EmptyState
+              tone="error"
+              icon={TriangleAlert}
+              title="Couldn't load the requests board"
+              description="The board isn't responding right now — that's on our side, not yours. Nothing you've posted is lost."
+              action={<RetryButton />}
+            />
+          ) : (
+            <EmptyState
+              icon={MessageSquare}
+              title="No requests yet"
+              description="Be the first to ask the community for a setup."
+            />
+          )
         ) : (
           <SetupRequestsList initialPage={requestPage} />
         )}

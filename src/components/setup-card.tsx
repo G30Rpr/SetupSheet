@@ -11,7 +11,9 @@ import {
   BookOpen,
   ChevronDown,
   Clipboard,
+  Ellipsis,
   ExternalLink,
+  FileCheck2,
   FileDown,
   Flag,
   Gamepad2,
@@ -29,6 +31,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SetupCardFooter } from "@/components/setup-card-footer";
 import { TagBadge } from "@/components/tag-badge";
 import {
@@ -328,7 +336,11 @@ export function SetupCard({
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             {setup.isVerifiedLap && (
-              <Badge variant="green" className="gap-1 font-semibold">
+              <Badge
+                variant="green"
+                className="gap-1 font-semibold"
+                title="The author attached a hotlap video or telemetry file for this lap. This is their own evidence, not a site verification."
+              >
                 <BadgeCheck className="size-3.5 text-racing-green" />
                 Verified Lap
               </Badge>
@@ -362,21 +374,32 @@ export function SetupCard({
                 </button>
               </div>
             )}
-            <Link
-              href={`/report?type=setup&id=${encodeURIComponent(setup.id)}`}
-              aria-label="Report setup"
-              className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            >
-              <Flag className="size-3.5" />
-            </Link>
-            <button
-              type="button"
-              onClick={handleShare}
-              aria-label="Share setup"
-              className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            >
-              <Share2 className="size-3.5" />
-            </button>
+            {/* Share and report used to be two permanent icons on every card
+                in every grid; reporting is rare enough to live one tap in
+                rather than competing with Download for attention. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="More actions"
+                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  <Ellipsis className="size-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onSelect={handleShare}>
+                  <Share2 />
+                  Share setup
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/report?type=setup&id=${encodeURIComponent(setup.id)}`}>
+                    <Flag />
+                    Report setup
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Badge variant={conditionVariant[setup.condition]}>{setup.condition}</Badge>
           </div>
         </div>
@@ -419,9 +442,13 @@ export function SetupCard({
           </span>
           <span className="text-xs text-muted-foreground">lap time</span>
           {setup.fileUrl && (
-            <Badge variant="green" className="ml-auto shrink-0">
-              <BadgeCheck className="size-3" />
-              Verified
+            <Badge
+              variant="green"
+              className="ml-auto shrink-0"
+              title="A setup file is attached — use Download Setup below."
+            >
+              <FileCheck2 className="size-3" />
+              File included
             </Badge>
           )}
         </div>
@@ -567,8 +594,14 @@ export function SetupCard({
                 </span>
               </span>
               <span className="shrink-0 text-xs font-normal text-racing-coral/70">
-                <span className="font-mono tabular-nums">{downloads}</span>{" "}
-                {downloads === 1 ? "download" : "downloads"}
+                {downloads > 0 ? (
+                  <>
+                    <span className="font-mono tabular-nums">{downloads}</span>{" "}
+                    {downloads === 1 ? "download" : "downloads"}
+                  </>
+                ) : (
+                  "Be the first"
+                )}
               </span>
             </button>
             {setup.setupValues && (
