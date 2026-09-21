@@ -373,4 +373,19 @@ Gates after the slice: `tsc --noEmit` clean · `eslint` clean · **41 files / 23
 
 Deferred within the slice's spirit: rig-context rating aggregation ("rated by 3 wheel users") needs a `rig` snapshot on `setup_ratings`, which the owner chose to skip for now (display-only rating fixes).
 
+### Slice A follow-up — the e2e suite was pinning the defect
+
+Slice A's first push went red in CI, and the reason is worth keeping: the two specs that cover the degraded read asserted the contradiction Slice A removed.
+
+| Spec | What it required before | What it requires now |
+|---|---|---|
+| `e2e/requests-board.spec.ts` | "No requests yet" **and** "Couldn't load the requests board right now." both visible — i.e. the site had to claim the board was empty *and* broken in the same breath | the outage state ("Couldn't load the requests board" + Try again) is visible, and "No requests yet" has **zero** matches |
+| `e2e/setups-browse.spec.ts` | "No setups yet" while the query was failing | the outage state (+ Try again, and no "N setups found") is visible, and "No setups yet" has zero matches |
+
+The specs were written to match the implementation rather than the user-visible requirement, so they acted as a lock on the bug — a reminder that a passing test suite proves consistency, not correctness. Both now guard the fix in both directions (outage copy present, empty-state copy absent). The filter-control and search-suggestion assertions from the original specs are kept, as is the logged-out request-form gate assertion (that gate is client-rendered after hydration, which is why a no-JS probe can't see it but Playwright can).
+
+Debugging note for future slices: **CI's e2e job is the only place a real browser runs this app**, and because the CI build points at the placeholder (unreachable) Supabase URL, that job exercises the degraded reads by design. Any change to an empty/error state must be mirrored in `e2e/`, and Playwright browsers cannot be downloaded in the sandbox (CDN egress is blocked), so `gh run watch` is the verification loop.
+
+CI after the fix: `e2e` pass, `lint-test-build` pass, `db-migrations` pass, Vercel pass.
+
 Still queued: **Slice B** (install-assist: numbered install section, copy-path buttons, downloadable install bundle) and **Slice C** (Rig Mode, QR handoff via `uqr`, print/PDF stylesheet).
