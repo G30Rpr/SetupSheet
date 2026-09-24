@@ -175,7 +175,7 @@ export default async function SetupDetailPage({
         </p>
       </div>
 
-      <SetupCard setup={setup} linkTitle={false} />
+      <SetupCard setup={setup} linkTitle={false} installGuideOpen />
 
       <Suspense fallback={null}>
         <RelatedSetups setupId={setup.id} game={setup.game} />

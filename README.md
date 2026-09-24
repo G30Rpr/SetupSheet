@@ -53,6 +53,12 @@ src/
                             reporting to the structured log stream; no third-party scripts
     related-setups.tsx  Streamed below-the-fold internal setup links
     setup-card.tsx      The setup card (car/track, lap time, tags, ratings, author byline...)
+    setup-card-install-guide.tsx  Expandable install panel: resolved destination folder with
+                            copy-to-clipboard, and a link to the install bundle
+    retry-button.tsx    Retry affordance for a degraded read (router.refresh(), or a
+                            caller-supplied refetch)
+    empty-state.tsx     Shared empty-state card; tone="error" turns it into a red, announced
+                            failure state with an action
     setups-browser.tsx  Client component: filter state + filtered grid
     upload-form.tsx      Upload form; drag a real ACC .json and it auto-fills the Car field.
                          Files go browser -> Supabase Storage with a signed URL minted
@@ -80,6 +86,12 @@ src/
                             browser and the Server Action so both enforce identical rules
     id-route-guard.ts       Shape guard answering a real 404 for /setups/<junk> and
                             /profile/<junk> in src/proxy.ts (the page can only render one)
+    install-guides.ts       Per-game install steps, destination folder and expected file
+                            extension. resolveInstallGuide() fills {car}/{track} from the
+                            setup and flags any placeholder it can't answer
+    install-bundle.ts       STORE-only ZIP writer + README generator behind
+                            GET /api/setups/<id>/bundle (file + values + instructions in
+                            one download, no compression dependency)
     setup-schemas.ts       Per-game setup-screen field definitions (see below)
     utils.ts              `cn()` class-merging helper, `getInitials()`
     ui-constants.ts       Shared setup-card pagination constants
