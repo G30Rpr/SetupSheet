@@ -6,6 +6,9 @@ import type { NextConfig } from "next";
 // build/server-start time. Everything below is genuinely static, so it stays
 // here.
 const nextConfig: NextConfig = {
+  // Arena's browser preview is served from a per-session e2b.app subdomain;
+  // Next's dev-resource origin guard must allow that host for HMR and chunks.
+  allowedDevOrigins: ["*.e2b.app"],
   poweredByHeader: false,
   experimental: {
     // Server Action request bodies default to 1 MB. File uploads no longer

@@ -250,6 +250,135 @@ export type Database = {
         };
         Relationships: Relationships;
       };
+      garage_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          source_setup_id: string | null;
+          game: string;
+          car: string;
+          track: string;
+          condition: string;
+          rig: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          source_setup_id?: string | null;
+          game: string;
+          car: string;
+          track: string;
+          condition: string;
+          rig?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          source_setup_id?: string | null;
+          game?: string;
+          car?: string;
+          track?: string;
+          condition?: string;
+          rig?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: Relationships;
+      };
+      garage_revisions: {
+        Row: {
+          id: string;
+          session_id: string;
+          setup_values: Json;
+          note: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          setup_values?: Json;
+          note?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          session_id?: string;
+          setup_values?: Json;
+          note?: string;
+          created_at?: string;
+        };
+        Relationships: Relationships;
+      };
+      garage_run_plan_items: {
+        Row: {
+          id: string;
+          session_id: string;
+          revision_id: string;
+          parameter: string;
+          direction: string;
+          amount: string;
+          verdict: string;
+          note: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          revision_id: string;
+          parameter: string;
+          direction: string;
+          amount: string;
+          verdict: string;
+          note?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          session_id?: string;
+          revision_id?: string;
+          parameter?: string;
+          direction?: string;
+          amount?: string;
+          verdict?: string;
+          note?: string;
+          created_at?: string;
+        };
+        Relationships: Relationships;
+      };
+      garage_laps: {
+        Row: {
+          id: string;
+          session_id: string;
+          revision_id: string;
+          lap_time_ms: number;
+          condition: string;
+          note: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          revision_id: string;
+          lap_time_ms: number;
+          condition: string;
+          note?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          session_id?: string;
+          revision_id?: string;
+          lap_time_ms?: number;
+          condition?: string;
+          note?: string;
+          created_at?: string;
+        };
+        Relationships: Relationships;
+      };
       setup_requests: {
         Row: {
           id: string;
@@ -466,6 +595,18 @@ export type Database = {
       is_valid_setup_values: {
         Args: { p_values: Json | null };
         Returns: boolean;
+      };
+      create_garage_session_with_baseline: {
+        Args: {
+          p_game: string;
+          p_car: string;
+          p_track: string;
+          p_condition: string;
+          p_rig: string | null;
+          p_setup_values: Json;
+          p_note: string;
+        };
+        Returns: string;
       };
     };
     Enums: Record<string, never>;
