@@ -1,11 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, CloudRain, Info, ShieldCheck, Sun, TriangleAlert } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { loadEngineerCalibration } from "@/lib/actions/engineer-calibration";
+import {
+  applyPublicEngineerCalibration,
+  type EngineerCalibrationFactor,
+} from "@/lib/engineer-calibration";
 import {
   Select,
   SelectContent,
@@ -38,6 +43,15 @@ const severityLabels: Record<EngineerSeverity, string> = {
   severe: "Severe",
 };
 
+type CalibrationUiState = {
+  game: EngineerGame;
+  condition: EngineerCondition;
+  status: "loading" | "available" | "unavailable";
+  factors: EngineerCalibrationFactor[];
+};
+
+const noCalibrationFactors: EngineerCalibrationFactor[] = [];
+
 function formatAmount(amount: number | string, unit?: string): string {
   if (!unit) return String(amount);
   const renderedUnit = unit.replace("(s)", typeof amount === "number" && amount === 1 ? "" : "s");
@@ -57,12 +71,55 @@ export function EngineerClient() {
   const [symptomId, setSymptomId] = useState<EngineerSymptomId>(ENGINEER_SYMPTOMS[0].id);
   const [severity, setSeverity] = useState<EngineerSeverity>("moderate");
   const [condition, setCondition] = useState<EngineerCondition>("dry");
+  const [calibrationState, setCalibrationState] = useState<CalibrationUiState>({
+    game: ENGINEER_GAMES[0],
+    condition: "dry",
+    status: "loading",
+    factors: [],
+  });
 
-  const result = useMemo(
+  useEffect(() => {
+    let isCurrent = true;
+
+    void loadEngineerCalibration(game, condition)
+      .then((queryResult) => {
+        if (isCurrent) setCalibrationState({ game, condition, ...queryResult });
+      })
+      .catch(() => {
+        if (isCurrent) setCalibrationState({ game, condition, status: "unavailable", factors: [] });
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [condition, game]);
+
+  const calibrationMatchesSelection =
+    calibrationState.game === game && calibrationState.condition === condition;
+  const calibrationFactors = calibrationMatchesSelection && calibrationState.status === "available"
+    ? calibrationState.factors
+    : noCalibrationFactors;
+  const staticResult = useMemo(
     () => getEngineerRecommendations({ game, symptomId, severity, condition }),
     [condition, game, severity, symptomId]
   );
+  const result = useMemo(
+    () => applyPublicEngineerCalibration(
+      staticResult,
+      { game, symptomId, severity, condition },
+      calibrationFactors
+    ),
+    [calibrationFactors, condition, game, severity, staticResult, symptomId]
+  );
+  const hasAppliedEvidence = result.recommendations.some((recommendation) => recommendation.publicEvidence);
   const selectedSymptom = ENGINEER_SYMPTOMS.find((symptom) => symptom.id === symptomId);
+  const calibrationMessage = !calibrationMatchesSelection || calibrationState.status === "loading"
+    ? "Static recommendations are ready immediately; public evidence may adjust ranking when available."
+    : calibrationState.status === "unavailable"
+      ? "Public evidence could not be loaded. The static fallback remains active."
+      : hasAppliedEvidence
+        ? "Recent public field-test evidence adjusted ranking only. Suggested amounts and wet rules remain unchanged."
+        : "No eligible recent evidence matched these exact parameters and directions. Static ranking remains in use.";
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -185,10 +242,13 @@ export function EngineerClient() {
               <h2 id="engineer-results-heading" className="mt-2 text-xl font-semibold">Recommended changes</h2>
               <p className="mt-1 text-sm text-muted-foreground">Ranked starting points for {game}.</p>
             </div>
-            <Badge variant={condition === "wet" ? "blue" : "outline"} className="gap-1.5">
-              {condition === "wet" ? <CloudRain aria-hidden="true" /> : <Sun aria-hidden="true" />}
-              {condition === "wet" ? "Wet rules applied" : "Dry baseline"}
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              {hasAppliedEvidence && <Badge variant="blue">Public evidence · rank only</Badge>}
+              <Badge variant={condition === "wet" ? "blue" : "outline"} className="gap-1.5">
+                {condition === "wet" ? <CloudRain aria-hidden="true" /> : <Sun aria-hidden="true" />}
+                {condition === "wet" ? "Wet rules applied" : "Dry baseline"}
+              </Badge>
+            </div>
           </div>
 
           {result.notices.map((notice) => (
@@ -229,10 +289,17 @@ export function EngineerClient() {
                           <h3 className="font-semibold">{recommendation.parameter}</h3>
                         </div>
                       </div>
-                      <Badge variant="outline" className={`shrink-0 gap-1.5 ${directionTone}`}>
-                        <DirectionIcon direction={recommendation.direction} />
-                        {directionLabels[recommendation.direction]}
-                      </Badge>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {recommendation.publicEvidence && (
+                          <Badge variant="blue" className="shrink-0">
+                            {recommendation.publicEvidence.sampleCount} public setups
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className={`shrink-0 gap-1.5 ${directionTone}`}>
+                          <DirectionIcon direction={recommendation.direction} />
+                          {directionLabels[recommendation.direction]}
+                        </Badge>
+                      </div>
                     </div>
 
                     <p className="mt-4 font-mono text-sm">
@@ -263,7 +330,7 @@ export function EngineerClient() {
 
           <div className="mt-6 flex items-start gap-2 border-t border-border/80 pt-4 text-xs leading-5 text-muted-foreground">
             <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-            <p>These are static first-pass recommendations, not a replacement for your car&apos;s setup guide or a controlled test. Live field-test evidence is not connected yet.</p>
+            <p>These are conservative first-pass recommendations, not a replacement for your car&apos;s setup guide or a controlled test. {calibrationMessage}</p>
           </div>
         </section>
       </div>

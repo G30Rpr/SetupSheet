@@ -1,6 +1,6 @@
 # Engineer, Garage, and Field Tests — Source of Truth
 
-**Status: Gates 1–4 core are implemented; configured-Supabase/RLS validation remains pending. Gate 3 decisions were approved on 2026-09-26. Gate 5 calibration has not started and still requires the approvals listed below.** ACC and Le Mans Ultimate are the initial Engineer games. This is the implementation contract distilled from the handoff; later optional surfaces remain deferred.
+**Status: Gates 1–5 core are implemented; configured-Supabase/RLS validation remains pending. Gate 3 and Gate 5 decisions were approved on 2026-09-26.** ACC and Le Mans Ultimate are the initial Engineer games. This is the implementation contract distilled from the handoff; later optional surfaces remain deferred.
 
 ## Product sequence and invariants
 
@@ -8,7 +8,7 @@ Build this as independently verifiable vertical slices; do not merge the handoff
 
 ## Gate 1 — Static Engineer (`/engineer`)
 
-The route works anonymously and has no Supabase dependency. Its input is:
+The static baseline works anonymously and does not require Supabase; optional calibration is a separate public read that may fail without affecting static recommendations. Its input is:
 
 ```ts
 type EngineerInput = {
@@ -46,6 +46,8 @@ Recommendation order of operations, once calibration is introduced:
 
 Calibration is ignored for insufficient or stale evidence, unknown game/condition, non-exact parameter matches, contradictory evidence, or query failure. Fallback always returns valid static recommendations. Calibration uses public evidence only, has Beta smoothing and a final factor bounded to **0.6–1.4**, and never mutates the base recommendation or consumes private run-plan data.
 
+**Approved Gate 5 calibration defaults (2026-09-26):** Use a Beta(2,2) prior. Each distinct public setup with an exact matching game, Dry/Wet condition, parameter, and direction in its validated better changes adds one positive observation; omissions are never treated as failures. For `s` supporting setups, `p = (2 + s) / (4 + s)` and the ranking multiplier is `clamp(0.6 + 0.8 × p, 0.6, 1.4)`. The prior maps to `1.0`; calibration changes ordering only, never the static score, amount, explanation, or wet behavior. Require **5 distinct setup IDs** and ignore evidence older than **90 days**. If the public aggregate reports more than one direction for the exact game/condition/parameter, skip calibration for that parameter. Because Gate 3 publishes only validated better changes, this positive-only model can up-rank but cannot infer a down-rank from missing evidence. The SQL view enforces the 90-day window and returns aggregates without setup, report, session, or user IDs.
+
 **Approved game scope:** Assetto Corsa Competizione (ACC) and Le Mans Ultimate (LMU), matching the existing setup schemas in this repository. Other catalog games remain experimental/unsupported for Engineer-specific advice. Suppress pressure advice for GT7 unless a reviewed, game-specific translation exists. The handoff does not include the actual symptom/rule corpus, so Gate 1 will use a conservative, clearly documented first-pass knowledge base for ACC and LMU, aligned to their in-repo parameter schemas and requiring domain review before any broader game rollout.
 
 ## Gate 2 — Garage workflow
@@ -71,9 +73,9 @@ The public read model exposes only an explicit projection: report ID, `setup_id`
 
 Start with an aggregate/read helper for counts. Do not add a denormalized `field_test_count` unless measured query cost warrants it; if added later, test insert/delete triggers, duplicates, and rollback behavior.
 
-## Gates 4–5 — Later public surfaces and calibration
+## Gates 4–5 — Public surfaces and calibration
 
-Only after the core field-test loop works, add “Proven” sorting, a landing-page proven rail, request-board field-test chips, “Open in garage” links, profile statistics, and leaderboard fields. Calibration follows these public surfaces and remains optional over the static base. Test Beta smoothing, the 0.6–1.4 bound, low sample counts, pooled versus game-specific evidence, immutability, wet behavior, and exclusion of private run-plan data.
+Only after the core field-test loop works, add the deferred “Proven” sorting, landing-page proven rail, request-board field-test chips, “Open in garage” links, profile statistics, and leaderboard fields. Gate 5 calibration is now implemented as an optional layer over the static base. It queries only the privacy-safe aggregate view, separates game and Dry/Wet evidence, refuses contradictory directions, requires the approved threshold/window, and fails back to static on missing or failed reads. Tests cover Beta smoothing, bounds, low samples, exact matching, game/condition isolation, conflicts, immutability, wet behavior, query failure, and exclusion of private Garage data. Since only positive “better” changes are public, no absent parameter or untested item is counted as a failure.
 
 ## Release gates and change manifest
 
@@ -81,7 +83,7 @@ Only after the core field-test loop works, add “Proven” sorting, a landing-p
 2. **Garage core:** authenticated session/baseline, revisions, run-plan results, laps, and the server-derived start-from-public-setup flow; Server Action validation; RLS and SQL regression tests. The app and unit tests are implemented; authenticated flows still need a configured Supabase run, and SQL RLS tests remain unexecuted because `psql` is unavailable in this environment.
 3. **Field tests:** server-derived metrics, UTC-day uniqueness, anonymous-first snapshot attribution, sanitized projection, owner notification, count and notification tests. Implementation and tests are written; database tests still need execution.
 4. **Public surfaces:** setup-page summary, count badge, public report list, and path revalidation. Implemented.
-5. **Calibration:** public-only evidence, safe fallback, wet/calibration tests, no private-data leakage. Not started; required calibration choices remain unapproved.
+5. **Calibration:** public-only evidence, safe fallback, wet/calibration tests, no private-data leakage. Implemented with the approved Beta(2,2), five-distinct-setup threshold, and 90-day window; the public aggregate/RLS migration still needs execution in a configured database environment.
 
 Literal changed-file integration manifest for the current Engineer + Garage work:
 
@@ -150,10 +152,21 @@ Literal changed-file integration manifest for Gate 4 (core public surfaces):
 - `src/lib/actions/setup-browse.ts` and `src/lib/actions/setup-browse.test.ts` — count-only projection for client-requested older browse pages.
 - `src/app/page.tsx` — batch count for featured setup cards.
 
-## Remaining decisions before calibration
+Literal changed-file integration manifest for Gate 5 (public-only calibration):
+
+- `docs/engineer-garage-field-tests-spec.md` — records the approved Beta prior/update, distinct-setup threshold, 90-day freshness window, positive-only evidence limitation, and Gate 5 manifest.
+- `src/lib/engineer-calibration.ts` and `src/lib/__tests__/engineer-calibration.test.ts` — Beta smoothing, exact aggregate mapping, conflict rejection, rank-only application, and immutability tests.
+- `src/lib/actions/engineer-calibration.ts` — anonymous read-only Server Action; no auth requirement and no effect on the static fallback.
+- `src/lib/supabase/engineer-calibration.ts` and `src/lib/supabase/engineer-calibration.test.ts` — bounded query of the privacy-safe public aggregate, validation, and failure fallback tests.
+- `src/lib/supabase/database.types.ts` — typed public aggregate view contract.
+- `src/components/engineer/engineer-client.tsx` and `src/components/engineer/engineer-client.test.tsx` — load evidence after static render, apply it only to ranking, and expose evidence/ fallback status.
+- `supabase/migrations/0033_engineer_public_calibration.sql` — 90-day aggregate over the public report projection, distinct setup counts, and no IDs or private fields.
+- `supabase/testing/garage_rls.test.sql` — public aggregate checks for minimum supporting setup counts, contradictory directions, stale/Mixed exclusion, and identifier privacy (not yet executed locally because `psql` is unavailable).
+
+## Remaining review and validation
 
 1. The static knowledge base is a conservative first-pass draft tied to the existing ACC/LMU setup schemas; review before expanding beyond those games.
-2. Before calibration implementation, explicitly approve the Beta prior/update formula, minimum sample threshold, and staleness window. These do not block the static fallback or field-test loop.
+2. Run migrations 0030–0033 and all RLS/concurrency regressions against configured PostgreSQL or Supabase. Local execution remains blocked because `psql` is unavailable.
 
 ## Repository baseline
 

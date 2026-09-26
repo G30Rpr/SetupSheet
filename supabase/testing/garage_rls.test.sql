@@ -1,9 +1,9 @@
 -- Regression coverage for 0030_garage_private_workflow.sql,
--- 0031_garage_start_from_setup.sql, and 0032_field_test_reports.sql. This
--- verifies private ownership through the parent session, anonymous denial,
--- server-derived field-test eligibility and metrics, public projection privacy,
--- attribution, owner notification, uniqueness, and session-delete cascades
--- using real non-superuser API roles in the migration harness.
+-- 0031_garage_start_from_setup.sql, 0032_field_test_reports.sql, and
+-- 0033_engineer_public_calibration.sql. This verifies private ownership,
+-- anonymous denial, server-derived field-test eligibility and metrics, public
+-- projection/privacy-safe calibration aggregates, attribution, owner notice,
+-- uniqueness, and session-delete cascades using real API roles.
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('11111111-1111-4111-8111-111111111111', 'garage-a@example.com', '{"full_name":"Garage A"}'),
@@ -21,6 +21,26 @@ values
    'Gran Turismo 7', 'Toyota GR86', 'Suzuka', 'Dry', 'unsupported Garage source', '{}', 'Gamepad'),
   ('77777777-7777-4777-8777-777777777777', '22222222-2222-4222-8222-222222222222',
    'Assetto Corsa Competizione', 'McLaren 720S GT3', 'Spa-Francorchamps', 'Dry', 'field-test source', '{}', 'Wheel + 3 Pedals');
+
+insert into public.setups
+  (id, user_id, game, car, track, condition, description, tags, rig_profile)
+values
+  ('31313131-3131-4313-8313-313131313131', '11111111-1111-4111-8111-111111111111',
+   'Assetto Corsa Competizione', 'Calibration Test 1', 'Test Track', 'Dry', 'calibration fixture', '{}', 'Wheel + 3 Pedals'),
+  ('32323232-3232-4323-8323-323232323232', '11111111-1111-4111-8111-111111111111',
+   'Assetto Corsa Competizione', 'Calibration Test 2', 'Test Track', 'Dry', 'calibration fixture', '{}', 'Wheel + 3 Pedals'),
+  ('33333333-3333-4333-8333-333333333333', '11111111-1111-4111-8111-111111111111',
+   'Assetto Corsa Competizione', 'Calibration Test 3', 'Test Track', 'Dry', 'calibration fixture', '{}', 'Wheel + 3 Pedals'),
+  ('34343434-3434-4343-8343-343434343434', '11111111-1111-4111-8111-111111111111',
+   'Assetto Corsa Competizione', 'Calibration Test 4', 'Test Track', 'Dry', 'calibration fixture', '{}', 'Wheel + 3 Pedals'),
+  ('35353535-3535-4353-8353-353535353535', '11111111-1111-4111-8111-111111111111',
+   'Assetto Corsa Competizione', 'Calibration Test 5', 'Test Track', 'Dry', 'calibration fixture', '{}', 'Wheel + 3 Pedals'),
+  ('36363636-3636-4363-8363-363636363636', '11111111-1111-4111-8111-111111111111',
+   'Assetto Corsa Competizione', 'Calibration Conflict', 'Test Track', 'Dry', 'calibration fixture', '{}', 'Wheel + 3 Pedals'),
+  ('37373737-3737-4373-8373-373737373737', '11111111-1111-4111-8111-111111111111',
+   'Assetto Corsa Competizione', 'Calibration Stale', 'Test Track', 'Dry', 'calibration fixture', '{}', 'Wheel + 3 Pedals'),
+  ('38383838-3838-4383-8383-383838383838', '11111111-1111-4111-8111-111111111111',
+   'Assetto Corsa Competizione', 'Calibration Mixed', 'Test Track', 'Mixed', 'calibration fixture', '{}', 'Wheel + 3 Pedals');
 
 -- Approximate Supabase's request JWT claim for this vanilla-Postgres test
 -- harness. Policies still execute as anon/authenticated, not as the owner.
@@ -48,7 +68,44 @@ values
    '77777777-7777-4777-8777-777777777777'),
   ('25252525-2525-4252-8252-252525252525', '11111111-1111-4111-8111-111111111111',
    'Assetto Corsa Competizione', 'McLaren 720S GT3', 'Spa-Francorchamps', 'Dry', null,
-   '77777777-7777-4777-8777-777777777777');
+   '77777777-7777-4777-8777-777777777777'),
+  ('39393939-3939-4393-8393-393939393939', '22222222-2222-4222-8222-222222222222',
+   'Assetto Corsa Competizione', 'Calibration Test 1', 'Test Track', 'Dry', null,
+   '31313131-3131-4313-8313-313131313131');
+
+-- Public calibration fixtures: five distinct supporting setups, one opposite
+-- direction, plus stale and Mixed rows that must not enter the view.
+insert into public.field_test_reports
+  (user_id, garage_session_id, setup_id, game, condition, validated_changes,
+   laps_run, best_lap_ms, created_at)
+values
+  ('11111111-1111-4111-8111-111111111111', '12121212-1212-4121-8121-121212121212',
+   '31313131-3131-4313-8313-313131313131', 'Assetto Corsa Competizione', 'Dry',
+   '[{"parameter":"Calibration Test Bar","direction":"soften","amount":"1 click"},{"parameter":"Calibration Clean Wing","direction":"increase","amount":"1 click"}]', 1, 100000, now()),
+  ('11111111-1111-4111-8111-111111111111', '12121212-1212-4121-8121-121212121212',
+   '32323232-3232-4323-8323-323232323232', 'Assetto Corsa Competizione', 'Dry',
+   '[{"parameter":"Calibration Test Bar","direction":"soften","amount":"1 click"},{"parameter":"Calibration Clean Wing","direction":"increase","amount":"1 click"}]', 1, 100000, now()),
+  ('11111111-1111-4111-8111-111111111111', '12121212-1212-4121-8121-121212121212',
+   '33333333-3333-4333-8333-333333333333', 'Assetto Corsa Competizione', 'Dry',
+   '[{"parameter":"Calibration Test Bar","direction":"soften","amount":"1 click"},{"parameter":"Calibration Clean Wing","direction":"increase","amount":"1 click"}]', 1, 100000, now()),
+  ('11111111-1111-4111-8111-111111111111', '12121212-1212-4121-8121-121212121212',
+   '34343434-3434-4343-8343-343434343434', 'Assetto Corsa Competizione', 'Dry',
+   '[{"parameter":"Calibration Test Bar","direction":"soften","amount":"1 click"},{"parameter":"Calibration Clean Wing","direction":"increase","amount":"1 click"}]', 1, 100000, now()),
+  ('11111111-1111-4111-8111-111111111111', '12121212-1212-4121-8121-121212121212',
+   '35353535-3535-4353-8353-353535353535', 'Assetto Corsa Competizione', 'Dry',
+   '[{"parameter":"Calibration Test Bar","direction":"soften","amount":"1 click"},{"parameter":"Calibration Clean Wing","direction":"increase","amount":"1 click"}]', 1, 100000, now()),
+  ('11111111-1111-4111-8111-111111111111', '12121212-1212-4121-8121-121212121212',
+   '36363636-3636-4363-8363-363636363636', 'Assetto Corsa Competizione', 'Dry',
+   '[{"parameter":"Calibration Test Bar","direction":"stiffen","amount":"1 click"}]', 1, 100000, now()),
+  ('11111111-1111-4111-8111-111111111111', '12121212-1212-4121-8121-121212121212',
+   '37373737-3737-4373-8373-373737373737', 'Assetto Corsa Competizione', 'Dry',
+   '[{"parameter":"Calibration Stale","direction":"increase","amount":"1 click"}]', 1, 100000, now() - interval '91 days'),
+  ('11111111-1111-4111-8111-111111111111', '12121212-1212-4121-8121-121212121212',
+   '38383838-3838-4383-8383-383838383838', 'Assetto Corsa Competizione', 'Mixed',
+   '[{"parameter":"Calibration Mixed","direction":"increase","amount":"1 click"}]', 1, 100000, now()),
+  ('22222222-2222-4222-8222-222222222222', '39393939-3939-4393-8393-393939393939',
+   '31313131-3131-4313-8313-313131313131', 'Assetto Corsa Competizione', 'Dry',
+   '[{"parameter":"Calibration Test Bar","direction":"soften","amount":"1 click"},{"parameter":"Calibration Clean Wing","direction":"increase","amount":"1 click"}]', 1, 100000, now());
 
 insert into public.garage_revisions (id, session_id, setup_values, note)
 values
@@ -457,6 +514,41 @@ select (
   \echo 'Public projection and server-derived metrics passed'
 \else
   \echo 'REGRESSION: public field-test projection leaked private data or metrics were incorrect'
+  \quit 1
+\endif
+
+select (
+  exists (
+    select 1 from public.engineer_calibration_evidence
+    where game = 'Assetto Corsa Competizione'
+      and condition = 'Dry'
+      and parameter = 'Calibration Clean Wing'
+      and direction = 'increase'
+      and supporting_setup_count = 5
+      and directions = array['increase']::text[]
+  )
+  and (
+    select count(*) = 2 and bool_and(directions = array['soften', 'stiffen']::text[])
+    from public.engineer_calibration_evidence
+    where game = 'Assetto Corsa Competizione'
+      and condition = 'Dry'
+      and parameter = 'Calibration Test Bar'
+  )
+  and not exists (
+    select 1 from public.engineer_calibration_evidence
+    where parameter in ('Calibration Stale', 'Calibration Mixed')
+  )
+  and not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'engineer_calibration_evidence'
+      and column_name in ('setup_id', 'user_id', 'report_id', 'garage_session_id', 'note', 'display_name')
+  )
+) as engineer_calibration_public_ok \gset
+\if :engineer_calibration_public_ok
+  \echo 'Public calibration aggregate, contradiction, staleness, and privacy checks passed'
+\else
+  \echo 'REGRESSION: calibration aggregate included stale/Mixed data, missed contradictory directions, or exposed identifiers'
   \quit 1
 \endif
 

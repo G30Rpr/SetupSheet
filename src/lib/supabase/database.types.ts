@@ -575,6 +575,17 @@ export type Database = {
         };
         Relationships: Relationships;
       };
+      engineer_calibration_evidence: {
+        Row: {
+          game: string;
+          condition: string;
+          parameter: string;
+          direction: string;
+          supporting_setup_count: number;
+          directions: string[];
+        };
+        Relationships: Relationships;
+      };
       setup_requests_most_wanted: {
         Row: {
           game: string;

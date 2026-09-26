@@ -78,10 +78,15 @@ export type EngineerRecommendation = {
   direction: EngineerDirection;
   amount: number | string;
   unit?: string;
-  /** Static relevance score from 0-100; used to order suggestions, not evidence. */
+  /** Static relevance score from 0-100; public calibration never mutates it. */
   score: number;
   explanation: string;
   warnings?: string[];
+  /** Public better-change evidence used only as a ranking multiplier. */
+  publicEvidence?: {
+    sampleCount: number;
+    factor: number;
+  };
 };
 
 export type EngineerRecommendationConflict = {
