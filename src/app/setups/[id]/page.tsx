@@ -4,9 +4,11 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 
 import { JsonLd } from "@/components/json-ld";
+import { PublicFieldTestReports } from "@/components/public-field-test-reports";
 import { RelatedSetups } from "@/components/related-setups";
 import { SetupCard } from "@/components/setup-card";
 import { getSetupById, getSetupSeoData } from "@/lib/supabase/setups";
+import { getPublicFieldTestSummary } from "@/lib/supabase/field-tests";
 import { absoluteUrl, fullPageTitle, truncateMetaDescription } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { isUuid } from "@/lib/utils";
@@ -94,6 +96,7 @@ export default async function SetupDetailPage({
 
   if (!setup) notFound();
 
+  const fieldTestSummary = await getPublicFieldTestSummary(setup.id, 5);
   const canonicalPath = `/setups/${encodeURIComponent(setup.id)}`;
   const setupUrl = absoluteUrl(canonicalPath);
   const authorUrl = absoluteUrl(`/profile/${encodeURIComponent(setup.authorId)}`);
@@ -175,7 +178,13 @@ export default async function SetupDetailPage({
         </p>
       </div>
 
-      <SetupCard setup={setup} linkTitle={false} installGuideOpen />
+      <SetupCard
+        setup={setup}
+        linkTitle={false}
+        installGuideOpen
+        fieldTestCount={fieldTestSummary.reportCount}
+      />
+      <PublicFieldTestReports summary={fieldTestSummary} />
 
       <Suspense fallback={null}>
         <RelatedSetups setupId={setup.id} game={setup.game} />

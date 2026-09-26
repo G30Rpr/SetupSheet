@@ -2,12 +2,14 @@
 
 import { normalizeBrowseFilters, type BrowseFilters } from "@/lib/browse-filters";
 import { getSetupsAfter, type SetupCursor } from "@/lib/supabase/setups";
+import { getPublicFieldTestCounts } from "@/lib/supabase/field-tests";
 import { isUuid } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
 export interface MoreSetupsResult {
   setups: Setup[];
   nextCursor: SetupCursor | null;
+  fieldTestCounts: Record<string, number>;
   error: string | null;
 }
 
@@ -29,15 +31,20 @@ export async function loadMoreSetups(
     Number.isNaN(Date.parse(cursor.createdAt)) ||
     !isUuid(cursor.id)
   ) {
-    return { setups: [], nextCursor: null, error: "That browse cursor is invalid." };
+    return { setups: [], nextCursor: null, fieldTestCounts: {}, error: "That browse cursor is invalid." };
   }
 
   try {
-    return await getSetupsAfter(cursor, normalizedFilters);
+    const result = await getSetupsAfter(cursor, normalizedFilters);
+    if (result.error) return { ...result, fieldTestCounts: {} };
+
+    const fieldTestCounts = await getPublicFieldTestCounts(result.setups.map((setup) => setup.id));
+    return { ...result, fieldTestCounts: Object.fromEntries(fieldTestCounts) };
   } catch {
     return {
       setups: [],
       nextCursor: null,
+      fieldTestCounts: {},
       error: "Couldn't load older setups right now.",
     };
   }

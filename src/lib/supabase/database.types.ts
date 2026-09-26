@@ -163,6 +163,7 @@ export type Database = {
           user_id: string;
           actor_id: string;
           setup_id: string | null;
+          field_test_report_id: string | null;
           type: string;
           read: boolean;
           created_at: string;
@@ -172,6 +173,7 @@ export type Database = {
           user_id: string;
           actor_id: string;
           setup_id?: string | null;
+          field_test_report_id?: string | null;
           type?: string;
           read?: boolean;
           created_at?: string;
@@ -181,6 +183,7 @@ export type Database = {
           user_id?: string;
           actor_id?: string;
           setup_id?: string | null;
+          field_test_report_id?: string | null;
           type?: string;
           read?: boolean;
           created_at?: string;
@@ -379,6 +382,46 @@ export type Database = {
         };
         Relationships: Relationships;
       };
+      field_test_reports: {
+        Row: {
+          id: string;
+          user_id: string;
+          garage_session_id: string;
+          setup_id: string;
+          report_day_utc: string;
+          game: string;
+          condition: string;
+          validated_changes: Json;
+          laps_run: number;
+          consistency_pct: number | null;
+          best_lap_ms: number;
+          note: string;
+          show_name: boolean;
+          display_name_snapshot: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          garage_session_id: string;
+          setup_id: string;
+          report_day_utc?: string;
+          game: string;
+          condition: string;
+          validated_changes: Json;
+          laps_run: number;
+          consistency_pct?: number | null;
+          best_lap_ms: number;
+          note?: string;
+          show_name?: boolean;
+          display_name_snapshot?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          show_name?: boolean;
+        };
+        Relationships: Relationships;
+      };
       setup_requests: {
         Row: {
           id: string;
@@ -510,6 +553,28 @@ export type Database = {
       };
     };
     Views: {
+      field_test_reports_public: {
+        Row: {
+          report_id: string;
+          setup_id: string;
+          game: string;
+          condition: string;
+          validated_changes: Json;
+          laps_run: number;
+          consistency_pct: number | null;
+          best_lap_ms: number;
+          created_at: string;
+          display_name: string | null;
+        };
+        Relationships: Relationships;
+      };
+      field_test_counts: {
+        Row: {
+          setup_id: string;
+          report_count: number;
+        };
+        Relationships: Relationships;
+      };
       setup_requests_most_wanted: {
         Row: {
           game: string;
@@ -614,6 +679,21 @@ export type Database = {
           p_rig: string | null;
           p_setup_values: Json;
           p_note: string;
+        };
+        Returns: string;
+      };
+      create_field_test_report: {
+        Args: {
+          p_garage_session_id: string;
+          p_setup_id: string;
+          p_note: string;
+        };
+        Returns: string;
+      };
+      set_field_test_report_attribution: {
+        Args: {
+          p_report_id: string;
+          p_show_name: boolean;
         };
         Returns: string;
       };

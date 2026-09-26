@@ -40,6 +40,7 @@ import {
   createGarageSession,
   deleteGarageSession,
 } from "@/lib/actions/garage";
+import { FieldTestReportForm } from "@/components/garage/field-test-report-form";
 import {
   GARAGE_VERDICTS,
   MAX_GARAGE_AMOUNT_LENGTH,
@@ -612,6 +613,8 @@ function GarageSessionWorkspace({ detail }: { detail: GarageSessionDetail }) {
           </Button>
         </div>
       </Card>
+
+      <FieldTestReportForm detail={detail} />
 
       <section className="grid gap-5 xl:grid-cols-2">
         <Card className="min-w-0 gap-4 px-5 sm:px-6">

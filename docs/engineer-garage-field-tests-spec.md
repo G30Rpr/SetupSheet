@@ -1,6 +1,6 @@
 # Engineer, Garage, and Field Tests — Source of Truth
 
-**Status: Gate 1 complete; Gate 2 basic workflow and `/garage?from=<setup-id>` are implemented, with authenticated deployment/RLS validation still pending.** ACC and Le Mans Ultimate are the initial Engineer games. This is the implementation contract distilled from the handoff; future-gate details can be finalized before their implementation. Items marked **Proposal** still need explicit sign-off.
+**Status: Gates 1–4 core are implemented; configured-Supabase/RLS validation remains pending. Gate 3 decisions were approved on 2026-09-26. Gate 5 calibration has not started and still requires the approvals listed below.** ACC and Le Mans Ultimate are the initial Engineer games. This is the implementation contract distilled from the handoff; later optional surfaces remain deferred.
 
 ## Product sequence and invariants
 
@@ -50,7 +50,7 @@ Calibration is ignored for insufficient or stale evidence, unknown game/conditio
 
 ## Gate 2 — Garage workflow
 
-Start with an authenticated Garage workflow: create a session and baseline snapshot atomically, add immutable revision snapshots, record one-change run-plan items with a `better | worse | inconclusive` result, and log laps linked to a revision and condition. The current implementation follows the four-table normalized proposal—`garage_sessions`, `garage_revisions`, `garage_run_plan_items`, and `garage_laps`—so run-plan items and laps stay queryable rows rather than embedded JSON. This is the chosen implementation shape for the slice, but the four-versus-three-table question has not been separately confirmed as a final schema decision.
+Start with an authenticated Garage workflow: create a session and baseline snapshot atomically, add immutable revision snapshots, record one-change run-plan items with a `better | worse | inconclusive` result, and log laps linked to a revision and condition. The four-table normalized Garage model—`garage_sessions`, `garage_revisions`, `garage_run_plan_items`, and `garage_laps`—is approved for subsequent field-test work. Run-plan items and laps stay queryable rows rather than embedded JSON.
 
 Every write through the Garage Server Actions is authenticated and validated server-side and is also protected by Supabase RLS. A narrow no-login writer role keeps session-plus-baseline creation atomic without granting authenticated clients direct session inserts. Child-row policies verify ownership through the parent session; composite revision foreign keys prevent attaching a lap or plan item to a revision from a different session. Anonymous access is denied. Session deletion safely cascades to its private child records. SQL tests cover the atomic baseline RPC, cross-user session/revision reads, inserting a lap into another user's session, anonymous access, direct session-insert denial, and deletion cascades. The initial app workflow supports ACC and LMU only.
 
@@ -58,13 +58,18 @@ Every write through the Garage Server Actions is authenticated and validated ser
 
 ## Gate 3 — Field tests
 
-A field test is created from a Garage session, not arbitrary client-entered metrics. The client submits only `{ garageSessionId, setupId, note }`. The server verifies session ownership and the session/setup relationship, then derives lap count, best lap, consistency, validated changes, and report attribution from owned Garage records. A valid report requires at least one lap and at least one run-plan item marked **better**. No client-supplied summary metrics are accepted.
+A field test is created from an owned Garage session, not arbitrary client-entered metrics. The create client submits exactly `{ garageSessionId, setupId, note }`; `note` is private, and no client summary metrics or source metadata are accepted. The server requires the session's `source_setup_id` to equal `setupId`, then derives every public metric from the owned session's laps and run-plan items. A valid report requires at least one lap and at least one run-plan item marked **better**. `validated_changes` includes only the better items' parameter, direction, and amount—never their private notes or revision IDs.
 
-Enforce one report per reporting user/setup/day with a database-level unique invariant or an equivalent atomic transaction/lock—not a check-then-insert. Include a concurrency test.
+Approved reporting rules:
 
-Expose only an approved public projection: `setup_id`, `game`, `condition`, `validated_changes`, `laps_run`, `consistency_pct`, `best_lap_ms`, `created_at`, and either an intentionally public display name or anonymous attribution. Never expose Garage session IDs, private notes, sensitive rig details, or internal user IDs by default. Add a setup-page summary, setup-card badge, and field-test report list; notify the setup owner.
+- One report per user/setup/UTC calendar day, enforced by a database unique invariant on `(user_id, setup_id, report_day_utc)`; a two-connection concurrent-create regression is included.
+- `laps_run` counts all laps in the session; `best_lap_ms` is their minimum. Condition is derived from logged laps (implementation choice): one shared condition stays as-is, otherwise the report condition is `Mixed`.
+- With at least two laps, consistency is `clamp(100 × (1 − sample standard deviation / mean lap time), 0, 100)`, rounded to one decimal. With one lap, consistency is `null` because variability cannot be estimated.
+- Attribution is anonymous by default. A separate, owner-only action can opt a report into a sanitized display-name snapshot or revoke that choice; it does not add a fourth field to the report-create payload.
 
-Start with an aggregate/read helper for counts. Add a denormalized `field_test_count` only if measured query cost warrants it; if added, test insert/delete triggers, duplicate handling, and rollback behavior.
+The public read model exposes only an explicit projection: report ID, `setup_id`, `game`, `condition`, `validated_changes`, `laps_run`, `consistency_pct`, `best_lap_ms`, `created_at`, and optional opted-in display name. It never exposes Garage session IDs, private notes, sensitive rig details, or internal user IDs. Notify the setup owner (except for self-reports). Gate 4 adds the setup-page summary, setup-card badge, and public report list.
+
+Start with an aggregate/read helper for counts. Do not add a denormalized `field_test_count` unless measured query cost warrants it; if added later, test insert/delete triggers, duplicates, and rollback behavior.
 
 ## Gates 4–5 — Later public surfaces and calibration
 
@@ -74,9 +79,9 @@ Only after the core field-test loop works, add “Proven” sorting, a landing-p
 
 1. **Static Engineer:** anonymous; no database; unit tests pass; deterministic fallback. Complete.
 2. **Garage core:** authenticated session/baseline, revisions, run-plan results, laps, and the server-derived start-from-public-setup flow; Server Action validation; RLS and SQL regression tests. The app and unit tests are implemented; authenticated flows still need a configured Supabase run, and SQL RLS tests remain unexecuted because `psql` is unavailable in this environment.
-3. **Field tests:** server-derived metrics, concurrency-safe cooldown, sanitized projection, and notification tests.
-4. **Public surfaces:** summaries/badges/links and correct cache invalidation.
-5. **Calibration:** public-only evidence, safe fallback, wet/calibration tests, no private-data leakage.
+3. **Field tests:** server-derived metrics, UTC-day uniqueness, anonymous-first snapshot attribution, sanitized projection, owner notification, count and notification tests. Implementation and tests are written; database tests still need execution.
+4. **Public surfaces:** setup-page summary, count badge, public report list, and path revalidation. Implemented.
+5. **Calibration:** public-only evidence, safe fallback, wet/calibration tests, no private-data leakage. Not started; required calibration choices remain unapproved.
 
 Literal changed-file integration manifest for the current Engineer + Garage work:
 
@@ -117,13 +122,38 @@ Literal changed-file integration manifest for the `/garage?from=<setup-id>` slic
 - `supabase/migrations/0031_garage_start_from_setup.sql` — restricted setup read grant and atomic source-derived session/baseline RPC.
 - `supabase/testing/garage_rls.test.sql` — source metadata derivation, unsupported-game, and anonymous RPC checks (not yet run locally; `psql` is unavailable).
 
-## Decisions needed before implementation
+Literal changed-file integration manifest for Gate 3 (field-test create and reporting):
 
-1. ACC and LMU are approved for the initial Engineer slice; the static knowledge-base content is a conservative first-pass draft tied to the existing setup schemas and should be reviewed before expanding beyond those games.
-2. The basic Garage slice follows the four-table proposal. Confirm whether to keep that model before later schema expansion; if preferring three tables, document the alternative and migration rationale.
-3. Confirm public attribution policy (proposal: anonymous by default; display name only by explicit opt-in).
-4. Before field-test implementation, approve the report-day timezone, consistency formula (including behavior with only one lap), and exact session/setup relationship.
-5. Before calibration implementation, approve Beta prior/update formula, minimum sample threshold, and staleness window. These do not block Gate 1.
+- `docs/engineer-garage-field-tests-spec.md` — approved reporting rules, implementation status, and gate manifest.
+- `src/lib/field-tests.ts` — exact input parsers, supported-game guard, lap-condition derivation, and sample-CV consistency formula.
+- `src/lib/actions/field-tests.ts` — authenticated report-create RPC and separate owner-only attribution action; path revalidation.
+- `src/lib/actions/field-tests.test.ts` — exact create payload, server-side metrics boundary, duplicate-day error, and separate opt-in tests.
+- `src/lib/supabase/field-tests.ts` — safe public projection parser, bounded report query, and count-view helper.
+- `src/lib/supabase/field-tests.test.ts` — projection allowlist, anonymous rows, supported games, and aggregate-count query tests.
+- `src/lib/supabase/database.types.ts` — report table, public views, attribution/create RPCs, and notification column contracts.
+- `src/components/garage/field-test-report-form.tsx` — eligibility UI, anonymous create flow, and separate opt-in/revoke controls.
+- `src/components/garage/field-test-report-form.test.tsx` — eligibility, strict report payload, and separate attribution-action tests.
+- `src/components/garage/garage-dashboard.tsx` — links the eligible, source-linked session workspace to field-test submission.
+- `src/components/garage/garage-dashboard.test.tsx` — Garage workspace coverage with the report form.
+- `src/lib/supabase/notifications.ts` and `src/lib/supabase/notifications.test.ts` — private owner-notification mapping through the public attribution projection; anonymous authors are not profile-queried.
+- `src/components/notification-bell.tsx` — field-test notification label and setup navigation.
+- `supabase/migrations/0032_field_test_reports.sql` — private reports, ownership policies, server-derived RPCs, UTC uniqueness, snapshot attribution, public/count views, and setup-owner notification trigger.
+- `supabase/testing/garage_rls.test.sql` — ownership, eligibility, metrics, privacy, attribution, count, notification, and duplicate-day regression checks.
+- `scripts/test-field-test-concurrency.sh` and `scripts/test-db.sh` — two-connection insert race added to the database regression harness.
+
+Literal changed-file integration manifest for Gate 4 (core public surfaces):
+
+- `src/components/public-field-test-reports.tsx` and `src/components/public-field-test-reports.test.tsx` — sanitized public report list and empty/error states.
+- `src/app/setups/[id]/page.tsx` — setup-page field-test summary, public report list, and count badge.
+- `src/components/setup-card.tsx` and `src/components/setup-card-honesty.test.tsx` — optional positive public count badge.
+- `src/app/setups/page.tsx` and `src/components/setups-browser.tsx` — batch counts on the browse index and cards loaded by older-page actions.
+- `src/lib/actions/setup-browse.ts` and `src/lib/actions/setup-browse.test.ts` — count-only projection for client-requested older browse pages.
+- `src/app/page.tsx` — batch count for featured setup cards.
+
+## Remaining decisions before calibration
+
+1. The static knowledge base is a conservative first-pass draft tied to the existing ACC/LMU setup schemas; review before expanding beyond those games.
+2. Before calibration implementation, explicitly approve the Beta prior/update formula, minimum sample threshold, and staleness window. These do not block the static fallback or field-test loop.
 
 ## Repository baseline
 

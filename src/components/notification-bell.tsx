@@ -113,15 +113,19 @@ export function NotificationBell({
         }
       });
     }
-    // A new-setup notification is about the actor -- go see who they are.
-    // A fulfilled-request or new-comment notification is about the setup
-    // itself -- go see that instead.
-    router.push(
-      (notification.type === "request_fulfilled" || notification.type === "new_comment") &&
-        notification.setupId
-        ? `/setups/${notification.setupId}`
-        : `/profile/${notification.actorId}`
-    );
+    // Setup-related notifications go to the setup itself. New-setup
+    // notifications go to the actor; field-test actors stay anonymous unless
+    // they explicitly opted in, and have no public profile route.
+    if (
+      (notification.type === "request_fulfilled" ||
+        notification.type === "new_comment" ||
+        notification.type === "field_test") &&
+      notification.setupId
+    ) {
+      router.push(`/setups/${notification.setupId}`);
+    } else if (notification.actorId) {
+      router.push(`/profile/${notification.actorId}`);
+    }
   }
 
   function handleMarkAllRead() {
@@ -215,7 +219,9 @@ export function NotificationBell({
                     ? "fulfilled your request"
                     : n.type === "new_comment"
                       ? "commented on your setup"
-                      : "uploaded a new setup"}
+                      : n.type === "field_test"
+                        ? "submitted a field test for"
+                        : "uploaded a new setup"}
                   {n.car ? (
                     <>
                       {" "}

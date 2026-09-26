@@ -90,6 +90,15 @@ describe("SetupCard trust labels", () => {
     expect(screen.queryByText("0 downloads")).not.toBeInTheDocument();
     expect(screen.getByText(/be the first/i)).toBeInTheDocument();
   });
+
+  it("shows a field-test badge only when the server supplies a positive public count", () => {
+    const { rerender } = render(<SetupCard setup={baseSetup} fieldTestCount={0} />);
+    expect(screen.queryByText("0 field tests")).not.toBeInTheDocument();
+
+    rerender(<SetupCard setup={baseSetup} fieldTestCount={3} />);
+    const badge = screen.getByRole("link", { name: "3 field tests" });
+    expect(badge).toHaveAttribute("href", "/setups/setup-1#field-tests");
+  });
 });
 
 describe("SetupCard actions", () => {

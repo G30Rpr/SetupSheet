@@ -11,6 +11,7 @@ import {
   BookOpen,
   ChevronDown,
   Clipboard,
+  ClipboardList,
   Ellipsis,
   ExternalLink,
   FileCheck2,
@@ -110,6 +111,7 @@ export function SetupCard({
   titleLevel = 2,
   compareSelected = false,
   installGuideOpen = false,
+  fieldTestCount = 0,
   onToggleCompare,
 }: {
   setup: Setup;
@@ -125,6 +127,8 @@ export function SetupCard({
    * would crowd out the comparison.
    */
   installGuideOpen?: boolean;
+  /** Public aggregate report count, loaded server-side from the count-only view. */
+  fieldTestCount?: number;
   /** Presence of this prop is what turns on the compare-mode checkbox -- omit it entirely on the detail/profile call sites. */
   onToggleCompare?: () => void;
 }) {
@@ -407,6 +411,17 @@ export function SetupCard({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            {fieldTestCount > 0 && (
+              <Badge variant="blue" asChild>
+                <Link
+                  href={`/setups/${encodeURIComponent(setup.id)}#field-tests`}
+                  title="Public self-reported field tests derived from logged Garage laps and changes."
+                >
+                  <ClipboardList aria-hidden="true" />
+                  {fieldTestCount} field {fieldTestCount === 1 ? "test" : "tests"}
+                </Link>
+              </Badge>
+            )}
             <Badge variant={conditionVariant[setup.condition]}>{setup.condition}</Badge>
           </div>
         </div>

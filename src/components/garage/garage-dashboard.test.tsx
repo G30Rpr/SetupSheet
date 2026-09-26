@@ -15,6 +15,10 @@ vi.mock("@/lib/actions/garage", () => ({
   createGarageSession: createGarageSessionMock,
   deleteGarageSession: vi.fn(),
 }));
+vi.mock("@/lib/actions/field-tests", () => ({
+  createFieldTestReport: vi.fn(),
+  setFieldTestReportAttribution: vi.fn(),
+}));
 vi.mock("@/components/ui/checkbox", () => ({
   Checkbox: ({ checked, onCheckedChange, ...props }: {
     checked?: boolean;
