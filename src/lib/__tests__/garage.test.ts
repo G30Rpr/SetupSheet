@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  countGarageSetupValues,
+  getGarageCompatibleSetupValues,
   parseCreateGarageLapInput,
   parseCreateGarageRevisionInput,
   parseCreateGarageRunPlanItemInput,
@@ -10,6 +12,23 @@ import {
 import { getEmptySetupValues } from "@/lib/setup-schemas";
 
 describe("Garage input validation", () => {
+  it("copies only non-empty setup fields supported by the source game's Garage schema", () => {
+    const sourceValues = {
+      brakeBias: "56% front",
+      rearArb: "4",
+      notARealField: "discard this",
+      frontArb: "",
+    };
+
+    expect(getGarageCompatibleSetupValues("Assetto Corsa Competizione", sourceValues)).toEqual({
+      brakeBias: "56% front",
+      rearArb: "4",
+      frontArb: "",
+    });
+    expect(countGarageSetupValues("Assetto Corsa Competizione", sourceValues)).toBe(2);
+    expect(getGarageCompatibleSetupValues("Le Mans Ultimate", null)).toEqual({});
+  });
+
   it("accepts an ACC session with schema-backed baseline values", () => {
     const result = parseCreateGarageSessionInput({
       game: "Assetto Corsa Competizione",

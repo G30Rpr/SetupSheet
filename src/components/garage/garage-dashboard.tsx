@@ -20,6 +20,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,6 +50,7 @@ import {
   type GarageLap,
   type GarageRevision,
   type GarageRunPlanItem,
+  type GarageSetupSource,
   type GarageSession,
   type GarageSessionDetail,
   type GarageVerdict,
@@ -107,11 +109,15 @@ export function GarageDashboard({
   detail,
   listError,
   detailError,
+  sourceSetup = null,
+  sourceSetupError = null,
 }: {
   sessions: GarageSession[];
   detail: GarageSessionDetail | null;
   listError: boolean;
   detailError: boolean;
+  sourceSetup?: GarageSetupSource | null;
+  sourceSetupError?: string | null;
 }) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -135,9 +141,15 @@ export function GarageDashboard({
         </Link>
       </header>
 
+      {sourceSetupError && <div className="mb-6 max-w-2xl"><ErrorMessage>{sourceSetupError}</ErrorMessage></div>}
+
       <div className="grid items-start gap-6 lg:grid-cols-[290px_minmax(0,1fr)]">
         <aside className="flex min-w-0 flex-col gap-4">
-          <NewGarageSessionForm startOpen={sessions.length === 0} />
+          <NewGarageSessionForm
+            key={sourceSetup?.id ?? "new-session-form"}
+            startOpen={Boolean(sourceSetup) || sessions.length === 0}
+            sourceSetup={sourceSetup}
+          />
 
           <Card className="gap-3 px-4">
             <div className="flex items-center justify-between gap-2">
@@ -226,12 +238,20 @@ export function GarageDashboard({
   );
 }
 
-function NewGarageSessionForm({ startOpen }: { startOpen: boolean }) {
+function NewGarageSessionForm({
+  startOpen,
+  sourceSetup,
+}: {
+  startOpen: boolean;
+  sourceSetup: GarageSetupSource | null;
+}) {
   const router = useRouter();
-  const [game, setGame] = useState<EngineerGame>(DEFAULT_GAME);
-  const [condition, setCondition] = useState<Condition>("Dry");
+  const initialGame = sourceSetup?.game ?? DEFAULT_GAME;
+  const [game, setGame] = useState<EngineerGame>(initialGame);
+  const [condition, setCondition] = useState<Condition>(sourceSetup?.condition ?? "Dry");
   const [rig, setRig] = useState<RigProfile | "none">("none");
-  const [setupValues, setSetupValues] = useState<SetupValues>(() => getEmptySetupValues(DEFAULT_GAME));
+  const [setupValues, setSetupValues] = useState<SetupValues>(() => getEmptySetupValues(initialGame));
+  const [copySourceSetupValues, setCopySourceSetupValues] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isOpen, setIsOpen] = useState(startOpen);
@@ -250,18 +270,28 @@ function NewGarageSessionForm({ startOpen }: { startOpen: boolean }) {
     const car = String(formData.get("car") ?? "");
     const track = String(formData.get("track") ?? "");
     const baselineNote = String(formData.get("baselineNote") ?? "");
-
-    startTransition(async () => {
-      try {
-        const result = await createGarageSession({
+    const rigValue = rig === "none" ? null : rig;
+    const sessionInput = sourceSetup
+      ? {
+          sourceSetupId: sourceSetup.id,
+          copySourceSetupValues,
+          rig: rigValue,
+          setupValues,
+          baselineNote,
+        }
+      : {
           game,
           car,
           track,
           condition,
-          rig: rig === "none" ? null : rig,
+          rig: rigValue,
           setupValues,
           baselineNote,
-        });
+        };
+
+    startTransition(async () => {
+      try {
+        const result = await createGarageSession(sessionInput);
         if (result.error || !result.sessionId) {
           setError(result.error ?? "Couldn't create the Garage session.");
           return;
@@ -288,68 +318,115 @@ function NewGarageSessionForm({ startOpen }: { startOpen: boolean }) {
         <span className="text-xs text-muted-foreground">ACC · LMU</span>
       </summary>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 border-t border-border/70 px-4 py-4">
+        {sourceSetup ? (
+          <div className="rounded-lg border border-racing-cyan/25 bg-racing-cyan/5 px-3 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-racing-cyan">Starting from public setup</p>
+            <p className="mt-1 font-medium">{sourceSetup.car} <span className="text-muted-foreground">@ {sourceSetup.track}</span></p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{sourceSetup.game} · {sourceSetup.condition}</p>
+            <Link
+              href={`/setups/${encodeURIComponent(sourceSetup.id)}`}
+              className="mt-2 inline-flex text-xs font-medium text-racing-cyan hover:text-foreground"
+            >
+              View source setup
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="garage-new-game">Game</Label>
+              <Select value={game} onValueChange={handleGameChange}>
+                <SelectTrigger id="garage-new-game" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ENGINEER_GAMES.map((supportedGame) => (
+                    <SelectItem key={supportedGame} value={supportedGame}>{supportedGame}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="garage-new-car">Car</Label>
+                <Input id="garage-new-car" name="car" maxLength={MAX_CAR_LENGTH} placeholder="e.g. BMW M4 GT3" required />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="garage-new-track">Track</Label>
+                <Input id="garage-new-track" name="track" maxLength={MAX_TRACK_LENGTH} placeholder="e.g. Monza" required />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="garage-new-condition">Track condition</Label>
+              <Select value={condition} onValueChange={(value) => setCondition(value as Condition)}>
+                <SelectTrigger id="garage-new-condition" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {conditions.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
+
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="garage-new-game">Game</Label>
-          <Select value={game} onValueChange={handleGameChange}>
-            <SelectTrigger id="garage-new-game" className="w-full">
+          <Label htmlFor="garage-new-rig">Your rig profile (optional)</Label>
+          <Select value={rig} onValueChange={(value) => setRig(value as RigProfile | "none")}>
+            <SelectTrigger id="garage-new-rig" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {ENGINEER_GAMES.map((supportedGame) => (
-                <SelectItem key={supportedGame} value={supportedGame}>{supportedGame}</SelectItem>
-              ))}
+              <SelectItem value="none">Not specified</SelectItem>
+              {rigProfiles.map((profile) => <SelectItem key={profile} value={profile}>{profile}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="garage-new-car">Car</Label>
-            <Input id="garage-new-car" name="car" maxLength={MAX_CAR_LENGTH} placeholder="e.g. BMW M4 GT3" required />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="garage-new-track">Track</Label>
-            <Input id="garage-new-track" name="track" maxLength={MAX_TRACK_LENGTH} placeholder="e.g. Monza" required />
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="garage-new-condition">Track condition</Label>
-            <Select value={condition} onValueChange={(value) => setCondition(value as Condition)}>
-              <SelectTrigger id="garage-new-condition" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {conditions.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="garage-new-rig">Rig profile (optional)</Label>
-            <Select value={rig} onValueChange={(value) => setRig(value as RigProfile | "none")}>
-              <SelectTrigger id="garage-new-rig" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Not specified</SelectItem>
-                {rigProfiles.map((profile) => <SelectItem key={profile} value={profile}>{profile}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <details className="rounded-lg border border-border/70 bg-secondary/15">
-          <summary className="cursor-pointer px-3 py-2.5 text-sm font-medium">Add baseline setup values (optional)</summary>
-          <div className="border-t border-border/70 p-3">
-            <SetupValuesFields
-              game={game}
-              values={setupValues}
-              idPrefix="garage-new"
-              onChange={(key, value) => setSetupValues((current) => ({ ...current, [key]: value }))}
+        {sourceSetup && sourceSetup.setupValueCount > 0 && (
+          <div className="flex items-start gap-3 rounded-lg border border-border/70 px-3 py-3">
+            <Checkbox
+              id="garage-copy-source-values"
+              checked={copySourceSetupValues}
+              onCheckedChange={(checked) => setCopySourceSetupValues(checked === true)}
             />
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="garage-copy-source-values" className="cursor-pointer text-sm font-medium">
+                Copy {sourceSetup.setupValueCount} saved setup {sourceSetup.setupValueCount === 1 ? "value" : "values"}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                This is optional and starts unchecked. If selected, the server copies those public values into your private baseline.
+              </p>
+            </div>
           </div>
-        </details>
+        )}
+
+        {sourceSetup && sourceSetup.setupValueCount === 0 && (
+          <p className="text-xs text-muted-foreground">
+            This setup has no structured values to import. You can still enter baseline values manually.
+          </p>
+        )}
+
+        {sourceSetup && copySourceSetupValues ? (
+          <div className="rounded-lg border border-racing-cyan/25 bg-racing-cyan/5 px-3 py-2.5 text-xs text-muted-foreground">
+            The baseline will use the saved values exactly as published. You can add a revision to test changes after creating the session.
+          </div>
+        ) : (
+          <details className="rounded-lg border border-border/70 bg-secondary/15">
+            <summary className="cursor-pointer px-3 py-2.5 text-sm font-medium">
+              {sourceSetup ? "Enter baseline setup values manually (optional)" : "Add baseline setup values (optional)"}
+            </summary>
+            <div className="border-t border-border/70 p-3">
+              <SetupValuesFields
+                game={game}
+                values={setupValues}
+                idPrefix="garage-new"
+                onChange={(key, value) => setSetupValues((current) => ({ ...current, [key]: value }))}
+              />
+            </div>
+          </details>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="garage-new-note">Baseline note (optional)</Label>

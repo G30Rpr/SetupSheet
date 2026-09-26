@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+const { createGarageSessionMock } = vi.hoisted(() => ({ createGarageSessionMock: vi.fn() }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
@@ -10,17 +12,41 @@ vi.mock("@/lib/actions/garage", () => ({
   createGarageLap: vi.fn(),
   createGarageRevision: vi.fn(),
   createGarageRunPlanItem: vi.fn(),
-  createGarageSession: vi.fn(),
+  createGarageSession: createGarageSessionMock,
   deleteGarageSession: vi.fn(),
+}));
+vi.mock("@/components/ui/checkbox", () => ({
+  Checkbox: ({ checked, onCheckedChange, ...props }: {
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+    id?: string;
+    "aria-label"?: string;
+  }) => (
+    <input
+      {...props}
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onCheckedChange?.(event.currentTarget.checked)}
+    />
+  ),
 }));
 vi.mock("sonner", () => ({
   toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }),
 }));
 
 import { GarageDashboard } from "@/components/garage/garage-dashboard";
-import type { GarageSessionDetail } from "@/lib/garage";
+import type { GarageSessionDetail, GarageSetupSource } from "@/lib/garage";
 
 afterEach(cleanup);
+
+const sourceSetup: GarageSetupSource = {
+  id: "11111111-1111-4111-8111-111111111111",
+  game: "Assetto Corsa Competizione",
+  car: "BMW M4 GT3",
+  track: "Monza",
+  condition: "Wet",
+  setupValueCount: 2,
+};
 
 const detail: GarageSessionDetail = {
   session: {
@@ -71,6 +97,51 @@ describe("GarageDashboard", () => {
     expect(screen.getByText("Private")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Start your first session" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create session" })).toBeInTheDocument();
+  });
+
+  it("keeps source values unchecked and submits only the source ID plus explicit opt-in", async () => {
+    createGarageSessionMock.mockResolvedValue({
+      sessionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      error: null,
+    });
+
+    render(
+      <GarageDashboard
+        sessions={[]}
+        detail={null}
+        listError={false}
+        detailError={false}
+        sourceSetup={sourceSetup}
+      />
+    );
+
+    expect(screen.getByText("Starting from public setup")).toBeInTheDocument();
+    expect(screen.getByText("BMW M4 GT3")).toBeInTheDocument();
+    expect(screen.getByText("Assetto Corsa Competizione · Wet")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Game")).not.toBeInTheDocument();
+
+    const copyCheckbox = screen.getByRole("checkbox", { name: "Copy 2 saved setup values" });
+    expect(copyCheckbox).not.toBeChecked();
+    fireEvent.click(copyCheckbox);
+    expect(copyCheckbox).toBeChecked();
+
+    const form = screen.getByRole("button", { name: "Create session" }).closest("form");
+    expect(form).not.toBeNull();
+    fireEvent.submit(form!);
+
+    await waitFor(() => expect(createGarageSessionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceSetupId: sourceSetup.id,
+        copySourceSetupValues: true,
+        rig: null,
+        baselineNote: "",
+      })
+    ));
+    const submitted = createGarageSessionMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(submitted).not.toHaveProperty("game");
+    expect(submitted).not.toHaveProperty("car");
+    expect(submitted).not.toHaveProperty("track");
+    expect(submitted).not.toHaveProperty("condition");
   });
 
   it("shows revisions, one-change results, and lap times for the selected private session", () => {

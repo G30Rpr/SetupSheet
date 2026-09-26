@@ -7,6 +7,10 @@ import { Card } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { getGarageSessionDetail, getGarageSessions } from "@/lib/supabase/garage";
+import { getSetupById } from "@/lib/supabase/setups";
+import { countGarageSetupValues, type GarageSetupSource } from "@/lib/garage";
+import { ENGINEER_GAMES, type EngineerGame } from "@/lib/engineer-types";
+import { isUuid } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Garage",
@@ -17,7 +21,7 @@ export const metadata: Metadata = {
 export default async function GaragePage({
   searchParams,
 }: {
-  searchParams: Promise<{ session?: string | string[] }>;
+  searchParams: Promise<{ session?: string | string[]; from?: string | string[] }>;
 }) {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
@@ -53,13 +57,48 @@ export default async function GaragePage({
     ? await getGarageSessionDetail(user.id, selectedSession.id)
     : { detail: null, error: false };
 
+  let sourceSetup: GarageSetupSource | null = null;
+  let sourceSetupError: string | null = null;
+  if (params.from !== undefined) {
+    const requestedSetupId = Array.isArray(params.from)
+      ? params.from.length === 1 ? params.from[0] : null
+      : params.from;
+
+    if (!requestedSetupId || !isUuid(requestedSetupId)) {
+      sourceSetupError = "That setup link is invalid. Open a public ACC or LMU setup and try again.";
+    } else {
+      try {
+        const setup = await getSetupById(requestedSetupId);
+        if (!setup) {
+          sourceSetupError = "That public setup could not be found. It may have been removed.";
+        } else if (!ENGINEER_GAMES.includes(setup.game as EngineerGame)) {
+          sourceSetupError = "Starting a Garage session from a setup is currently supported for ACC and Le Mans Ultimate only.";
+        } else {
+          const game = setup.game as EngineerGame;
+          sourceSetup = {
+            id: setup.id,
+            game,
+            car: setup.car,
+            track: setup.track,
+            condition: setup.condition,
+            setupValueCount: countGarageSetupValues(game, setup.setupValues),
+          };
+        }
+      } catch {
+        sourceSetupError = "The public setup could not be loaded right now. Please try again.";
+      }
+    }
+  }
+
   return (
     <GarageDashboard
-      key={selectedSession?.id ?? "empty-garage"}
+      key={`${selectedSession?.id ?? "empty-garage"}:${sourceSetup?.id ?? "no-source"}`}
       sessions={sessionList.sessions}
       detail={detailResult.detail}
       listError={sessionList.error}
       detailError={detailResult.error}
+      sourceSetup={sourceSetup}
+      sourceSetupError={sourceSetupError}
     />
   );
 }

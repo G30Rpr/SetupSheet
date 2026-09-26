@@ -1,4 +1,5 @@
--- Regression coverage for 0030_garage_private_workflow.sql. This verifies
+-- Regression coverage for 0030_garage_private_workflow.sql and
+-- 0031_garage_start_from_setup.sql. This verifies
 -- private ownership through the parent session, anonymous denial, the atomic
 -- session+baseline RPC, and session-delete cascades using real non-superuser
 -- API roles in the migration harness.
@@ -6,6 +7,14 @@
 insert into auth.users (id, email, raw_user_meta_data) values
   ('11111111-1111-4111-8111-111111111111', 'garage-a@example.com', '{"full_name":"Garage A"}'),
   ('22222222-2222-4222-8222-222222222222', 'garage-b@example.com', '{"full_name":"Garage B"}');
+
+insert into public.setups
+  (id, user_id, game, car, track, condition, description, tags, rig_profile)
+values
+  ('99999999-9999-4999-8999-999999999999', '11111111-1111-4111-8111-111111111111',
+   'Assetto Corsa Competizione', 'BMW M4 GT3', 'Monza', 'Wet', 'public source setup', '{}', 'Wheel + 3 Pedals'),
+  ('88888888-8888-4888-8888-888888888888', '11111111-1111-4111-8111-111111111111',
+   'Gran Turismo 7', 'Toyota GR86', 'Suzuka', 'Dry', 'unsupported Garage source', '{}', 'Gamepad');
 
 -- Approximate Supabase's request JWT claim for this vanilla-Postgres test
 -- harness. Policies still execute as anon/authenticated, not as the owner.
@@ -98,6 +107,47 @@ select (
   \echo 'REGRESSION: session RPC did not create both owned rows'
   \quit 1
 \endif
+
+select public.create_garage_session_from_setup_with_baseline(
+  '99999999-9999-4999-8999-999999999999', 'Gamepad', '{"brakeBias":"56% front"}'::jsonb, 'Source baseline'
+) as session_id \gset garage_source_
+select (
+  exists (
+    select 1 from public.garage_sessions
+    where id = :'garage_source_session_id'::uuid
+      and user_id = '11111111-1111-4111-8111-111111111111'
+      and source_setup_id = '99999999-9999-4999-8999-999999999999'
+      and game = 'Assetto Corsa Competizione'
+      and car = 'BMW M4 GT3'
+      and track = 'Monza'
+      and condition = 'Wet'
+      and rig = 'Gamepad'
+  )
+  and exists (
+    select 1 from public.garage_revisions
+    where session_id = :'garage_source_session_id'::uuid
+      and setup_values = '{"brakeBias":"56% front"}'::jsonb
+      and note = 'Source baseline'
+  )
+) as source_rpc_ok \gset
+\if :source_rpc_ok
+  \echo 'CHECK 1b passed: source metadata is read from the public setup row'
+\else
+  \echo 'REGRESSION: source RPC did not derive metadata or create its baseline'
+  \quit 1
+\endif
+
+do $$
+begin
+  begin
+    perform public.create_garage_session_from_setup_with_baseline(
+      '88888888-8888-4888-8888-888888888888', null, '{}'::jsonb, 'unsupported source'
+    );
+    raise exception 'REGRESSION: source RPC accepted an unsupported game';
+  exception when sqlstate '22023' then
+    raise notice 'Unsupported source game rejected';
+  end;
+end $$;
 rollback;
 
 \echo 'CHECK 2: User A cannot read User B sessions or revisions or insert a lap there'
@@ -186,6 +236,15 @@ begin
     raise exception 'REGRESSION: anonymous role called the session RPC';
   exception when insufficient_privilege then
     raise notice 'Anonymous RPC denied';
+  end;
+
+  begin
+    perform public.create_garage_session_from_setup_with_baseline(
+      '99999999-9999-4999-8999-999999999999', null, '{}'::jsonb, 'anonymous source'
+    );
+    raise exception 'REGRESSION: anonymous role called the source setup RPC';
+  exception when insufficient_privilege then
+    raise notice 'Anonymous source setup RPC denied';
   end;
 end $$;
 rollback;

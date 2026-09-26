@@ -1,6 +1,6 @@
 # Engineer, Garage, and Field Tests — Source of Truth
 
-**Status: Gate 1 complete; Gate 2 basic workflow implemented and under validation.** ACC and Le Mans Ultimate are the initial Engineer games. This is the implementation contract distilled from the handoff; future-gate details can be finalized before their implementation. Items marked **Proposal** still need explicit sign-off.
+**Status: Gate 1 complete; Gate 2 basic workflow and `/garage?from=<setup-id>` are implemented, with authenticated deployment/RLS validation still pending.** ACC and Le Mans Ultimate are the initial Engineer games. This is the implementation contract distilled from the handoff; future-gate details can be finalized before their implementation. Items marked **Proposal** still need explicit sign-off.
 
 ## Product sequence and invariants
 
@@ -54,7 +54,7 @@ Start with an authenticated Garage workflow: create a session and baseline snaps
 
 Every write through the Garage Server Actions is authenticated and validated server-side and is also protected by Supabase RLS. A narrow no-login writer role keeps session-plus-baseline creation atomic without granting authenticated clients direct session inserts. Child-row policies verify ownership through the parent session; composite revision foreign keys prevent attaching a lap or plan item to a revision from a different session. Anonymous access is denied. Session deletion safely cascades to its private child records. SQL tests cover the atomic baseline RPC, cross-user session/revision reads, inserting a lap into another user's session, anonymous access, direct session-insert denial, and deletion cascades. The initial app workflow supports ACC and LMU only.
 
-After the basic Garage workflow has been exercised, add `/garage?from=<setup-id>`. The server validates and reads the public setup through the existing setup reader, and supplies its metadata to the new-session form. Setup values are copied only after explicit user opt-in. The browser is never authoritative for source-setup metadata.
+`/garage?from=<setup-id>` now starts a Garage session from a public setup. The page rejects malformed IDs before lookup and reads a valid ID through the normal `getSetupById` reader. It sends only server-derived game/car/track/condition metadata and the count of compatible saved values to the form; the setup values themselves stay server-side. The copy checkbox starts unchecked, and only an explicit opt-in makes the authenticated Server Action re-read and schema-filter those values into the private baseline. The browser never supplies source metadata. A dedicated database RPC independently derives session metadata from the public setup row under RLS, stores `source_setup_id`, and atomically creates the baseline. The user's own rig profile remains an explicit form choice; the source uploader's rig is not copied. The public setup detail page does not yet add an “Open in Garage” CTA, which remains deferred with the later public surfaces.
 
 ## Gate 3 — Field tests
 
@@ -73,7 +73,7 @@ Only after the core field-test loop works, add “Proven” sorting, a landing-p
 ## Release gates and change manifest
 
 1. **Static Engineer:** anonymous; no database; unit tests pass; deterministic fallback. Complete.
-2. **Garage core:** authenticated session/baseline, revisions, run-plan results, and laps; Server Action validation; RLS and SQL regression tests. In progress. Start-from-public-setup is a later addition after the basic loop works.
+2. **Garage core:** authenticated session/baseline, revisions, run-plan results, laps, and the server-derived start-from-public-setup flow; Server Action validation; RLS and SQL regression tests. The app and unit tests are implemented; authenticated flows still need a configured Supabase run, and SQL RLS tests remain unexecuted because `psql` is unavailable in this environment.
 3. **Field tests:** server-derived metrics, concurrency-safe cooldown, sanitized projection, and notification tests.
 4. **Public surfaces:** summaries/badges/links and correct cache invalidation.
 5. **Calibration:** public-only evidence, safe fallback, wet/calibration tests, no private-data leakage.
@@ -101,6 +101,21 @@ Literal changed-file integration manifest for the current Engineer + Garage work
 - `next.config.ts` — allows Arena’s per-session `e2b.app` preview origin for development chunks and HMR.
 - `supabase/migrations/0030_garage_private_workflow.sql` — four private tables, constraints, grants, RLS, and atomic session/baseline RPC.
 - `supabase/testing/garage_rls.test.sql` — ownership, anonymous access, atomic create, and cascade regression checks.
+
+Literal changed-file integration manifest for the `/garage?from=<setup-id>` slice:
+
+- `docs/engineer-garage-field-tests-spec.md` — records the start-from-setup contract and remaining validation gates.
+- `src/app/garage/page.tsx` — validates the query ID, reads via `getSetupById`, and passes only server-derived metadata/counts.
+- `src/app/garage/page.test.tsx` — verifies normal-reader use, metadata projection, malformed IDs, and signed-out behavior.
+- `src/components/garage/garage-dashboard.tsx` — read-only source metadata, unchecked opt-in checkbox, and no source values sent before opt-in.
+- `src/components/garage/garage-dashboard.test.tsx` — verifies the checkbox defaults off and submits the source ID/choice without client metadata.
+- `src/lib/garage.ts` — source summary type and schema-compatible value filtering/counting.
+- `src/lib/__tests__/garage.test.ts` — source value allowlist and count tests.
+- `src/lib/actions/garage.ts` — re-reads the source, derives metadata, validates values, and selects the atomic source RPC.
+- `src/lib/actions/garage.test.ts` — server-derived metadata, opt-in copy, invalid/unsupported source, and existing create path tests.
+- `src/lib/supabase/database.types.ts` — source-RPC contract.
+- `supabase/migrations/0031_garage_start_from_setup.sql` — restricted setup read grant and atomic source-derived session/baseline RPC.
+- `supabase/testing/garage_rls.test.sql` — source metadata derivation, unsupported-game, and anonymous RPC checks (not yet run locally; `psql` is unavailable).
 
 ## Decisions needed before implementation
 

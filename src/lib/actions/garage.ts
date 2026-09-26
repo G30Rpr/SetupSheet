@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import {
+  getGarageCompatibleSetupValues,
   parseCreateGarageLapInput,
   parseCreateGarageRevisionInput,
   parseCreateGarageRunPlanItemInput,
@@ -13,6 +14,7 @@ import { logger } from "@/lib/logger";
 import { ENGINEER_GAMES, type EngineerGame } from "@/lib/engineer-types";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
+import { getSetupById } from "@/lib/supabase/setups";
 import { isUuid } from "@/lib/utils";
 
 export async function createGarageSession(
@@ -22,30 +24,85 @@ export async function createGarageSession(
   const user = await getCurrentUser(supabase);
   if (!user) return { sessionId: null, error: "Log in to create a private Garage session." };
 
-  const parsed = parseCreateGarageSessionInput(input);
+  const fields =
+    typeof input === "object" && input !== null && !Array.isArray(input)
+      ? input as Record<string, unknown>
+      : null;
+  const hasSourceSetup = Boolean(fields && Object.hasOwn(fields, "sourceSetupId"));
+  let sourceSetupId: string | null = null;
+  let parsed: ReturnType<typeof parseCreateGarageSessionInput>;
+
+  if (hasSourceSetup) {
+    if (!fields) return { sessionId: null, error: "Session details are invalid." };
+    const requestedSetupId = fields.sourceSetupId;
+    if (typeof requestedSetupId !== "string" || !isUuid(requestedSetupId)) {
+      return { sessionId: null, error: "That source setup is invalid." };
+    }
+    if (typeof fields.copySourceSetupValues !== "boolean") {
+      return { sessionId: null, error: "Choose whether to copy the source setup values." };
+    }
+
+    let sourceSetup;
+    try {
+      sourceSetup = await getSetupById(requestedSetupId);
+    } catch (lookupError) {
+      logger.error("createGarageSession: source setup lookup failed", lookupError);
+      return { sessionId: null, error: "That public setup could not be loaded right now." };
+    }
+    if (!sourceSetup) return { sessionId: null, error: "That public setup could not be found." };
+    if (!ENGINEER_GAMES.includes(sourceSetup.game as EngineerGame)) {
+      return { sessionId: null, error: "Garage can start from ACC and Le Mans Ultimate setups only." };
+    }
+
+    const game = sourceSetup.game as EngineerGame;
+    parsed = parseCreateGarageSessionInput({
+      // Source identity is the only setup metadata accepted from the browser.
+      // The actual session metadata always comes from the public setup reader.
+      game,
+      car: sourceSetup.car,
+      track: sourceSetup.track,
+      condition: sourceSetup.condition,
+      rig: fields.rig,
+      setupValues: fields.copySourceSetupValues
+        ? getGarageCompatibleSetupValues(game, sourceSetup.setupValues)
+        : fields.setupValues,
+      baselineNote: fields.baselineNote,
+    });
+    sourceSetupId = sourceSetup.id;
+  } else {
+    parsed = parseCreateGarageSessionInput(input);
+  }
+
   if (!parsed.value) return { sessionId: null, error: parsed.error ?? "Session details are invalid." };
 
   const { value } = parsed;
-  const { data, error } = await supabase.rpc("create_garage_session_with_baseline", {
-    p_game: value.game,
-    p_car: value.car,
-    p_track: value.track,
-    p_condition: value.condition,
-    p_rig: value.rig,
-    p_setup_values: value.setupValues,
-    p_note: value.baselineNote || "Baseline",
-  });
+  const result = sourceSetupId
+    ? await supabase.rpc("create_garage_session_from_setup_with_baseline", {
+        p_source_setup_id: sourceSetupId,
+        p_rig: value.rig,
+        p_setup_values: value.setupValues,
+        p_note: value.baselineNote || "Baseline",
+      })
+    : await supabase.rpc("create_garage_session_with_baseline", {
+        p_game: value.game,
+        p_car: value.car,
+        p_track: value.track,
+        p_condition: value.condition,
+        p_rig: value.rig,
+        p_setup_values: value.setupValues,
+        p_note: value.baselineNote || "Baseline",
+      });
 
-  if (error || typeof data !== "string") {
-    logger.error("createGarageSession: atomic create failed", error);
+  if (result.error || typeof result.data !== "string") {
+    logger.error("createGarageSession: atomic create failed", result.error);
     return {
       sessionId: null,
-      error: getActionError(error, "Couldn't create that Garage session right now."),
+      error: getActionError(result.error, "Couldn't create that Garage session right now."),
     };
   }
 
   revalidatePath("/garage");
-  return { sessionId: data, error: null };
+  return { sessionId: result.data, error: null };
 }
 
 async function getOwnedSessionGame(

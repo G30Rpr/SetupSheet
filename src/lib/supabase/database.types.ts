@@ -608,6 +608,15 @@ export type Database = {
         };
         Returns: string;
       };
+      create_garage_session_from_setup_with_baseline: {
+        Args: {
+          p_source_setup_id: string;
+          p_rig: string | null;
+          p_setup_values: Json;
+          p_note: string;
+        };
+        Returns: string;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

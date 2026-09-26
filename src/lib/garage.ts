@@ -70,6 +70,16 @@ export interface GarageSessionDetail {
   laps: GarageLap[];
 }
 
+/** Public setup metadata passed to the private Garage form. Setup values stay server-side until the user opts in to copying them. */
+export interface GarageSetupSource {
+  id: string;
+  game: EngineerGame;
+  car: string;
+  track: string;
+  condition: Condition;
+  setupValueCount: number;
+}
+
 export interface CreateGarageSessionInput {
   game: EngineerGame;
   car: string;
@@ -122,6 +132,25 @@ function normalizeValuesForGame(game: EngineerGame, value: unknown): SetupValues
 
   // Return a normal-prototype object before it crosses a Server Action/RSC boundary.
   return { ...values };
+}
+
+/** Pick only fields that belong to the Garage schema for a source setup's game. */
+export function getGarageCompatibleSetupValues(game: EngineerGame, value: unknown): SetupValues {
+  const schema = setupSchemas[game];
+  const values = normalizeSetupValues(value);
+  if (!schema || !values) return {};
+
+  const allowedKeys = new Set(schema.flatMap((group) => group.fields.map((field) => field.key)));
+  const compatible: SetupValues = {};
+  for (const [key, item] of Object.entries(values)) {
+    if (allowedKeys.has(key)) compatible[key] = item;
+  }
+  return compatible;
+}
+
+export function countGarageSetupValues(game: EngineerGame, value: unknown): number {
+  return Object.values(getGarageCompatibleSetupValues(game, value))
+    .filter((item) => item.trim().length > 0).length;
 }
 
 export function parseCreateGarageSessionInput(
