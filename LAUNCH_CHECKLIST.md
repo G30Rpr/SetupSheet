@@ -89,8 +89,8 @@ Run the repository migration harness locally or in CI:
 npm run test:db
 ```
 
-CI run `36262690508` passed all three jobs, including the PostgreSQL 16 migration
-suite and Playwright E2E, against commit `41c75ff9acf521f9038abfc01d1ed55e03ca6302`.
+GitHub Actions run `36431167843` passed all three jobs, including the PostgreSQL 16 migration
+suite and Playwright E2E, on feature commit `bf22886b6dfc98a8d2e7bd9961a3a6859fa3a4bd`.
 That is repository/CI validation, not a run against the configured production Supabase
 project. In the current sandbox, `psql` is unavailable locally and no Supabase deployment
 environment variables are configured, so a live migration/smoke test is still required.
@@ -117,7 +117,7 @@ environment variables are configured, so a live migration/smoke test is still re
 
 - [ ] Deploy the current branch and confirm the environment contains `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 - [ ] Turn on Dependabot for the repo (`.github/dependabot.yml` is committed but the feature is off: `GET /dependabot/alerts` returns "Dependabot alerts are disabled for this repository"), and enable code scanning or accept the gap in writing.
-- [x] Latest recorded CI run (`36262690508`, commit `41c75ff`) passed all three jobs: `lint-test-build`, `e2e`, and `db-migrations`.
+- [x] GitHub Actions run `36431167843` on feature commit `bf22886` passed all three jobs: `lint-test-build`, `e2e`, and `db-migrations`.
 - [ ] Confirm branch protection requires those three checks before merging to the default branch; the CI pass does not verify repository protection settings.
 - [ ] Configure shared edge/WAF limits for uploads, Server Actions, anonymous download-counter traffic, and repeated auth failures. (There is still no server-side per-user *upload* rate limit; `0021` covers `setups`/`setup_comments`/`setup_requests` inserts only.)
 - [ ] Configure upload quarantine/malware scanning if arbitrary community files are accepted at scale.
@@ -129,7 +129,7 @@ environment variables are configured, so a live migration/smoke test is still re
 
 ## Browser and performance validation
 
-- [x] Chromium is installed in CI and `npx playwright test` runs (the recorded `e2e` job passed 14/14 in CI run `36262690508`).
+- [x] Chromium is installed in CI and `npx playwright test` runs (the `e2e` job passed 14/14 in CI run `36431167843` on feature commit `bf22886`).
 - [ ] Re-run Playwright locally after obtaining the Chromium binary: 3 browser-independent checks passed, while 11 browser-backed tests could not launch because Chromium is missing; `npx playwright install chromium` failed with TLS `ECONNRESET` in this sandbox.
 - [ ] Run Lighthouse or PageSpeed on mobile and desktop for `/`, `/setups`, a populated `/setups/[id]`, and `/profile/[userId]`.
 - [ ] Record LCP element/time, INP, CLS, TTFB, HTML/RSC size, JavaScript long tasks, and image bytes.

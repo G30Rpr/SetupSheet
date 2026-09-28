@@ -356,8 +356,8 @@ source-derived creation, field-test eligibility/metrics/privacy, concurrency,
 notification/count, and calibration-projection checks. Needs a reachable Postgres
 (`PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD` env vars, defaulting to
 `localhost:5432` as `postgres`). CI runs this script against a `postgres:16`
-service container; latest recorded CI run `36262690508` passed its migration job.
-That CI result is not a live configured-Supabase migration or smoke test.
+service container; CI run `36431167843` passed its migration job on feature commit
+`bf22886`. That CI result is not a live configured-Supabase migration or smoke test.
 
 **RLS policies**, scoped with `auth.uid()`:
 
