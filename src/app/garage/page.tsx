@@ -24,7 +24,13 @@ export default async function GaragePage({
   searchParams: Promise<{ session?: string | string[]; from?: string | string[] }>;
 }) {
   const supabase = await createClient();
-  const user = await getCurrentUser(supabase);
+  const [user, params] = await Promise.all([getCurrentUser(supabase), searchParams]);
+  const requestedSourceSetupId = Array.isArray(params.from)
+    ? params.from.length === 1 ? params.from[0] : null
+    : params.from;
+  const loginNextPath = requestedSourceSetupId && isUuid(requestedSourceSetupId)
+    ? `/garage?from=${encodeURIComponent(requestedSourceSetupId)}`
+    : "/garage";
 
   if (!user) {
     return (
@@ -39,16 +45,13 @@ export default async function GaragePage({
               Garage sessions, setup snapshots, run-plan notes, and lap times are private to your account.
             </p>
           </div>
-          <DiscordLoginButton />
+          <DiscordLoginButton nextPath={loginNextPath} />
         </Card>
       </div>
     );
   }
 
-  const [params, sessionList] = await Promise.all([
-    searchParams,
-    getGarageSessions(user.id),
-  ]);
+  const sessionList = await getGarageSessions(user.id);
   const requestedId = Array.isArray(params.session) ? params.session[0] : params.session;
   const selectedSession = sessionList.sessions.find((session) => session.id === requestedId)
     ?? sessionList.sessions[0]

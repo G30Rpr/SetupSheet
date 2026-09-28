@@ -1,6 +1,7 @@
-import { isValidElement, type ReactElement } from "react";
+import { isValidElement, type ElementType, type ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DiscordLoginButton } from "@/components/auth-nav";
 import type { Setup } from "@/lib/types";
 
 const {
@@ -52,6 +53,22 @@ function getDashboardProps(element: unknown): Record<string, unknown> {
   return (element as ReactElement<Record<string, unknown>>).props;
 }
 
+function findElementOfType(element: unknown, targetType: ElementType): ReactElement<Record<string, unknown>> | null {
+  if (Array.isArray(element)) {
+    for (const child of element) {
+      const match = findElementOfType(child, targetType);
+      if (match) return match;
+    }
+    return null;
+  }
+  if (!isValidElement(element)) return null;
+
+  const typedElement = element as ReactElement<Record<string, unknown>>;
+  if (typedElement.type === targetType) return typedElement;
+
+  return findElementOfType(typedElement.props.children, targetType);
+}
+
 describe("GaragePage start-from-setup source", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -60,6 +77,25 @@ describe("GaragePage start-from-setup source", () => {
     getGarageSessionsMock.mockResolvedValue({ sessions: [], error: false });
     getGarageSessionDetailMock.mockResolvedValue({ detail: null, error: false });
     getSetupByIdMock.mockResolvedValue(sourceSetup);
+  });
+
+  it("preserves a validated source setup through Discord sign-in", async () => {
+    getCurrentUserMock.mockResolvedValue(null);
+
+    const element = await GaragePage({ searchParams: Promise.resolve({ from: SOURCE_SETUP_ID }) });
+    const loginButton = findElementOfType(element, DiscordLoginButton);
+
+    expect(loginButton?.props.nextPath).toBe(`/garage?from=${SOURCE_SETUP_ID}`);
+    expect(getSetupByIdMock).not.toHaveBeenCalled();
+  });
+
+  it("does not carry an invalid source ID into the sign-in return path", async () => {
+    getCurrentUserMock.mockResolvedValue(null);
+
+    const element = await GaragePage({ searchParams: Promise.resolve({ from: "not-a-uuid" }) });
+    const loginButton = findElementOfType(element, DiscordLoginButton);
+
+    expect(loginButton?.props.nextPath).toBe("/garage");
   });
 
   it("validates and reads a public setup through the normal reader, passing only server-derived metadata", async () => {

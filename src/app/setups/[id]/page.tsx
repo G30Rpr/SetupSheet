@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 
 import { JsonLd } from "@/components/json-ld";
+import { OpenInGarageLink } from "@/components/open-in-garage-link";
 import { PublicFieldTestReports } from "@/components/public-field-test-reports";
 import { RelatedSetups } from "@/components/related-setups";
 import { SetupCard } from "@/components/setup-card";
@@ -178,6 +179,7 @@ export default async function SetupDetailPage({
         </p>
       </div>
 
+      <OpenInGarageLink setupId={setup.id} game={setup.game} />
       <SetupCard
         setup={setup}
         linkTitle={false}

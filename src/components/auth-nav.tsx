@@ -29,12 +29,18 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-export function DiscordLoginButton({ className }: { className?: string }) {
+export function DiscordLoginButton({
+  className,
+  nextPath,
+}: {
+  className?: string;
+  nextPath?: string;
+}) {
   const { signInWithDiscord } = useAuth();
 
   return (
     <Button
-      onClick={() => void signInWithDiscord()}
+      onClick={() => void signInWithDiscord(nextPath)}
       size="sm"
       className={cn(
         "bg-[#5865F2] text-white hover:bg-[#4752C4] hover:shadow-[0_0_24px_-4px_rgba(88,101,242,0.6)]",

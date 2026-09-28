@@ -27,6 +27,8 @@ dark, sim-racing themed UI (carbon black, racing green, alert red).
   moderation information.
 - `/account/data-deletion` — Authenticated manual account/data-deletion request flow.
 - `/report` — Authenticated private reporting flow for setups, comments, and profiles.
+- `/engineer` — Anonymous setup recommendations for reviewed ACC and Le Mans Ultimate symptoms, with a static fallback independent of Supabase.
+- `/garage` — Private, authenticated setup sessions, revision snapshots, one-change run plans, and lap logs. A supported public setup can be opened in Garage; setup values copy only after an explicit opt-in.
 
 ## Project structure
 
@@ -157,6 +159,13 @@ supabase/
     0024_setup_search_view.sql                       profile-aware setup search
     0025_account_deletion_requests.sql               manual account deletion workflow
     0026_content_reports.sql                          private moderation report intake
+    0027_most_wanted_requests.sql                     rolling 90-day request aggregate
+    0028_setup_files_gc.sql                           Storage orphan/deletion helpers
+    0029_storage_bucket_limits.sql                    10 MiB bucket object cap
+    0030_garage_private_workflow.sql                  private Garage tables, RLS, atomic baseline RPC
+    0031_garage_start_from_setup.sql                  source-derived Garage start RPC
+    0032_field_test_reports.sql                       private reports + sanitized public projections
+    0033_engineer_public_calibration.sql               privacy-safe 90-day calibration aggregate
   seed.sql                          sample setups across all 8 supported games
 ```
 
@@ -207,7 +216,11 @@ the production build and checks gzipped JS/CSS chunk budgets.
   loading every profile into the client. Migration `0025_account_deletion_requests.sql`
   adds a user-scoped manual deletion-request workflow without exposing a
   Supabase service key to the application. Migration `0026_content_reports.sql`
-  adds private setup/comment report intake for operator review.
+  adds private setup/comment report intake for operator review. Migrations `0030`–`0033`
+  create the private ACC/LMU Garage workflow and its server-derived start-from-setup path,
+  server-derived field-test reports with a sanitized public projection, and a 90-day
+  privacy-safe Engineer calibration aggregate. Apply these in numeric order before deploying
+  the corresponding app code; live configured-Supabase validation is still a release check.
 
 ## Auth: Supabase + Discord OAuth
 
@@ -217,10 +230,13 @@ Router (it replaces the deprecated `auth-helpers-nextjs`). The flow:
 
 1. `DiscordLoginButton` (in `auth-nav.tsx`) calls
    `supabase.auth.signInWithOAuth({ provider: "discord" })` from the browser
-   client, which redirects the user to Discord, then back to Supabase.
+   client, which redirects the user to Discord, then back to Supabase. A flow
+   that needs to resume at a local destination (for example, `/garage?from=<setup-id>`)
+   carries that path as the callback's `next` parameter.
 2. Supabase redirects the browser to `/auth/callback?code=...` on your site.
-   `src/app/auth/callback/route.ts` exchanges that code for a session and
-   sets the auth cookies, then redirects to `/`.
+   `src/app/auth/callback/route.ts` exchanges that code for a session, sets the
+   auth cookies, validates `next` as an internal path (rejecting absolute and
+   protocol-relative URLs), and redirects to that destination or `/`.
 3. `src/proxy.ts` runs on every request and refreshes the session
    cookie via `updateSession()`, so the token never silently expires.
 4. `AuthProvider` (wrapped around the app in `layout.tsx`) hydrates from the
@@ -261,17 +277,21 @@ permit).
 3. In **Authentication → URL Configuration**, set:
    - **Site URL**: `http://localhost:3000` for local dev (your production
      domain once deployed).
-   - **Redirect URLs**: add `http://localhost:3000/auth/callback` (and your
-     production equivalent, e.g. `https://setupsheet.app/auth/callback`).
-     Supabase only allows redirecting to URLs on this allow-list.
+   - **Redirect URLs**: allow the callback including its query string, because the
+     Garage sign-in flow carries a validated `next` path. With Supabase's glob syntax,
+     add the narrowly scoped patterns `http://localhost:3000/auth/callback**` and
+     `https://setupsheet.app/auth/callback**` (replace the production host as needed).
+     Supabase only allows redirecting to URLs on this allow-list; do not broaden the
+     production rule to an unrestricted host-wide wildcard.
 
    **If you land back on `/?code=...` instead of being logged in:** that
    means the `redirectTo` your app asked for wasn't on the allow-list above,
    so Supabase silently fell back to the bare Site URL instead of
-   `/auth/callback` — check the exact entry exists (not just the bare
-   origin). `src/proxy.ts` will forward a stray `?code=` on any page to
-   `/auth/callback` as a safety net, but that only papers over the symptom;
-   the actual fix is fixing the allow-list entry.
+   `/auth/callback` — check a callback entry exists (not just the bare
+   origin). Verify that the allow-list pattern matches the callback on the
+   correct host, including its query string. `src/proxy.ts` will forward a stray
+   `?code=` on any page to `/auth/callback` as a safety net, but that only papers
+   over the symptom; the actual fix is correcting the allow-list entry.
 
 ### 4. Test it
 
@@ -281,7 +301,9 @@ npm run dev
 
 Click **Login with Discord** in the header → approve on Discord → you're
 redirected back to SetupSheet signed in, with your Discord avatar in the
-header. Click the avatar → **Log out** to sign out.
+header. To test the return flow, open a public ACC/LMU setup while signed out,
+choose **Open in Garage**, then sign in; you should return to that setup's
+Garage start form. Click the avatar → **Log out** to sign out.
 
 ## Database: setups, upvotes, and RLS
 
@@ -329,10 +351,13 @@ its race-condition fix, the request-reopen trigger, comment length, and
 0018's direct-API data constraints, 0020's atomic setup creation, 0021's
 INSERT grants/rate limits, 0022's setup freshness trigger, 0023's profile
 aggregate view, 0024's author-search view, 0025's deletion-request policies,
-and 0026's moderation-report policies. Needs a reachable Postgres
+0026's moderation-report policies, and 0030–0033's Garage ownership/RLS,
+source-derived creation, field-test eligibility/metrics/privacy, concurrency,
+notification/count, and calibration-projection checks. Needs a reachable Postgres
 (`PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD` env vars, defaulting to
-`localhost:5432` as `postgres`) — CI runs this same script against a
-`postgres:16` service container on every push.
+`localhost:5432` as `postgres`). CI runs this script against a `postgres:16`
+service container; latest recorded CI run `36262690508` passed its migration job.
+That CI result is not a live configured-Supabase migration or smoke test.
 
 **RLS policies**, scoped with `auth.uid()`:
 
@@ -528,11 +553,13 @@ automatically, so no `vercel.json` or custom build settings are needed.
    deployed link:
    - Supabase dashboard → **Authentication → URL Configuration**.
    - Set **Site URL** to your main Vercel URL (or custom domain).
-   - Add both `https://<your-vercel-url>/auth/callback` **and**
-     `http://localhost:3000/auth/callback` to **Redirect URLs** — Supabase
-     rejects redirects to anything not on this list. If you'll also test
-     from branch preview URLs, add each of those too (or a wildcard pattern
-     if your Supabase plan supports it).
+   - Add narrowly scoped callback patterns such as
+     `https://<your-vercel-url>/auth/callback**` and
+     `http://localhost:3000/auth/callback**` to **Redirect URLs**. The `**`
+     covers the encoded `next` query used to resume Garage sign-in. Supabase
+     rejects redirects not matched by this allow-list. For branch previews,
+     add each preview's callback pattern or a restricted wildcard matching
+     only your Vercel project/team hosts.
    - You do **not** need to touch Discord's OAuth2 settings again — Discord
      only ever redirects back to Supabase's fixed
      `https://<project-ref>.supabase.co/auth/v1/callback`, never directly to

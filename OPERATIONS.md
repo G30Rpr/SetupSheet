@@ -161,12 +161,32 @@ where id = '<REPORT_UUID>'::uuid;
 
 Remove or hide violating content using the existing owner/admin process, and preserve evidence only as long as the approved retention policy requires.
 
+## Engineer, Garage, and field-test data
+
+- The Garage tables (`garage_sessions`, `garage_revisions`, `garage_run_plan_items`, and
+  `garage_laps`) are private, owner-scoped data. Do not expose them through new anonymous
+  queries or grant broad table access; child-row RLS follows ownership through the parent
+  session.
+- `field_test_reports` is also private. Public reads must use the explicit
+  `field_test_reports_public` and `field_test_counts` views; never add public access to the
+  base table or expose private notes, Garage session IDs, or internal user IDs.
+- `engineer_calibration_evidence` contains only recent aggregates and no report/setup/session/
+  user identifiers. Static Engineer recommendations remain the fallback if this view is
+  absent or unreadable. Calibration is a ranking adjustment, not a change to the recommended
+  setup amounts.
+- The Engineer and Garage workflow currently support ACC and Le Mans Ultimate only; do not
+  treat other catalog games as reviewed.
+
 ## Before launch
 
-- Apply migrations `0023` through `0029` after `0022`, in numeric order
-  (`0027` adds the most-wanted view, `0028` the Storage retention helpers, `0029` the
-  bucket size cap). `npm run test:db` applies all of them in order against a scratch
-  database and is the CI gate for this.
+- Apply migrations `0023` through `0033` after `0022`, in numeric order. This includes
+  `0027` (most-wanted view), `0028` (Storage retention helpers), `0029` (bucket size cap),
+  `0030` (private Garage tables/RLS and atomic baseline creation), `0031` (server-derived
+  start-from-setup RPC), `0032` (field-test reports and sanitized public projections), and
+  `0033` (90-day privacy-safe Engineer calibration evidence). Do not deploy the matching
+  app changes before applying the migrations. The `db-migrations` CI job runs the full
+  harness against PostgreSQL 16; live configured-Supabase validation remains a separate
+  deployment check.
 - Confirm the `leaderboard` view exposes `total_ratings` and `setup_search` exposes
   `author_username`, and that the new objects exist:
 
@@ -175,6 +195,20 @@ Remove or hide violating content using the existing owner/admin process, and pre
   select has_function_privilege('authenticated','public.orphaned_setup_files(interval)','execute');  -- expect f
   select has_function_privilege('service_role','public.orphaned_setup_files(interval)','execute');   -- expect t
   select file_size_limit from storage.buckets where id = 'setup-files';  -- expect 10485760
+
+  select table_name
+  from information_schema.tables
+  where table_schema = 'public'
+    and table_name in (
+      'garage_sessions', 'garage_revisions', 'garage_run_plan_items', 'garage_laps',
+      'field_test_reports', 'field_test_reports_public', 'field_test_counts',
+      'engineer_calibration_evidence'
+    );
+
+  select has_function_privilege('anon','public.create_field_test_report(uuid,uuid,text)','execute');
+  -- expect f
+  select has_function_privilege('authenticated','public.create_field_test_report(uuid,uuid,text)','execute');
+  -- expect t
   ```
 
 - Configure WAF/CDN limits for uploads, Server Actions, authentication failures, and

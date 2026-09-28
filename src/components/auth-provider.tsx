@@ -10,14 +10,15 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 
-import { createClient } from "@/lib/supabase/client";
+import { buildAuthCallbackUrl } from "@/lib/auth-redirect";
 import { logger } from "@/lib/logger";
+import { createClient } from "@/lib/supabase/client";
 
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
-  signInWithDiscord: () => Promise<void>;
+  signInWithDiscord: (nextPath?: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -69,12 +70,12 @@ export function AuthProvider({
       user,
       session,
       isLoading,
-      async signInWithDiscord() {
+      async signInWithDiscord(nextPath) {
         try {
           const { error } = await supabase.auth.signInWithOAuth({
             provider: "discord",
             options: {
-              redirectTo: `${window.location.origin}/auth/callback`,
+              redirectTo: buildAuthCallbackUrl(window.location.origin, nextPath),
             },
           });
           if (error) logger.error("AuthProvider: Discord sign-in failed", error);
