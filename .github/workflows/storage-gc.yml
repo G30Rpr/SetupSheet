@@ -1,0 +1,44 @@
+name: Storage Garbage Collection
+
+on:
+  schedule:
+    # Run weekly on Sundays at 04:00 UTC
+    - cron: "0 4 * * 0"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Perform a dry run without deleting objects"
+        type: boolean
+        default: false
+      grace:
+        description: "Grace period interval for orphaned files"
+        type: string
+        default: "24 hours"
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run Orphaned Storage Sweep
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "Notice: SUPABASE_SERVICE_ROLE_KEY secret is not configured; skipping automated sweep."
+            exit 0
+          fi
+          EXTRA_ARGS=""
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --dry-run"
+          fi
+          if [ -n "${{ github.event.inputs.grace }}" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --grace '${{ github.event.inputs.grace }}'"
+          fi
+          npm run storage:sweep -- $EXTRA_ARGS

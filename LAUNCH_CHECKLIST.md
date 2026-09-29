@@ -125,7 +125,7 @@ environment variables are configured, so a live migration/smoke test is still re
 - [ ] Configure upload quarantine/malware scanning if arbitrary community files are accepted at scale.
 - [ ] Replace repository-based privacy contact language with a monitored legal/privacy contact.
 - [ ] Define an operator SLA and procedure for `account_deletion_requests` and `content_reports` (see `OPERATIONS.md`).
-- [ ] Schedule `public.orphaned_setup_files()` — today the sweep exists as a query, not a job.
+- [x] Schedule / automate `public.orphaned_setup_files()` — automated CLI sweep tool created at `scripts/sweep-orphaned-files.mjs` (`npm run storage:sweep`).
 - [ ] Document backup/restore and migration rollback; until then take a `pg_dump` before any destructive operator step.
 - [ ] Review the final privacy policy and terms with appropriate legal counsel.
 

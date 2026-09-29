@@ -109,9 +109,11 @@ select count(*) from public.orphaned_setup_files('7 days');   -- audit first
   users.
 - Deletion is intentionally not implemented in SQL. Run the list, then delete via the
   Storage API above; re-running the query afterwards should return 0 rows.
-- Nothing schedules this yet. Until a scheduled job exists (see
-  `LAUNCH_CHECKLIST.md`), run it whenever you complete a deletion request, and at least
-  weekly.
+- Automated CLI tool: run `npm run storage:sweep -- --dry-run` to audit orphans without
+  deleting, or `npm run storage:sweep` to delete in batches via the Storage API.
+  For completed account deletions: `npm run storage:sweep -- --user <user-uuid>`.
+- Scheduled sweeps: configure a scheduled workflow (or cron) running `npm run storage:sweep`
+  with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to automate weekly maintenance.
 
 ### Per-account listing
 

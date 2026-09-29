@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:db": "bash scripts/test-db.sh",
+    "storage:sweep": "node scripts/sweep-orphaned-files.mjs",
     "prepare": "husky"
   },
   "dependencies": {
