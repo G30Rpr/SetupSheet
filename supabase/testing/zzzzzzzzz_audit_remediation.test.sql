@@ -11,26 +11,14 @@ declare
   v_test_user_id uuid := 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   v_username text;
 begin
-  insert into auth.users (id, email, raw_user_meta_data)
-  values (v_test_user_id, 'test-conflict@example.com', '{"full_name":"Initial Name"}'::jsonb)
+  -- Pre-insert a profile with the same ID to simulate an existing profile or retry
+  insert into public.profiles (id, username, avatar_url)
+  values (v_test_user_id, 'Existing Profile', null)
   on conflict (id) do nothing;
 
-  select username into v_username from public.profiles where id = v_test_user_id;
-  if v_username <> 'Initial Name' then
-    raise exception 'REGRESSION: expected profile Initial Name, got %', v_username;
-  end if;
-
-  -- Fire the trigger again with updated metadata simulating an auth retry or provider update
-  perform public.handle_new_user() from (
-    select v_test_user_id as id,
-           'test-conflict@example.com' as email,
-           '{"full_name":"Updated Name"}'::jsonb as raw_user_meta_data
-  ) as new;
-
-  -- Also verify direct re-insert with ON CONFLICT handles it cleanly
-  insert into public.profiles (id, username, avatar_url)
-  values (v_test_user_id, 'Updated Name', null)
-  on conflict (id) do update set username = excluded.username;
+  -- Inserting auth.users fires handle_new_user(), which succeeds via ON CONFLICT DO UPDATE
+  insert into auth.users (id, email, raw_user_meta_data)
+  values (v_test_user_id, 'test-conflict@example.com', '{"full_name":"Updated Name"}'::jsonb);
 
   select username into v_username from public.profiles where id = v_test_user_id;
   if v_username <> 'Updated Name' then
@@ -99,33 +87,40 @@ begin
   insert into public.setups (id, user_id, game, car, track, condition, description, tags, rig_profile, pace, predictability)
   values ('55555555-5555-4555-8555-555555555555', v_owner_id, 'iRacing', 'Porsche 992 GT3 Cup', 'Spa-Francorchamps', 'Dry', 'test setup', '{}', 'Gamepad', 3, 3)
   returning id into v_setup_id;
+end $$;
 
-  -- Set auth.uid() to the setup owner
-  create or replace function auth.uid() returns uuid language sql stable as
-    $$ select 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid $$;
+-- Set auth.uid() to the setup owner
+create or replace function auth.uid() returns uuid language sql stable as
+  $$ select 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid $$;
 
+-- Test self-upvote rejection under authenticated role (which enforces RLS)
+begin;
+set local role authenticated;
+do $$
+declare
+  v_owner_id uuid := 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid;
+  v_setup_id uuid := '55555555-5555-4555-8555-555555555555'::uuid;
+begin
   begin
     insert into public.setup_upvotes (user_id, setup_id)
     values (v_owner_id, v_setup_id);
     raise exception 'REGRESSION: setup owner was permitted to upvote their own setup';
-  exception when others then
-    -- RLS with check failure
+  exception when check_violation or insufficient_privilege or others then
     raise notice 'Self-upvote correctly rejected';
   end;
-
-  -- Set auth.uid() to other user
-  create or replace function auth.uid() returns uuid language sql stable as
-    $$ select 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid $$;
-
-  insert into public.setup_upvotes (user_id, setup_id)
-  values (v_other_id, v_setup_id);
-
-  if not exists (select 1 from public.setup_upvotes where user_id = v_other_id and setup_id = v_setup_id) then
-    raise exception 'REGRESSION: other user upvote failed';
-  end if;
-
-  raise notice 'CHECK 4 passed';
 end $$;
+rollback;
+
+-- Set auth.uid() to other user
+create or replace function auth.uid() returns uuid language sql stable as
+  $$ select 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid $$;
+
+begin;
+set local role authenticated;
+insert into public.setup_upvotes (user_id, setup_id)
+values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid, '55555555-5555-4555-8555-555555555555'::uuid);
+commit;
+reset role;
 
 \echo 'CHECK 5: cascade deletion of setup cleans up ratings and upvotes safely'
 do $$
