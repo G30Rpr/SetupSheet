@@ -221,5 +221,94 @@ Remove or hide violating content using the existing owner/admin process, and pre
 - Configure malware scanning/quarantine if community uploads are not manually reviewed.
 - Replace repository-based privacy contact language with a monitored contact.
 - Restrict SQL Editor/service-role access to trusted operators and rotate credentials according to the provider policy.
-- Backups/restore and migration rollback policy are **not** documented anywhere yet. Until
-  they are, take a `pg_dump` before any destructive step on this page.
+
+## Operator SLAs and Review Procedures
+
+### Account Deletion Requests (`account_deletion_requests`)
+- **Target SLA:** Review and execute within **7 calendar days** of submission (well within statutory GDPR 30-day and CCPA 45-day requirements).
+- **Execution Runbook:**
+  1. Inspect pending requests:
+     ```sql
+     select id, user_id, status, created_at
+     from public.account_deletion_requests
+     where status = 'pending'
+     order by created_at asc;
+     ```
+  2. Mark request as `processing`:
+     ```sql
+     update public.account_deletion_requests
+     set status = 'processing'
+     where id = '<REQUEST_ID>'::uuid;
+     ```
+  3. Purge user's files from Supabase Storage:
+     ```bash
+     npm run storage:sweep -- --user <USER_UUID>
+     ```
+  4. Complete request and delete user from `auth.users` (cascading public profiles, setups, versions, ratings, comments, and upvotes):
+     ```sql
+     begin;
+     update public.account_deletion_requests
+     set status = 'completed', completed_at = now()
+     where user_id = '<USER_UUID>'::uuid;
+
+     delete from auth.users where id = '<USER_UUID>'::uuid;
+     commit;
+     ```
+
+### Content Moderation Reports (`content_reports`)
+- **Target SLA:**
+  - **Critical (spam, unsafe_file, harassment):** Review within **24 hours**.
+  - **Standard (copyright, other):** Review within **72 hours**.
+- **Investigation Runbook:**
+  1. Query active moderation queue:
+     ```sql
+     select id, reporter_id, target_type, target_id, reason, details, status, created_at
+     from public.content_reports
+     where status in ('pending', 'reviewing')
+     order by created_at asc;
+     ```
+  2. Inspect target entity:
+     - For `setup`: `select * from public.setups where id = '<TARGET_ID>'::uuid;`
+     - For `comment`: `select * from public.setup_comments where id = '<TARGET_ID>'::uuid;`
+     - For `profile`: `select * from public.profiles where id = '<TARGET_ID>'::uuid;`
+  3. Action:
+     - If violating: delete the offending comment or setup (followed by `npm run storage:sweep`), and suspend/ban the author if malicious.
+     - Update report status:
+       ```sql
+       update public.content_reports
+       set status = 'resolved', reviewed_at = now()
+       where id = '<REPORT_ID>'::uuid;
+       ```
+     - If benign or false positive:
+       ```sql
+       update public.content_reports
+       set status = 'dismissed', reviewed_at = now()
+       where id = '<REPORT_ID>'::uuid;
+       ```
+
+## Backup, Restore, and Migration Rollback Policy
+
+### Automated & On-Demand Backups
+1. **Automated Backups:** Ensure daily automated backups and Point-In-Time Recovery (PITR) are enabled in the Supabase Dashboard under **Project Settings > Database > Backups**.
+2. **On-Demand Operator Snapshot:** Before running any manual DDL or running migrations against production, take an explicit logical schema + data snapshot:
+   ```bash
+   # Schema + data backup via Supabase CLI
+   supabase db dump --project-ref <PROJECT_REF> -f "backup_$(date +%Y%m%d_%H%M%S).sql"
+
+   # Or via pg_dump
+   pg_dump "$DATABASE_URL" --format=custom --file="setupsheet_$(date +%Y%m%d_%H%M%S).dump"
+   ```
+
+### Restoration Runbook
+- **Point-In-Time Restore (PITR):** In the Supabase Dashboard, select PITR to restore to a specific timestamp or spin up a restored branch.
+- **SQL Dump Restore:** To restore a custom dump file to a recovery database:
+  ```bash
+  psql "$RECOVERY_DATABASE_URL" -f backup_YYYYMMDD_HHMMSS.sql
+  ```
+
+### Migration Rollback Policy
+- **Forward-Fix Principle:** SetupSheet operates on a strict forward-fix migration policy. Never delete historical migration files that have already been applied to production. Write a new sequential migration (`0035_...`) to revert or adjust schema definitions.
+- **Transactional DDL:** PostgreSQL supports fully transactional DDL (`CREATE INDEX`, `ALTER TABLE`, `CREATE FUNCTION`). Wrap manual DDL alterations in `BEGIN ... COMMIT;` blocks so a failed alteration rolls back completely without leaving partial schema changes.
+- **Rolling Back Specific 0034 Changes:**
+  - To drop added indexes if needed: `drop index if exists public.<index_name>;`
+  - All trigger replacements in `0034` are idempotent `create or replace function`, making rollback as simple as re-applying previous function bodies if necessary.
