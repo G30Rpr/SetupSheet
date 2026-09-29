@@ -29,11 +29,16 @@ vi.mock("@/lib/supabase/auth", () => ({
   getCurrentUser: (...args: unknown[]) => getCurrentUser(...args),
 }));
 
-const { createUploadTarget, verifyUploadedFile } = await import("@/lib/actions/setups");
+const {
+  createUploadTarget,
+  verifyUploadedFile,
+  resetUploadTargetRateLimitsForTesting,
+} = await import("@/lib/actions/setups");
 
 describe("createUploadTarget", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    await resetUploadTargetRateLimitsForTesting();
     getCurrentUser.mockResolvedValue({ id: USER_ID });
     createSignedUploadUrl.mockResolvedValue({ data: { token: "signed-token" }, error: null });
   });
@@ -88,6 +93,16 @@ describe("createUploadTarget", () => {
 
     expect(result.error).toContain("Unsupported upload type");
     expect(createSignedUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it("enforces a per-user rate limit on signed upload target requests", async () => {
+    for (let i = 0; i < 30; i++) {
+      const res = await createUploadTarget("setup", `Monza_${i}.json`, 1024);
+      expect(res.error).toBeNull();
+    }
+    const rateLimited = await createUploadTarget("setup", "overflow.json", 1024);
+    expect(rateLimited.error).toContain("Upload rate limit reached");
+    expect(rateLimited.path).toBeNull();
   });
 });
 

@@ -132,6 +132,27 @@ function validateRating(value: unknown): boolean {
  * always `<userId>/<id>-<name>` inside the caller's own folder -- the same
  * shape the 0004/0019 Storage policies require.
  */
+const MAX_UPLOAD_TARGETS_PER_HOUR = 30;
+const uploadTargetTimestampsByUser = new Map<string, number[]>();
+
+function checkUploadTargetRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const windowMs = 60 * 60 * 1000;
+  const recent = (uploadTargetTimestampsByUser.get(userId) ?? []).filter(
+    (t) => now - t < windowMs
+  );
+  if (recent.length >= MAX_UPLOAD_TARGETS_PER_HOUR) {
+    return false;
+  }
+  recent.push(now);
+  uploadTargetTimestampsByUser.set(userId, recent);
+  return true;
+}
+
+export async function resetUploadTargetRateLimitsForTesting(): Promise<void> {
+  uploadTargetTimestampsByUser.clear();
+}
+
 export async function createUploadTarget(
   kind: UploadKind,
   fileName: string,
@@ -153,6 +174,13 @@ export async function createUploadTarget(
     return {
       ...empty,
       error: "You need to be logged in with Discord to upload a file.",
+    };
+  }
+
+  if (!checkUploadTargetRateLimit(user.id)) {
+    return {
+      ...empty,
+      error: "Upload rate limit reached; please try again later.",
     };
   }
 
@@ -549,6 +577,18 @@ export async function toggleUpvote(
   }
   if (!isUuid(setupId) || typeof isCurrentlyUpvoted !== "boolean") {
     return { error: "That upvote request is invalid." };
+  }
+
+  if (!isCurrentlyUpvoted) {
+    const { data: setup } = await supabase
+      .from("setups")
+      .select("user_id")
+      .eq("id", setupId)
+      .maybeSingle();
+
+    if (setup && setup.user_id === user.id) {
+      return { error: "You can't upvote your own setup." };
+    }
   }
 
   const { error } = isCurrentlyUpvoted

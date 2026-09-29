@@ -24,11 +24,12 @@ This checklist separates repository-complete work from actions that require the 
 
 ## Supabase deployment
 
-**Apply migrations before the app deploy, not after.** Migrations `0030`–`0033`
+**Apply migrations before the app deploy, not after.** Migrations `0030`–`0034`
 add the private Garage workflow, setup-derived Garage creation, field-test reporting,
-and the privacy-safe Engineer calibration view. The app must not be deployed before
-these migrations are applied and verified. Apply migrations in numeric order. If `0022`
-is already applied, run:
+the privacy-safe Engineer calibration view, and database audit remediation (idempotent signup
+profiles, missing FK/retention indexes, cascade delete safety, and self-upvote prevention).
+The app must not be deployed before these migrations are applied and verified. Apply
+migrations in numeric order. If `0022` is already applied, run:
 
 ```text
 0023_profile_setup_stats.sql
@@ -42,6 +43,7 @@ is already applied, run:
 0031_garage_start_from_setup.sql
 0032_field_test_reports.sql
 0033_engineer_public_calibration.sql
+0034_audit_remediation.sql
 ```
 
 Then verify:
@@ -119,12 +121,12 @@ environment variables are configured, so a live migration/smoke test is still re
 - [ ] Turn on Dependabot for the repo (`.github/dependabot.yml` is committed but the feature is off: `GET /dependabot/alerts` returns "Dependabot alerts are disabled for this repository"), and enable code scanning or accept the gap in writing.
 - [x] GitHub Actions run `36431167843` on feature commit `bf22886` passed all three jobs: `lint-test-build`, `e2e`, and `db-migrations`.
 - [ ] Confirm branch protection requires those three checks before merging to the default branch; the CI pass does not verify repository protection settings.
-- [ ] Configure shared edge/WAF limits for uploads, Server Actions, anonymous download-counter traffic, and repeated auth failures. (There is still no server-side per-user *upload* rate limit; `0021` covers `setups`/`setup_comments`/`setup_requests` inserts only.)
+- [ ] Configure shared edge/WAF limits for uploads, Server Actions, anonymous download-counter traffic, and repeated auth failures. (Application-level upload target rate limiting is implemented in `createUploadTarget` at 30 requests/user/hour, alongside database triggers in `0021` for `setups`/`setup_comments`/`setup_requests`.)
 - [ ] Configure upload quarantine/malware scanning if arbitrary community files are accepted at scale.
 - [ ] Replace repository-based privacy contact language with a monitored legal/privacy contact.
-- [ ] Define an operator SLA and procedure for `account_deletion_requests` and `content_reports` (see `OPERATIONS.md`).
-- [ ] Schedule `public.orphaned_setup_files()` — today the sweep exists as a query, not a job.
-- [ ] Document backup/restore and migration rollback; until then take a `pg_dump` before any destructive operator step.
+- [x] Define an operator SLA and procedure for `account_deletion_requests` and `content_reports` (documented in `OPERATIONS.md`).
+- [x] Schedule / automate `public.orphaned_setup_files()` — automated CLI sweep tool created at `scripts/sweep-orphaned-files.mjs` (`npm run storage:sweep`).
+- [x] Document backup/restore and migration rollback policy (documented in `OPERATIONS.md`).
 - [ ] Review the final privacy policy and terms with appropriate legal counsel.
 
 ## Browser and performance validation

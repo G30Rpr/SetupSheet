@@ -109,9 +109,11 @@ select count(*) from public.orphaned_setup_files('7 days');   -- audit first
   users.
 - Deletion is intentionally not implemented in SQL. Run the list, then delete via the
   Storage API above; re-running the query afterwards should return 0 rows.
-- Nothing schedules this yet. Until a scheduled job exists (see
-  `LAUNCH_CHECKLIST.md`), run it whenever you complete a deletion request, and at least
-  weekly.
+- Automated CLI tool: run `npm run storage:sweep -- --dry-run` to audit orphans without
+  deleting, or `npm run storage:sweep` to delete in batches via the Storage API.
+  For completed account deletions: `npm run storage:sweep -- --user <user-uuid>`.
+- Scheduled sweeps: configure a scheduled workflow (or cron) running `npm run storage:sweep`
+  with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to automate weekly maintenance.
 
 ### Per-account listing
 
@@ -179,14 +181,15 @@ Remove or hide violating content using the existing owner/admin process, and pre
 
 ## Before launch
 
-- Apply migrations `0023` through `0033` after `0022`, in numeric order. This includes
+- Apply migrations `0023` through `0034` after `0022`, in numeric order. This includes
   `0027` (most-wanted view), `0028` (Storage retention helpers), `0029` (bucket size cap),
   `0030` (private Garage tables/RLS and atomic baseline creation), `0031` (server-derived
-  start-from-setup RPC), `0032` (field-test reports and sanitized public projections), and
-  `0033` (90-day privacy-safe Engineer calibration evidence). Do not deploy the matching
-  app changes before applying the migrations. The `db-migrations` CI job runs the full
-  harness against PostgreSQL 16; live configured-Supabase validation remains a separate
-  deployment check.
+  start-from-setup RPC), `0032` (field-test reports and sanitized public projections),
+  `0033` (90-day privacy-safe Engineer calibration evidence), and `0034` (audit remediation:
+  idempotent signup profiles, missing foreign key/retention indexes, cascade delete safety,
+  and self-upvote prevention). Do not deploy the matching app changes before applying
+  the migrations. The `db-migrations` CI job runs the full harness against PostgreSQL 16;
+  live configured-Supabase validation remains a separate deployment check.
 - Confirm the `leaderboard` view exposes `total_ratings` and `setup_search` exposes
   `author_username`, and that the new objects exist:
 
@@ -218,5 +221,94 @@ Remove or hide violating content using the existing owner/admin process, and pre
 - Configure malware scanning/quarantine if community uploads are not manually reviewed.
 - Replace repository-based privacy contact language with a monitored contact.
 - Restrict SQL Editor/service-role access to trusted operators and rotate credentials according to the provider policy.
-- Backups/restore and migration rollback policy are **not** documented anywhere yet. Until
-  they are, take a `pg_dump` before any destructive step on this page.
+
+## Operator SLAs and Review Procedures
+
+### Account Deletion Requests (`account_deletion_requests`)
+- **Target SLA:** Review and execute within **7 calendar days** of submission (well within statutory GDPR 30-day and CCPA 45-day requirements).
+- **Execution Runbook:**
+  1. Inspect pending requests:
+     ```sql
+     select id, user_id, status, created_at
+     from public.account_deletion_requests
+     where status = 'pending'
+     order by created_at asc;
+     ```
+  2. Mark request as `processing`:
+     ```sql
+     update public.account_deletion_requests
+     set status = 'processing'
+     where id = '<REQUEST_ID>'::uuid;
+     ```
+  3. Purge user's files from Supabase Storage:
+     ```bash
+     npm run storage:sweep -- --user <USER_UUID>
+     ```
+  4. Complete request and delete user from `auth.users` (cascading public profiles, setups, versions, ratings, comments, and upvotes):
+     ```sql
+     begin;
+     update public.account_deletion_requests
+     set status = 'completed', completed_at = now()
+     where user_id = '<USER_UUID>'::uuid;
+
+     delete from auth.users where id = '<USER_UUID>'::uuid;
+     commit;
+     ```
+
+### Content Moderation Reports (`content_reports`)
+- **Target SLA:**
+  - **Critical (spam, unsafe_file, harassment):** Review within **24 hours**.
+  - **Standard (copyright, other):** Review within **72 hours**.
+- **Investigation Runbook:**
+  1. Query active moderation queue:
+     ```sql
+     select id, reporter_id, target_type, target_id, reason, details, status, created_at
+     from public.content_reports
+     where status in ('pending', 'reviewing')
+     order by created_at asc;
+     ```
+  2. Inspect target entity:
+     - For `setup`: `select * from public.setups where id = '<TARGET_ID>'::uuid;`
+     - For `comment`: `select * from public.setup_comments where id = '<TARGET_ID>'::uuid;`
+     - For `profile`: `select * from public.profiles where id = '<TARGET_ID>'::uuid;`
+  3. Action:
+     - If violating: delete the offending comment or setup (followed by `npm run storage:sweep`), and suspend/ban the author if malicious.
+     - Update report status:
+       ```sql
+       update public.content_reports
+       set status = 'resolved', reviewed_at = now()
+       where id = '<REPORT_ID>'::uuid;
+       ```
+     - If benign or false positive:
+       ```sql
+       update public.content_reports
+       set status = 'dismissed', reviewed_at = now()
+       where id = '<REPORT_ID>'::uuid;
+       ```
+
+## Backup, Restore, and Migration Rollback Policy
+
+### Automated & On-Demand Backups
+1. **Automated Backups:** Ensure daily automated backups and Point-In-Time Recovery (PITR) are enabled in the Supabase Dashboard under **Project Settings > Database > Backups**.
+2. **On-Demand Operator Snapshot:** Before running any manual DDL or running migrations against production, take an explicit logical schema + data snapshot:
+   ```bash
+   # Schema + data backup via Supabase CLI
+   supabase db dump --project-ref <PROJECT_REF> -f "backup_$(date +%Y%m%d_%H%M%S).sql"
+
+   # Or via pg_dump
+   pg_dump "$DATABASE_URL" --format=custom --file="setupsheet_$(date +%Y%m%d_%H%M%S).dump"
+   ```
+
+### Restoration Runbook
+- **Point-In-Time Restore (PITR):** In the Supabase Dashboard, select PITR to restore to a specific timestamp or spin up a restored branch.
+- **SQL Dump Restore:** To restore a custom dump file to a recovery database:
+  ```bash
+  psql "$RECOVERY_DATABASE_URL" -f backup_YYYYMMDD_HHMMSS.sql
+  ```
+
+### Migration Rollback Policy
+- **Forward-Fix Principle:** SetupSheet operates on a strict forward-fix migration policy. Never delete historical migration files that have already been applied to production. Write a new sequential migration (`0035_...`) to revert or adjust schema definitions.
+- **Transactional DDL:** PostgreSQL supports fully transactional DDL (`CREATE INDEX`, `ALTER TABLE`, `CREATE FUNCTION`). Wrap manual DDL alterations in `BEGIN ... COMMIT;` blocks so a failed alteration rolls back completely without leaving partial schema changes.
+- **Rolling Back Specific 0034 Changes:**
+  - To drop added indexes if needed: `drop index if exists public.<index_name>;`
+  - All trigger replacements in `0034` are idempotent `create or replace function`, making rollback as simple as re-applying previous function bodies if necessary.
