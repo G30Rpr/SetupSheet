@@ -551,6 +551,18 @@ export async function toggleUpvote(
     return { error: "That upvote request is invalid." };
   }
 
+  if (!isCurrentlyUpvoted) {
+    const { data: setup } = await supabase
+      .from("setups")
+      .select("user_id")
+      .eq("id", setupId)
+      .maybeSingle();
+
+    if (setup && setup.user_id === user.id) {
+      return { error: "You can't upvote your own setup." };
+    }
+  }
+
   const { error } = isCurrentlyUpvoted
     ? await supabase
         .from("setup_upvotes")

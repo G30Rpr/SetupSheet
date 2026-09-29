@@ -24,11 +24,12 @@ This checklist separates repository-complete work from actions that require the 
 
 ## Supabase deployment
 
-**Apply migrations before the app deploy, not after.** Migrations `0030`–`0033`
+**Apply migrations before the app deploy, not after.** Migrations `0030`–`0034`
 add the private Garage workflow, setup-derived Garage creation, field-test reporting,
-and the privacy-safe Engineer calibration view. The app must not be deployed before
-these migrations are applied and verified. Apply migrations in numeric order. If `0022`
-is already applied, run:
+the privacy-safe Engineer calibration view, and database audit remediation (idempotent signup
+profiles, missing FK/retention indexes, cascade delete safety, and self-upvote prevention).
+The app must not be deployed before these migrations are applied and verified. Apply
+migrations in numeric order. If `0022` is already applied, run:
 
 ```text
 0023_profile_setup_stats.sql
@@ -42,6 +43,7 @@ is already applied, run:
 0031_garage_start_from_setup.sql
 0032_field_test_reports.sql
 0033_engineer_public_calibration.sql
+0034_audit_remediation.sql
 ```
 
 Then verify:

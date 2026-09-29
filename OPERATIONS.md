@@ -179,14 +179,15 @@ Remove or hide violating content using the existing owner/admin process, and pre
 
 ## Before launch
 
-- Apply migrations `0023` through `0033` after `0022`, in numeric order. This includes
+- Apply migrations `0023` through `0034` after `0022`, in numeric order. This includes
   `0027` (most-wanted view), `0028` (Storage retention helpers), `0029` (bucket size cap),
   `0030` (private Garage tables/RLS and atomic baseline creation), `0031` (server-derived
-  start-from-setup RPC), `0032` (field-test reports and sanitized public projections), and
-  `0033` (90-day privacy-safe Engineer calibration evidence). Do not deploy the matching
-  app changes before applying the migrations. The `db-migrations` CI job runs the full
-  harness against PostgreSQL 16; live configured-Supabase validation remains a separate
-  deployment check.
+  start-from-setup RPC), `0032` (field-test reports and sanitized public projections),
+  `0033` (90-day privacy-safe Engineer calibration evidence), and `0034` (audit remediation:
+  idempotent signup profiles, missing foreign key/retention indexes, cascade delete safety,
+  and self-upvote prevention). Do not deploy the matching app changes before applying
+  the migrations. The `db-migrations` CI job runs the full harness against PostgreSQL 16;
+  live configured-Supabase validation remains a separate deployment check.
 - Confirm the `leaderboard` view exposes `total_ratings` and `setup_search` exposes
   `author_username`, and that the new objects exist:
 

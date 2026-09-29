@@ -12,13 +12,23 @@
 -- Academy, F1Laps, GT Planet, simracingsetup.com, etc.), not copied from
 -- any single published setup — see git history for sources.
 
+-- Ensure a demo creator exists in auth.users if no profile exists yet,
+-- so seed setups can attach to a valid profile on a fresh database reset.
+insert into auth.users (id, email, raw_user_meta_data)
+values (
+  '00000000-0000-0000-0000-000000000001',
+  'demo@setupsheet.app',
+  '{"full_name": "SetupSheet Community", "name": "SetupSheet Community"}'::jsonb
+)
+on conflict (id) do nothing;
+
 insert into public.setups
   (user_id, game, car, track, condition, lap_time, description, tags, rig_profile,
-   setup_values, pace, predictability, upvotes, downloads, created_at)
+   setup_values, pace, predictability, rating_count, upvotes, downloads, created_at, updated_at)
 select
   (select id from public.profiles order by created_at asc limit 1),
   v.game, v.car, v.track, v.condition, v.lap_time, v.description, v.tags, v.rig_profile,
-  v.setup_values, v.pace, v.predictability, v.upvotes, v.downloads, v.created_at
+  v.setup_values, v.pace, v.predictability, 1, v.upvotes, v.downloads, v.created_at, v.created_at
 from (values
 
   -- iRacing --------------------------------------------------------------
@@ -346,3 +356,11 @@ from (values
 ) as v(game, car, track, condition, lap_time, description, tags, rig_profile,
        setup_values, pace, predictability, upvotes, downloads, created_at)
 where exists (select 1 from public.profiles);
+
+-- Populate setup_ratings with each setup's initial baseline rating so
+-- community ratings don't wipe out the seeded pace/predictability upon first vote.
+insert into public.setup_ratings (user_id, setup_id, pace, predictability, created_at, updated_at)
+select user_id, id, pace::smallint, predictability::smallint, created_at, updated_at
+from public.setups
+on conflict (user_id, setup_id) do nothing;
+
