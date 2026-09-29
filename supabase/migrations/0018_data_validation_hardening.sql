@@ -9,10 +9,15 @@
 -- sends an unusable avatar URL. The original trigger coalesced only NULL, so
 -- an empty provider name could violate the new username constraint and block
 -- sign-in entirely.
-create or replace function public.handle_new_user()
-returns trigger
+create or replace function public.sync_profile_from_auth(
+  p_id uuid,
+  p_email text,
+  p_raw_user_meta_data jsonb
+)
+returns void
 language plpgsql
-security definer set search_path = public
+security definer
+set search_path = public
 as $$
 declare
   v_username text;
@@ -20,21 +25,38 @@ declare
 begin
   v_username := left(
     coalesce(
-      nullif(btrim(new.raw_user_meta_data ->> 'full_name'), ''),
-      nullif(btrim(new.raw_user_meta_data ->> 'name'), ''),
-      nullif(btrim(new.raw_user_meta_data ->> 'user_name'), ''),
-      nullif(btrim(split_part(coalesce(new.email, ''), '@', 1)), ''),
+      nullif(btrim(p_raw_user_meta_data ->> 'full_name'), ''),
+      nullif(btrim(p_raw_user_meta_data ->> 'name'), ''),
+      nullif(btrim(p_raw_user_meta_data ->> 'user_name'), ''),
+      nullif(btrim(split_part(coalesce(p_email, ''), '@', 1)), ''),
       'Racer'
     ),
     80
   );
-  v_avatar_url := new.raw_user_meta_data ->> 'avatar_url';
+  v_avatar_url := p_raw_user_meta_data ->> 'avatar_url';
 
   insert into public.profiles (id, username, avatar_url)
   values (
-    new.id,
+    p_id,
     coalesce(nullif(v_username, ''), 'Racer'),
     case when v_avatar_url ~* '^https://' then left(v_avatar_url, 2048) else null end
+  )
+  on conflict (id) do update
+    set username = excluded.username,
+        avatar_url = excluded.avatar_url;
+end;
+$$;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  perform public.sync_profile_from_auth(
+    new.id,
+    new.email,
+    new.raw_user_meta_data
   );
   return new;
 end;
