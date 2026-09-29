@@ -54,16 +54,19 @@ export function SetupsBrowser({
   totalCount,
   initialFilters,
   loadFailed = false,
+  fieldTestCounts = {},
 }: {
   setups: Setup[];
   totalCount: number;
   initialFilters: BrowseFilters;
+  fieldTestCounts?: Record<string, number>;
   /** True when the server's browse read failed -- the grid is empty because the
    *  database was unreachable, not because nothing matched. */
   loadFailed?: boolean;
 }) {
   const searchParams = useSearchParams();
   const [additionalSetups, setAdditionalSetups] = useState<Setup[]>([]);
+  const [additionalFieldTestCounts, setAdditionalFieldTestCounts] = useState<Record<string, number>>({});
   const [remoteCursor, setRemoteCursor] = useState<SetupCursor | null>(() => {
     const lastSetup = setups.at(-1);
     return lastSetup ? { createdAt: lastSetup.uploadedAt, id: lastSetup.id } : null;
@@ -100,6 +103,7 @@ export function SetupsBrowser({
     setPrevFilterSignature(filterSignature);
     setPrevSetups(setups);
     setAdditionalSetups([]);
+    setAdditionalFieldTestCounts({});
     setRemoteError(null);
     const lastSetup = setups.at(-1);
     setRemoteCursor(lastSetup ? { createdAt: lastSetup.uploadedAt, id: lastSetup.id } : null);
@@ -294,6 +298,10 @@ export function SetupsBrowser({
             ...result.setups.filter((setup) => !knownIds.has(setup.id)),
           ];
         });
+        setAdditionalFieldTestCounts((previous) => ({
+          ...previous,
+          ...(result.fieldTestCounts ?? {}),
+        }));
         const nextCursor = result.nextCursor;
         setRemoteCursor(
           nextCursor &&
@@ -519,6 +527,7 @@ export function SetupsBrowser({
                 <li key={setup.id} className="min-w-0">
                   <SetupCard
                     setup={setup}
+                    fieldTestCount={fieldTestCounts[setup.id] ?? additionalFieldTestCounts[setup.id] ?? 0}
                     compareSelected={compareIds.includes(setup.id)}
                     onToggleCompare={compareMode ? () => toggleCompareSelect(setup.id) : undefined}
                   />

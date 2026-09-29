@@ -1,6 +1,6 @@
 # SetupSheet launch checklist
 
-Updated: 2026-09-11 (re-dated at each audit; previous revision 2026-08-28)
+Updated: 2026-09-28 (previous revision 2026-09-11)
 
 This checklist separates repository-complete work from actions that require the deployed Supabase, hosting, or search-console environments.
 
@@ -20,14 +20,15 @@ This checklist separates repository-complete work from actions that require the 
 - [x] Canonical metadata, JSON-LD, robots, sitemap, OG images, semantic headings, and internal links are implemented. The site-wide `alternates.canonical` is gone from the root layout — each page declares its own — so not-found pages no longer advertise the homepage as their canonical.
 - [x] File extension, size, and recognizable content/signature checks are implemented, and the `setup-files` bucket now also enforces a 10 MiB hard cap (`0029`) for callers that skip the Server Actions.
 - [x] Non-UUID `/setups/<id>/opengraph-image` requests are refused in `src/proxy.ts` before rendering, so junk paths can no longer force a Satori render + a 24 h edge-cache entry.
+- [x] Engineer, private Garage, field-test reporting, and public calibration implementation slices exist for ACC/LMU. The setup detail page now includes an “Open in Garage” CTA for those reviewed games; signed-out users retain a validated setup ID through the same-origin OAuth callback. In this worktree, all 62 Vitest files (321 tests), ESLint, TypeScript checking, production build, and `npm run build:budget` pass (38 JS/CSS chunks; 435.0 KiB gzip total). `npm audit --audit-level=high` also passes; two moderate Vitest-chain advisories remain accepted. Build logs show external font and placeholder-Supabase fetch failures, but the build completes. Configured-Supabase validation and domain review of the first-pass Engineer rule corpus remain outstanding.
 
 ## Supabase deployment
 
-**Apply migrations before the app deploy, not after.** The deploy is safe either way (a
-missing `setup_requests_most_wanted` view degrades to "no Most wanted panel"), but the
-feature would be silently absent, so treat this as the first step of the release:
-
-Apply migrations in numeric order. If `0022` is already applied, run:
+**Apply migrations before the app deploy, not after.** Migrations `0030`–`0033`
+add the private Garage workflow, setup-derived Garage creation, field-test reporting,
+and the privacy-safe Engineer calibration view. The app must not be deployed before
+these migrations are applied and verified. Apply migrations in numeric order. If `0022`
+is already applied, run:
 
 ```text
 0023_profile_setup_stats.sql
@@ -37,6 +38,10 @@ Apply migrations in numeric order. If `0022` is already applied, run:
 0027_most_wanted_requests.sql
 0028_setup_files_gc.sql
 0029_storage_bucket_limits.sql
+0030_garage_private_workflow.sql
+0031_garage_start_from_setup.sql
+0032_field_test_reports.sql
+0033_engineer_public_calibration.sql
 ```
 
 Then verify:
@@ -63,6 +68,19 @@ select count(*) from public.setup_requests_most_wanted;
 select has_function_privilege('authenticated','public.orphaned_setup_files(interval)','execute');  -- expect f
 select has_function_privilege('service_role','public.orphaned_setup_files(interval)','execute');   -- expect t
 select file_size_limit from storage.buckets where id = 'setup-files';                                -- expect 10485760
+
+select table_name
+from information_schema.tables
+where table_schema = 'public'
+  and table_name in (
+    'garage_sessions', 'garage_revisions', 'garage_run_plan_items', 'garage_laps',
+    'field_test_reports'
+  );
+
+select table_name
+from information_schema.views
+where table_schema = 'public'
+  and table_name in ('field_test_reports_public', 'field_test_counts', 'engineer_calibration_evidence');
 ```
 
 Run the repository migration harness locally or in CI:
@@ -70,6 +88,12 @@ Run the repository migration harness locally or in CI:
 ```bash
 npm run test:db
 ```
+
+GitHub Actions run `36431167843` passed all three jobs, including the PostgreSQL 16 migration
+suite and Playwright E2E, on feature commit `bf22886b6dfc98a8d2e7bd9961a3a6859fa3a4bd`.
+That is repository/CI validation, not a run against the configured production Supabase
+project. In the current sandbox, `psql` is unavailable locally and no Supabase deployment
+environment variables are configured, so a live migration/smoke test is still required.
 
 ## Deploy notes specific to this release
 
@@ -93,7 +117,8 @@ npm run test:db
 
 - [ ] Deploy the current branch and confirm the environment contains `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 - [ ] Turn on Dependabot for the repo (`.github/dependabot.yml` is committed but the feature is off: `GET /dependabot/alerts` returns "Dependabot alerts are disabled for this repository"), and enable code scanning or accept the gap in writing.
-- [ ] Require the `lint-test-build`, `e2e`, and `db-migrations` checks before merging to the default branch — PR #4 merged with two of them failing.
+- [x] GitHub Actions run `36431167843` on feature commit `bf22886` passed all three jobs: `lint-test-build`, `e2e`, and `db-migrations`.
+- [ ] Confirm branch protection requires those three checks before merging to the default branch; the CI pass does not verify repository protection settings.
 - [ ] Configure shared edge/WAF limits for uploads, Server Actions, anonymous download-counter traffic, and repeated auth failures. (There is still no server-side per-user *upload* rate limit; `0021` covers `setups`/`setup_comments`/`setup_requests` inserts only.)
 - [ ] Configure upload quarantine/malware scanning if arbitrary community files are accepted at scale.
 - [ ] Replace repository-based privacy contact language with a monitored legal/privacy contact.
@@ -104,7 +129,8 @@ npm run test:db
 
 ## Browser and performance validation
 
-- [x] Chromium is installed in CI and `npx playwright test` runs (the `e2e` job; it passed on this branch — 14/14).
+- [x] Chromium is installed in CI and `npx playwright test` runs (the `e2e` job passed 14/14 in CI run `36431167843` on feature commit `bf22886`).
+- [ ] Re-run Playwright locally after obtaining the Chromium binary: 3 browser-independent checks passed, while 11 browser-backed tests could not launch because Chromium is missing; `npx playwright install chromium` failed with TLS `ECONNRESET` in this sandbox.
 - [ ] Run Lighthouse or PageSpeed on mobile and desktop for `/`, `/setups`, a populated `/setups/[id]`, and `/profile/[userId]`.
 - [ ] Record LCP element/time, INP, CLS, TTFB, HTML/RSC size, JavaScript long tasks, and image bytes.
 - [ ] Establish budgets and monitor real-user Web Vitals after launch.

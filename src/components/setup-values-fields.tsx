@@ -11,10 +11,12 @@ export function SetupValuesFields({
   game,
   values,
   onChange,
+  idPrefix,
 }: {
   game: Game;
   values: SetupValues;
   onChange: (key: string, value: string) => void;
+  idPrefix?: string;
 }) {
   const groups = setupSchemas[game];
 
@@ -27,20 +29,23 @@ export function SetupValuesFields({
         <div key={group.title} className="flex flex-col gap-2.5">
           <p className="text-xs font-medium text-muted-foreground">{group.title}</p>
           <div className="grid grid-cols-2 gap-3">
-            {group.fields.map((field) => (
-              <div key={field.key} className="flex flex-col gap-1.5">
-                <Label htmlFor={field.key} className="text-xs font-normal text-muted-foreground">
-                  {field.label}
-                </Label>
-                <Input
-                  id={field.key}
-                  placeholder={field.placeholder}
-                  maxLength={MAX_SETUP_VALUE_LENGTH}
-                  value={values[field.key] ?? ""}
-                  onChange={(e) => onChange(field.key, e.target.value)}
-                />
-              </div>
-            ))}
+            {group.fields.map((field) => {
+              const fieldId = idPrefix ? `${idPrefix}-${field.key}` : field.key;
+              return (
+                <div key={field.key} className="flex flex-col gap-1.5">
+                  <Label htmlFor={fieldId} className="text-xs font-normal text-muted-foreground">
+                    {field.label}
+                  </Label>
+                  <Input
+                    id={fieldId}
+                    placeholder={field.placeholder}
+                    maxLength={MAX_SETUP_VALUE_LENGTH}
+                    value={values[field.key] ?? ""}
+                    onChange={(e) => onChange(field.key, e.target.value)}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}

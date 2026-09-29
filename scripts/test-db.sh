@@ -2,9 +2,9 @@
 # Regression test for the SQL migrations under supabase/migrations/ --
 # applies every migration to a scratch Postgres database (created fresh and
 # dropped at the end, so this is safe to re-run against a shared local
-# Postgres instance) and then runs the assertions in
-# supabase/testing/*.test.sql. Exits non-zero if any migration fails to
-# apply or any assertion fails.
+# Postgres instance), runs the assertions in supabase/testing/*.test.sql, and
+# finishes with a real two-connection field-test uniqueness race. Exits
+# non-zero if any migration or assertion fails.
 #
 # Connection is via the standard PG* environment variables (PGHOST, PGPORT,
 # PGUSER, PGPASSWORD, ...) -- defaults below match a local Postgres running
@@ -51,5 +51,7 @@ for test_file in supabase/testing/*.test.sql; do
   echo "Running $test_file"
   psql -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$test_file"
 done
+
+bash scripts/test-field-test-concurrency.sh "$DB_NAME"
 
 echo "All migrations and regression checks passed."

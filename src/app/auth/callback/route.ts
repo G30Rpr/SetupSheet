@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { logger } from "@/lib/logger";
+import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { createClient } from "@/lib/supabase/server";
 
 export function sanitizeRedirectUrl(nextParam: string | null): string {
-  if (!nextParam) return "/";
-  // Ensure the redirect URL is a relative path starting with '/' and not protocol-relative ('//') or Windows-style ('/\')
-  if (nextParam.startsWith("/") && !nextParam.startsWith("//") && !nextParam.startsWith("/\\")) {
-    return nextParam;
-  }
-  return "/";
+  return sanitizeInternalRedirectPath(nextParam) ?? "/";
 }
 
 // Handles the redirect back from Discord (via Supabase) after OAuth,

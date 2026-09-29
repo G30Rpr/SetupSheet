@@ -7,6 +7,7 @@ import {
   getSetupCount,
   getSetups,
 } from "@/lib/supabase/setups";
+import { getPublicFieldTestCounts } from "@/lib/supabase/field-tests";
 import {
   ALL_BROWSE_FILTER,
   EMPTY_BROWSE_FILTERS,
@@ -62,6 +63,7 @@ export default async function SetupsPage({
   // grows past that cap, both stop covering the oldest setups too (not
   // just the browse grid), which is worth being upfront about here.
   const isCapped = setups.length === SETUPS_BROWSE_LIMIT && totalCount > SETUPS_BROWSE_LIMIT;
+  const fieldTestCounts = Object.fromEntries(await getPublicFieldTestCounts(setups.map((setup) => setup.id)));
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -106,6 +108,7 @@ export default async function SetupsPage({
         key={setups[0]?.id ?? "no-setups"}
         setups={setups}
         totalCount={totalCount}
+        fieldTestCounts={fieldTestCounts}
         initialFilters={filters}
         loadFailed={loadFailed}
       />

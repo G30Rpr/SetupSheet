@@ -163,6 +163,7 @@ export type Database = {
           user_id: string;
           actor_id: string;
           setup_id: string | null;
+          field_test_report_id: string | null;
           type: string;
           read: boolean;
           created_at: string;
@@ -172,6 +173,7 @@ export type Database = {
           user_id: string;
           actor_id: string;
           setup_id?: string | null;
+          field_test_report_id?: string | null;
           type?: string;
           read?: boolean;
           created_at?: string;
@@ -181,6 +183,7 @@ export type Database = {
           user_id?: string;
           actor_id?: string;
           setup_id?: string | null;
+          field_test_report_id?: string | null;
           type?: string;
           read?: boolean;
           created_at?: string;
@@ -247,6 +250,175 @@ export type Database = {
           telemetry_file_path?: string | null;
           telemetry_file_name?: string | null;
           created_at?: string;
+        };
+        Relationships: Relationships;
+      };
+      garage_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          source_setup_id: string | null;
+          game: string;
+          car: string;
+          track: string;
+          condition: string;
+          rig: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          source_setup_id?: string | null;
+          game: string;
+          car: string;
+          track: string;
+          condition: string;
+          rig?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          source_setup_id?: string | null;
+          game?: string;
+          car?: string;
+          track?: string;
+          condition?: string;
+          rig?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: Relationships;
+      };
+      garage_revisions: {
+        Row: {
+          id: string;
+          session_id: string;
+          setup_values: Json;
+          note: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          setup_values?: Json;
+          note?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          session_id?: string;
+          setup_values?: Json;
+          note?: string;
+          created_at?: string;
+        };
+        Relationships: Relationships;
+      };
+      garage_run_plan_items: {
+        Row: {
+          id: string;
+          session_id: string;
+          revision_id: string;
+          parameter: string;
+          direction: string;
+          amount: string;
+          verdict: string;
+          note: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          revision_id: string;
+          parameter: string;
+          direction: string;
+          amount: string;
+          verdict: string;
+          note?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          session_id?: string;
+          revision_id?: string;
+          parameter?: string;
+          direction?: string;
+          amount?: string;
+          verdict?: string;
+          note?: string;
+          created_at?: string;
+        };
+        Relationships: Relationships;
+      };
+      garage_laps: {
+        Row: {
+          id: string;
+          session_id: string;
+          revision_id: string;
+          lap_time_ms: number;
+          condition: string;
+          note: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          revision_id: string;
+          lap_time_ms: number;
+          condition: string;
+          note?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          session_id?: string;
+          revision_id?: string;
+          lap_time_ms?: number;
+          condition?: string;
+          note?: string;
+          created_at?: string;
+        };
+        Relationships: Relationships;
+      };
+      field_test_reports: {
+        Row: {
+          id: string;
+          user_id: string;
+          garage_session_id: string;
+          setup_id: string;
+          report_day_utc: string;
+          game: string;
+          condition: string;
+          validated_changes: Json;
+          laps_run: number;
+          consistency_pct: number | null;
+          best_lap_ms: number;
+          note: string;
+          show_name: boolean;
+          display_name_snapshot: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          garage_session_id: string;
+          setup_id: string;
+          report_day_utc?: string;
+          game: string;
+          condition: string;
+          validated_changes: Json;
+          laps_run: number;
+          consistency_pct?: number | null;
+          best_lap_ms: number;
+          note?: string;
+          show_name?: boolean;
+          display_name_snapshot?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          show_name?: boolean;
         };
         Relationships: Relationships;
       };
@@ -381,6 +553,39 @@ export type Database = {
       };
     };
     Views: {
+      field_test_reports_public: {
+        Row: {
+          report_id: string;
+          setup_id: string;
+          game: string;
+          condition: string;
+          validated_changes: Json;
+          laps_run: number;
+          consistency_pct: number | null;
+          best_lap_ms: number;
+          created_at: string;
+          display_name: string | null;
+        };
+        Relationships: Relationships;
+      };
+      field_test_counts: {
+        Row: {
+          setup_id: string;
+          report_count: number;
+        };
+        Relationships: Relationships;
+      };
+      engineer_calibration_evidence: {
+        Row: {
+          game: string;
+          condition: string;
+          parameter: string;
+          direction: string;
+          supporting_setup_count: number;
+          directions: string[];
+        };
+        Relationships: Relationships;
+      };
       setup_requests_most_wanted: {
         Row: {
           game: string;
@@ -466,6 +671,42 @@ export type Database = {
       is_valid_setup_values: {
         Args: { p_values: Json | null };
         Returns: boolean;
+      };
+      create_garage_session_with_baseline: {
+        Args: {
+          p_game: string;
+          p_car: string;
+          p_track: string;
+          p_condition: string;
+          p_rig: string | null;
+          p_setup_values: Json;
+          p_note: string;
+        };
+        Returns: string;
+      };
+      create_garage_session_from_setup_with_baseline: {
+        Args: {
+          p_source_setup_id: string;
+          p_rig: string | null;
+          p_setup_values: Json;
+          p_note: string;
+        };
+        Returns: string;
+      };
+      create_field_test_report: {
+        Args: {
+          p_garage_session_id: string;
+          p_setup_id: string;
+          p_note: string;
+        };
+        Returns: string;
+      };
+      set_field_test_report_attribution: {
+        Args: {
+          p_report_id: string;
+          p_show_name: boolean;
+        };
+        Returns: string;
       };
     };
     Enums: Record<string, never>;

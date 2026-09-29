@@ -23,6 +23,7 @@ describe("loadMoreSetups", () => {
     ).resolves.toEqual({
       setups: [],
       nextCursor: null,
+      fieldTestCounts: {},
       error: "That browse cursor is invalid.",
     });
   });

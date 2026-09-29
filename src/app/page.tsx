@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/empty-state";
 import { SetupCard } from "@/components/setup-card";
 import { games, rigProfiles } from "@/lib/data";
 import { getFeaturedSetups, getSetupCount } from "@/lib/supabase/setups";
+import { getPublicFieldTestCounts } from "@/lib/supabase/field-tests";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -62,6 +63,7 @@ const highlights = [
 
 export default async function Home() {
   const [featured, setupCount] = await Promise.all([getFeaturedSetups(6), getSetupCount()]);
+  const fieldTestCounts = await getPublicFieldTestCounts(featured.map((setup) => setup.id));
 
   return (
     <div className="flex flex-col">
@@ -184,7 +186,11 @@ export default async function Home() {
             <ul className="grid list-none grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {featured.map((setup) => (
                 <li key={setup.id} className="min-w-0">
-                  <SetupCard setup={setup} titleLevel={3} />
+                  <SetupCard
+                    setup={setup}
+                    titleLevel={3}
+                    fieldTestCount={fieldTestCounts.get(setup.id) ?? 0}
+                  />
                 </li>
               ))}
             </ul>
