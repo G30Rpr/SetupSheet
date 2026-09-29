@@ -36,9 +36,9 @@ const {
 } = await import("@/lib/actions/setups");
 
 describe("createUploadTarget", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
-    resetUploadTargetRateLimitsForTesting();
+    await resetUploadTargetRateLimitsForTesting();
     getCurrentUser.mockResolvedValue({ id: USER_ID });
     createSignedUploadUrl.mockResolvedValue({ data: { token: "signed-token" }, error: null });
   });

@@ -149,7 +149,7 @@ function checkUploadTargetRateLimit(userId: string): boolean {
   return true;
 }
 
-export function resetUploadTargetRateLimitsForTesting(): void {
+export async function resetUploadTargetRateLimitsForTesting(): Promise<void> {
   uploadTargetTimestampsByUser.clear();
 }
 
