@@ -121,7 +121,7 @@ environment variables are configured, so a live migration/smoke test is still re
 - [ ] Turn on Dependabot for the repo (`.github/dependabot.yml` is committed but the feature is off: `GET /dependabot/alerts` returns "Dependabot alerts are disabled for this repository"), and enable code scanning or accept the gap in writing.
 - [x] GitHub Actions run `36431167843` on feature commit `bf22886` passed all three jobs: `lint-test-build`, `e2e`, and `db-migrations`.
 - [ ] Confirm branch protection requires those three checks before merging to the default branch; the CI pass does not verify repository protection settings.
-- [ ] Configure shared edge/WAF limits for uploads, Server Actions, anonymous download-counter traffic, and repeated auth failures. (There is still no server-side per-user *upload* rate limit; `0021` covers `setups`/`setup_comments`/`setup_requests` inserts only.)
+- [ ] Configure shared edge/WAF limits for uploads, Server Actions, anonymous download-counter traffic, and repeated auth failures. (Application-level upload target rate limiting is implemented in `createUploadTarget` at 30 requests/user/hour, alongside database triggers in `0021` for `setups`/`setup_comments`/`setup_requests`.)
 - [ ] Configure upload quarantine/malware scanning if arbitrary community files are accepted at scale.
 - [ ] Replace repository-based privacy contact language with a monitored legal/privacy contact.
 - [x] Define an operator SLA and procedure for `account_deletion_requests` and `content_reports` (documented in `OPERATIONS.md`).
