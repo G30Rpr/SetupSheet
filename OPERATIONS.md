@@ -181,15 +181,15 @@ Remove or hide violating content using the existing owner/admin process, and pre
 
 ## Before launch
 
-- Apply migrations `0023` through `0034` after `0022`, in numeric order. This includes
+- Apply migrations `0023` through `0035` after `0022`, in numeric order. This includes
   `0027` (most-wanted view), `0028` (Storage retention helpers), `0029` (bucket size cap),
   `0030` (private Garage tables/RLS and atomic baseline creation), `0031` (server-derived
   start-from-setup RPC), `0032` (field-test reports and sanitized public projections),
-  `0033` (90-day privacy-safe Engineer calibration evidence), and `0034` (audit remediation:
-  idempotent signup profiles, missing foreign key/retention indexes, cascade delete safety,
-  and self-upvote prevention). Do not deploy the matching app changes before applying
-  the migrations. The `db-migrations` CI job runs the full harness against PostgreSQL 16;
-  live configured-Supabase validation remains a separate deployment check.
+  `0033` (90-day privacy-safe Engineer calibration evidence), `0034` (audit remediation),
+  and `0035` (shared atomic upload-target rate limiting). Do not deploy the matching app
+  changes before applying the migrations. The `db-migrations` CI job runs the full harness
+  against PostgreSQL 16; live configured-Supabase validation remains a separate deployment
+  check.
 - Confirm the `leaderboard` view exposes `total_ratings` and `setup_search` exposes
   `author_username`, and that the new objects exist:
 
@@ -214,10 +214,10 @@ Remove or hide violating content using the existing owner/admin process, and pre
   -- expect t
   ```
 
-- Configure WAF/CDN limits for uploads, Server Actions, authentication failures, and
-  anonymous download-counter traffic. Server-side upload rate limiting does not exist yet
-  (the `0021` triggers cover `setups`/`setup_comments`/`setup_requests` inserts only), so
-  the edge limit is currently the only thing in front of `uploadSetupFile`.
+- Configure WAF/CDN limits for upload-target requests, telemetry reports, Server Actions,
+  authentication failures, and anonymous download-counter traffic. Migration `0035` provides
+  a shared per-user upload-target quota; edge limits are still required as defense in depth
+  and for unauthenticated telemetry/reporting endpoints.
 - Configure malware scanning/quarantine if community uploads are not manually reviewed.
 - Replace repository-based privacy contact language with a monitored contact.
 - Restrict SQL Editor/service-role access to trusted operators and rotate credentials according to the provider policy.

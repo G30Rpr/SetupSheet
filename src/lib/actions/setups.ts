@@ -117,42 +117,10 @@ function validateRating(value: unknown): boolean {
 
 /**
  * Mints a signed, single-use Supabase Storage upload URL for a file the
- * browser is about to send **directly to Storage**, instead of proxying the
- * bytes through this Server Action.
- *
- * Why direct: Next's Server Action body limit defaults to 1 MB, so any real
- * setup .json/.sto (or a telemetry pack) failed with an opaque 500 before the
- * action's own 5 MB / 10 MB validation was ever reached. Raising
- * `serverActions.bodySizeLimit` cannot fix it either -- Vercel caps a
- * serverless function's request body at ~4.5 MB, below both advertised
- * limits. Uploading straight to Storage removes the function from the data
- * path entirely.
- *
- * The returned path is built here, never supplied by the caller, so it is
- * always `<userId>/<id>-<name>` inside the caller's own folder -- the same
- * shape the 0004/0019 Storage policies require.
+ * browser sends directly to Storage. The per-user limit is enforced by the
+ * database RPC so it is shared across Vercel function instances and survives
+ * cold starts. The Storage bucket's own 10 MiB cap remains the outer boundary.
  */
-const MAX_UPLOAD_TARGETS_PER_HOUR = 30;
-const uploadTargetTimestampsByUser = new Map<string, number[]>();
-
-function checkUploadTargetRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const windowMs = 60 * 60 * 1000;
-  const recent = (uploadTargetTimestampsByUser.get(userId) ?? []).filter(
-    (t) => now - t < windowMs
-  );
-  if (recent.length >= MAX_UPLOAD_TARGETS_PER_HOUR) {
-    return false;
-  }
-  recent.push(now);
-  uploadTargetTimestampsByUser.set(userId, recent);
-  return true;
-}
-
-export async function resetUploadTargetRateLimitsForTesting(): Promise<void> {
-  uploadTargetTimestampsByUser.clear();
-}
-
 export async function createUploadTarget(
   kind: UploadKind,
   fileName: string,
@@ -177,15 +145,25 @@ export async function createUploadTarget(
     };
   }
 
-  if (!checkUploadTargetRateLimit(user.id)) {
+  const { target, error } = describeUploadTarget(kind, fileName, fileSize, user.id);
+  if (!target) return { ...empty, error };
+
+  // Database-backed so the quota is atomic and consistent across Vercel
+  // instances. Fail closed if the limiter is unavailable: do not mint a URL
+  // without checking the abuse-control boundary.
+  const { data: allowed, error: limitError } = await supabase.rpc(
+    "consume_upload_target_rate_limit"
+  );
+  if (limitError) {
+    logger.error("createUploadTarget: rate limit check failed", limitError);
+    return { ...empty, error: "Couldn't start the upload. Please try again." };
+  }
+  if (!allowed) {
     return {
       ...empty,
       error: "Upload rate limit reached; please try again later.",
     };
   }
-
-  const { target, error } = describeUploadTarget(kind, fileName, fileSize, user.id);
-  if (!target) return { ...empty, error };
 
   const { data, error: signError } = await supabase.storage
     .from(SETUP_FILES_BUCKET)

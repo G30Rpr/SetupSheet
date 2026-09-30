@@ -51,8 +51,8 @@ src/
                          menu each mount once regardless of viewport
     site-footer.tsx     Footer
     json-ld.tsx         Nonce-protected JSON-LD renderer shared by public routes
-    telemetry-provider.tsx  Field Core Web Vitals (LCP/INP/CLS/TTFB/FCP) + client-error
-                            reporting to the structured log stream; no third-party scripts
+    telemetry-provider.tsx  Batched Core Web Vitals + path-only client-error categories,
+                            sent to the bounded same-origin /api/telemetry log receiver
     related-setups.tsx  Streamed below-the-fold internal setup links
     setup-card.tsx      The setup card (car/track, lap time, tags, ratings, author byline...)
     setup-card-install-guide.tsx  Expandable install panel: resolved destination folder with
@@ -219,8 +219,11 @@ the production build and checks gzipped JS/CSS chunk budgets.
   adds private setup/comment report intake for operator review. Migrations `0030`–`0033`
   create the private ACC/LMU Garage workflow and its server-derived start-from-setup path,
   server-derived field-test reports with a sanitized public projection, and a 90-day
-  privacy-safe Engineer calibration aggregate. Apply these in numeric order before deploying
-  the corresponding app code; live configured-Supabase validation is still a release check.
+  privacy-safe Engineer calibration aggregate. Migration `0034` applies database audit
+  remediations, and `0035` adds the shared atomic per-user upload-target rate limit used by
+  Vercel instances. Apply these in numeric order
+  before deploying the corresponding app code; live configured-Supabase validation is
+  still a release check.
 
 ## Auth: Supabase + Discord OAuth
 

@@ -12,10 +12,12 @@ const USER_ID = "7ec21b4c-4a9b-4044-b2be-f6929af9be6a";
 
 const createSignedUploadUrl = vi.fn();
 const storageInfo = vi.fn();
+const consumeUploadTargetRateLimit = vi.fn();
 const getCurrentUser = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
+    rpc: consumeUploadTargetRateLimit,
     storage: {
       from: () => ({
         createSignedUploadUrl,
@@ -29,17 +31,13 @@ vi.mock("@/lib/supabase/auth", () => ({
   getCurrentUser: (...args: unknown[]) => getCurrentUser(...args),
 }));
 
-const {
-  createUploadTarget,
-  verifyUploadedFile,
-  resetUploadTargetRateLimitsForTesting,
-} = await import("@/lib/actions/setups");
+const { createUploadTarget, verifyUploadedFile } = await import("@/lib/actions/setups");
 
 describe("createUploadTarget", () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    await resetUploadTargetRateLimitsForTesting();
     getCurrentUser.mockResolvedValue({ id: USER_ID });
+    consumeUploadTargetRateLimit.mockResolvedValue({ data: true, error: null });
     createSignedUploadUrl.mockResolvedValue({ data: { token: "signed-token" }, error: null });
   });
 
@@ -95,14 +93,28 @@ describe("createUploadTarget", () => {
     expect(createSignedUploadUrl).not.toHaveBeenCalled();
   });
 
-  it("enforces a per-user rate limit on signed upload target requests", async () => {
-    for (let i = 0; i < 30; i++) {
-      const res = await createUploadTarget("setup", `Monza_${i}.json`, 1024);
-      expect(res.error).toBeNull();
-    }
-    const rateLimited = await createUploadTarget("setup", "overflow.json", 1024);
-    expect(rateLimited.error).toContain("Upload rate limit reached");
-    expect(rateLimited.path).toBeNull();
+  it("uses the shared database limit before minting a signed URL", async () => {
+    consumeUploadTargetRateLimit.mockResolvedValue({ data: false, error: null });
+
+    const result = await createUploadTarget("setup", "overflow.json", 1024);
+
+    expect(result.error).toContain("Upload rate limit reached");
+    expect(result.path).toBeNull();
+    expect(consumeUploadTargetRateLimit).toHaveBeenCalledOnce();
+    expect(createSignedUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it("fails closed if the shared rate-limit service is unavailable", async () => {
+    consumeUploadTargetRateLimit.mockResolvedValue({
+      data: null,
+      error: { message: "database unavailable" },
+    });
+
+    const result = await createUploadTarget("setup", "Monza.json", 1024);
+
+    expect(result.path).toBeNull();
+    expect(result.error).toContain("try again");
+    expect(createSignedUploadUrl).not.toHaveBeenCalled();
   });
 });
 
