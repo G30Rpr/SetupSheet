@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { logger } from "@/lib/logger";
+import { isSameOriginRequest } from "@/lib/request-origin";
 
 const MAX_BODY_BYTES = 8 * 1024;
 const MAX_EVENTS = 12;
@@ -102,6 +103,8 @@ async function readBoundedBody(request: Request): Promise<string | null> {
       }
       chunks.push(value);
     }
+  } catch {
+    return null;
   } finally {
     reader.releaseLock();
   }
@@ -120,7 +123,7 @@ export async function POST(request: Request) {
   const origin = request.headers.get("origin");
   if (origin) {
     try {
-      if (new URL(origin).origin !== new URL(request.url).origin) {
+      if (!isSameOriginRequest(request, origin)) {
         return new NextResponse(null, { status: 403 });
       }
     } catch {

@@ -74,15 +74,6 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/sitemap.xml",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
-          },
-        ],
-      },
-      {
         source: "/robots.txt",
         headers: [
           {

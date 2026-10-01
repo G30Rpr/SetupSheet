@@ -9,7 +9,12 @@ import {
 } from "@/lib/cache-tags";
 
 import { logger } from "@/lib/logger";
-import { unwrapCount, unwrapList, unwrapSingle } from "@/lib/supabase/query-helpers";
+import {
+  unwrapCachedCount,
+  unwrapCachedList,
+  unwrapCachedSingle,
+  unwrapList,
+} from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
 import {
   isOwnedStoragePath,
@@ -107,7 +112,7 @@ const getCachedBrowseRows = unstable_cache(
     track: string,
     condition: string,
     rig: string
-  ): Promise<{ rows: SetupRow[]; failed: boolean }> => {
+  ): Promise<SetupRow[]> => {
     const supabase = createPublicClient();
     const searchExpression = buildBrowseSearchExpression(search);
     let query = searchExpression
@@ -126,14 +131,7 @@ const getCachedBrowseRows = unstable_cache(
       .order("id", { ascending: false })
       .limit(SETUPS_BROWSE_LIMIT);
 
-    // `failed` is reported rather than swallowed into an empty array: a browse
-    // grid that can't tell "no matches" from "the database is unreachable"
-    // renders an outage as a quiet, empty community.
-    if (result.error || !result.data) {
-      logger.error("getCachedBrowseRows: failed to load setups", result.error);
-      return { rows: [], failed: true };
-    }
-    return { rows: result.data, failed: false };
+    return unwrapCachedList(result, "getCachedBrowseRows: failed to load setups");
   },
   ["setups-browse"],
   { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
@@ -148,7 +146,7 @@ const getCachedFeaturedRows = unstable_cache(
       .order("upvotes", { ascending: false })
       .limit(Math.min(Math.max(limit, 1), 24));
 
-    return unwrapList(result, "getCachedFeaturedRows: failed to load setups");
+    return unwrapCachedList(result, "getCachedFeaturedRows: failed to load setups");
   },
   ["setups-featured"],
   { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
@@ -158,7 +156,7 @@ const getCachedSetupCount = unstable_cache(
   async (): Promise<number> => {
     const supabase = createPublicClient();
     const result = await supabase.from("setups").select("id", { count: "exact", head: true });
-    return unwrapCount(result, "getCachedSetupCount: failed to count setups");
+    return unwrapCachedCount(result, "getCachedSetupCount: failed to count setups");
   },
   ["setups-count"],
   { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] }
@@ -166,7 +164,6 @@ const getCachedSetupCount = unstable_cache(
 
 interface CachedProfileSetupPage {
   rows: SetupRow[];
-  error: boolean;
 }
 
 const getCachedProfileSetupPage = unstable_cache(
@@ -192,8 +189,7 @@ const getCachedProfileSetupPage = unstable_cache(
 
     const result = await query;
     return {
-      rows: unwrapList(result, "getCachedProfileSetupPage: failed to load setups"),
-      error: Boolean(result.error),
+      rows: unwrapCachedList(result, "getCachedProfileSetupPage: failed to load setups"),
     };
   },
   ["setups-profile-page"],
@@ -208,7 +204,7 @@ const getCachedProfileSetupStats = unstable_cache(
       .select("setup_count, total_upvotes, total_ratings")
       .eq("user_id", userId)
       .maybeSingle();
-    const row = unwrapSingle(result, "getCachedProfileSetupStats: failed to load profile totals");
+    const row = unwrapCachedSingle(result, "getCachedProfileSetupStats: failed to load profile totals");
     if (!row) return null;
 
     return {
@@ -229,7 +225,7 @@ const getCachedSetupRowById = unstable_cache(
       .select(SETUP_COLUMNS)
       .eq("id", id)
       .maybeSingle();
-    return unwrapSingle(result, "getCachedSetupRowById: failed to load setup");
+    return unwrapCachedSingle(result, "getCachedSetupRowById: failed to load setup");
   },
   ["setup-by-id"],
   { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
@@ -239,7 +235,7 @@ const getCachedAuthorName = unstable_cache(
   async (userId: string): Promise<string> => {
     const supabase = createPublicClient();
     const result = await supabase.from("profiles").select("username").eq("id", userId).maybeSingle();
-    const row = unwrapSingle(result, "getCachedAuthorName: failed to load profile");
+    const row = unwrapCachedSingle(result, "getCachedAuthorName: failed to load profile");
     return sanitizeDisplayName(row?.username);
   },
   ["setup-author-name"],
@@ -260,7 +256,7 @@ const getCachedSetupSeoRow = unstable_cache(
       .select("id, user_id, game, car, track, condition, lap_time, description, tags, created_at, updated_at")
       .eq("id", id)
       .maybeSingle();
-    return unwrapSingle(result, "getCachedSetupSeoRow: failed to load setup");
+    return unwrapCachedSingle(result, "getCachedSetupSeoRow: failed to load setup");
   },
   ["setup-seo-by-id"],
   { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] }
@@ -292,7 +288,7 @@ const getCachedSitemapRows = unstable_cache(
         );
       }
 
-      const page = unwrapList(await query, "getCachedSitemapRows: failed to load setups") as SitemapRow[];
+      const page = unwrapCachedList(await query, "getCachedSitemapRows: failed to load setups") as SitemapRow[];
       if (page.length === 0) break;
       rows.push(...page);
 
@@ -327,7 +323,7 @@ const getCachedRelatedRows = unstable_cache(
       .neq("id", setupId)
       .order("created_at", { ascending: false })
       .limit(Math.min(Math.max(limit, 1), 12));
-    return unwrapList(result, "getCachedRelatedRows: failed to load setups");
+    return unwrapCachedList(result, "getCachedRelatedRows: failed to load setups");
   },
   ["setups-related"],
   { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] }
@@ -501,18 +497,22 @@ export async function getSetups(
   filters: BrowseFilters = EMPTY_BROWSE_FILTERS
 ): Promise<{ setups: Setup[]; failed: boolean }> {
   const supabase = await createClient();
-  const { rows, failed } = await getCachedBrowseRows(
-    filters.search,
-    filters.game,
-    filters.car,
-    filters.track,
-    filters.condition,
-    filters.rig
-  );
+  let rows: SetupRow[];
+  try {
+    rows = await getCachedBrowseRows(
+      filters.search,
+      filters.game,
+      filters.car,
+      filters.track,
+      filters.condition,
+      filters.rig
+    );
+  } catch {
+    // The cache callback throws on query failure, so Next won't retain an
+    // outage as a successful empty result. Render the retry state instead.
+    return { setups: [], failed: true };
+  }
 
-  // Skip the hydration queries entirely when the rows read failed -- the
-  // caller renders a retry state instead of an empty grid.
-  if (failed) return { setups: [], failed: true };
   return { setups: await hydrateSetupRows(supabase, rows), failed: false };
 }
 
@@ -578,14 +578,22 @@ export async function getSetupsAfter(
  * more than a handful of cards, so it has no business pulling every row
  * in the table down to the client just to sort and slice in JS.
  */
-export async function getFeaturedSetups(limit: number): Promise<Setup[]> {
+export async function getFeaturedSetups(
+  limit: number
+): Promise<{ setups: Setup[]; failed: boolean }> {
   const supabase = await createClient();
-  const rows = await getCachedFeaturedRows(limit);
-  return hydrateSetupRows(supabase, rows);
+  try {
+    const rows = await getCachedFeaturedRows(limit);
+    return { setups: await hydrateSetupRows(supabase, rows), failed: false };
+  } catch {
+    // Query errors throw from the cached callback, so they are never retained
+    // as a successful empty featured list.
+    return { setups: [], failed: true };
+  }
 }
 
 /** Total number of setups, optionally scoped to the same server-side browse filters. */
-export async function getSetupCount(filters: BrowseFilters = EMPTY_BROWSE_FILTERS): Promise<number> {
+export async function getSetupCount(filters: BrowseFilters = EMPTY_BROWSE_FILTERS): Promise<number | null> {
   // The landing-page stat and browse-page upper bound are intentionally
   // cached for a short window. Upload/update actions invalidate the tag, so
   // normal mutations remain fresh without making every anonymous page hit a
@@ -598,7 +606,11 @@ export async function getSetupCount(filters: BrowseFilters = EMPTY_BROWSE_FILTER
     filters.condition === ALL_BROWSE_FILTER &&
     filters.rig === ALL_BROWSE_FILTER
   ) {
-    return getCachedSetupCount();
+    try {
+      return await getCachedSetupCount();
+    } catch {
+      return null;
+    }
   }
 
   const supabase = await createClient();
@@ -614,15 +626,24 @@ export async function getSetupCount(filters: BrowseFilters = EMPTY_BROWSE_FILTER
   if (filters.rig !== ALL_BROWSE_FILTER) query = query.eq("rig_profile", filters.rig);
   if (searchExpression) query = query.or(searchExpression);
 
-  const result = await query;
-  return unwrapCount(result, "getSetupCount: failed to count setups");
+  try {
+    const result = await query;
+    if (result.error) {
+      logger.error("getSetupCount: failed to count setups", result.error);
+      return null;
+    }
+    return result.count ?? 0;
+  } catch (error) {
+    logger.error("getSetupCount: count query threw", error);
+    return null;
+  }
 }
 
 /**
  * Id + timestamp only, for the sitemap -- no viewer/author joins, since
  * search engines don't need per-visitor upvote/rating state. The source is
  * read in deterministic 1,000-row pages and capped at 24,000 setup URLs;
- * src/app/sitemap.ts budgets profile URLs so the final document remains
+ * src/app/sitemap.xml/route.ts budgets profile URLs so the final document remains
  * under the protocol's 50,000-URL limit.
  */
 interface SitemapRow {
@@ -699,13 +720,14 @@ export const getSetupsByUserPage = cache(
     }
 
     const supabase = await createClient();
-    const cachedPage = await getCachedProfileSetupPage(
-      userId,
-      cursor?.createdAt ?? "",
-      cursor?.id ?? ""
-    );
-
-    if (cachedPage.error) {
+    let cachedPage: CachedProfileSetupPage;
+    try {
+      cachedPage = await getCachedProfileSetupPage(
+        userId,
+        cursor?.createdAt ?? "",
+        cursor?.id ?? ""
+      );
+    } catch {
       return { setups: [], nextCursor: null, error: "Couldn't load profile setups right now." };
     }
 

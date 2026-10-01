@@ -6,11 +6,10 @@ import { isUuid } from "@/lib/utils";
 import { updateSession } from "@/lib/supabase/proxy";
 
 // Least-privilege CSP for what this app actually does: same-origin pages
-// and Server Actions, next/font self-hosted fonts, avatars/setup files
-// served from Discord's CDN and Supabase Storage (both https), and the
-// Supabase client's own REST/auth calls (plus its realtime websocket,
-// which the SDK can open even though this app doesn't subscribe to any
-// channel). No third-party scripts at all.
+// and Server Actions, Discord-hosted OAuth avatars, the configured Supabase
+// project's REST/auth calls (plus its realtime websocket), and the embedded
+// YouTube player. Setup files are download links, not embedded images. No
+// third-party scripts or webfonts are loaded by the browser.
 //
 // script-src uses a fresh per-request nonce instead of 'unsafe-inline' --
 // this app has zero hand-authored inline <script> tags (the one exception,
@@ -79,16 +78,34 @@ function malformedIdResponse(pathname: string) {
   });
 }
 
+function supabaseConnectSources(): string[] {
+  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!configuredUrl) return [];
+
+  try {
+    const url = new URL(configuredUrl);
+    const isLocalDevelopment =
+      isDev && ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+    if (url.protocol !== "https:" && !(url.protocol === "http:" && isLocalDevelopment)) return [];
+    if (url.username || url.password) return [];
+
+    const websocketScheme = url.protocol === "https:" ? "wss:" : "ws:";
+    return [url.origin, `${websocketScheme}//${url.host}`];
+  } catch {
+    return [];
+  }
+}
+
 function buildCsp(nonce: string) {
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' https:",
+    "img-src 'self' https://cdn.discordapp.com",
     "font-src 'self'",
     "frame-src 'self' https://www.youtube-nocookie.com",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-    "frame-ancestors 'self'",
+    `connect-src 'self' ${supabaseConnectSources().join(" ")}`.trim(),
+    "frame-ancestors 'none'",
     "form-action 'self'",
     "base-uri 'self'",
     "object-src 'none'",

@@ -62,7 +62,10 @@ export default async function SetupsPage({
   // client-side over whatever it fetched, so once the community actually
   // grows past that cap, both stop covering the oldest setups too (not
   // just the browse grid), which is worth being upfront about here.
-  const isCapped = setups.length === SETUPS_BROWSE_LIMIT && totalCount > SETUPS_BROWSE_LIMIT;
+  const isCapped =
+    totalCount !== null &&
+    setups.length === SETUPS_BROWSE_LIMIT &&
+    totalCount > SETUPS_BROWSE_LIMIT;
   const fieldTestCounts = Object.fromEntries(await getPublicFieldTestCounts(setups.map((setup) => setup.id)));
   const jsonLd = {
     "@context": "https://schema.org",
@@ -92,8 +95,10 @@ export default async function SetupsPage({
         </h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
           {loadFailed
-            ? "Community setups, filtered by game, car, track and condition."
-            : `${totalCount} setups shared by the community. Filter by game, car,
+            ? "Community setups are temporarily unavailable. Please retry shortly."
+            : totalCount === null
+              ? "Setup total temporarily unavailable. You can still browse the setups currently loaded."
+              : `${totalCount} setups shared by the community. Filter by game, car,
           track, or track condition to find your next fast lap.`}
         </p>
         {isCapped && !loadFailed && (

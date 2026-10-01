@@ -4,7 +4,7 @@ import { CACHE_TAG, SETUP_ROW_TAGS } from "@/lib/cache-tags";
 
 import { normalizeHttpsUrl } from "@/lib/safe-url";
 import { createPublicClient } from "@/lib/supabase/public";
-import { unwrapList } from "@/lib/supabase/query-helpers";
+import { unwrapCachedList } from "@/lib/supabase/query-helpers";
 import { sanitizeDisplayName } from "@/lib/user-display";
 
 export interface LeaderboardEntry {
@@ -24,7 +24,7 @@ const getCachedLeaderboardRows = unstable_cache(
       .order("total_upvotes", { ascending: false })
       .limit(Math.min(Math.max(limit, 1), 100));
 
-    return unwrapList(result, "getCachedLeaderboardRows: failed to load leaderboard");
+    return unwrapCachedList(result, "getCachedLeaderboardRows: failed to load leaderboard");
   },
   ["leaderboard"],
   { revalidate: 60, tags: [...SETUP_ROW_TAGS, CACHE_TAG.publicProfiles] }

@@ -214,10 +214,21 @@ Remove or hide violating content using the existing owner/admin process, and pre
   -- expect t
   ```
 
-- Configure WAF/CDN limits for upload-target requests, telemetry reports, Server Actions,
-  authentication failures, and anonymous download-counter traffic. Migration `0035` provides
-  a shared per-user upload-target quota; edge limits are still required as defense in depth
-  and for unauthenticated telemetry/reporting endpoints.
+- Configure and verify shared WAF/CDN rate limits before launch. Suggested starting ceilings
+  (tune against normal traffic and provider limits):
+  - `POST /api/telemetry` and `POST /api/csp-report`: 30 requests/minute/IP. The handlers
+    already cap bodies at 8 KiB and 16 KiB respectively, and discard unrecognized payloads.
+  - Next Server Actions (`POST /_next/action`): 120 requests/minute/IP as a broad abuse ceiling;
+    retain the tighter per-user database limits for uploads and other writes.
+  - `GET /api/setups/*/bundle`: 60 requests/minute/IP. Do not require login for ordinary
+    setup downloads; this limit is to constrain automated fetch amplification.
+  - Authentication failures: configure the provider's Auth rate limits separately, since
+    browser auth requests go directly to Supabase rather than through the app's WAF path.
+  Migration `0035` provides a shared atomic 30-requests/user/hour upload-target quota. Edge
+  limits remain defense in depth and protect unauthenticated endpoints, anonymous download
+  counter actions, and serverless capacity. Confirm the deployed plan supports the rules;
+  if not, configure equivalent limits at the CDN or another shared edge provider and record
+  a burst/false-positive review before enforcement.
 - Configure malware scanning/quarantine if community uploads are not manually reviewed.
 - Replace repository-based privacy contact language with a monitored contact.
 - Restrict SQL Editor/service-role access to trusted operators and rotate credentials according to the provider policy.

@@ -5,6 +5,7 @@ import {
   Gauge,
   ShieldCheck,
   Timer,
+  TriangleAlert,
   Upload,
   Users,
 } from "lucide-react";
@@ -62,7 +63,10 @@ const highlights = [
 ] as const;
 
 export default async function Home() {
-  const [featured, setupCount] = await Promise.all([getFeaturedSetups(6), getSetupCount()]);
+  const [{ setups: featured, failed: featuredFailed }, setupCount] = await Promise.all([
+    getFeaturedSetups(6),
+    getSetupCount(),
+  ]);
   const fieldTestCounts = await getPublicFieldTestCounts(featured.map((setup) => setup.id));
 
   return (
@@ -106,7 +110,7 @@ export default async function Home() {
           </div>
 
           <p className="mt-6 w-full max-w-2xl border-t border-border/80 pt-8 font-mono text-xs text-muted-foreground sm:text-sm">
-            {setupCount} community setups · {games.length} sim titles supported · growing every week
+            {setupCount === null ? "Setup count temporarily unavailable" : `${setupCount} community setups`} · {games.length} sim titles supported · growing every week
           </p>
         </div>
       </section>
@@ -196,16 +200,26 @@ export default async function Home() {
             </ul>
           ) : (
             <EmptyState
-              icon={Upload}
-              title="No setups yet"
-              description="Be the first to share one — it'll show up here once it's uploaded."
+              icon={featuredFailed ? TriangleAlert : Upload}
+              title={featuredFailed ? "Setups temporarily unavailable" : "No setups yet"}
+              description={
+                featuredFailed
+                  ? "We couldn't reach the setup library. Please try again shortly."
+                  : "Be the first to share one — it'll show up here once it's uploaded."
+              }
               action={
-                <Button asChild size="sm">
-                  <Link href="/upload">
-                    <Upload />
-                    Upload Your Setup
-                  </Link>
-                </Button>
+                featuredFailed ? (
+                  <Button asChild size="sm" variant="outline">
+                    <Link href="/setups">Try browsing setups</Link>
+                  </Button>
+                ) : (
+                  <Button asChild size="sm">
+                    <Link href="/upload">
+                      <Upload />
+                      Upload Your Setup
+                    </Link>
+                  </Button>
+                )
               }
             />
           )}

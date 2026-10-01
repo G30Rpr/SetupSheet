@@ -1,6 +1,6 @@
 # SetupSheet launch checklist
 
-Updated: 2026-09-28 (previous revision 2026-09-11)
+Updated: 2026-10-01 (previous revision 2026-09-28)
 
 This checklist separates repository-complete work from actions that require the deployed Supabase, hosting, or search-console environments.
 
@@ -23,7 +23,7 @@ This checklist separates repository-complete work from actions that require the 
 - [x] Malformed setup/profile IDs receive a useful static 404 document without invoking the streamed app layout.
 - [x] Signed-upload target quotas use an atomic Postgres RPC (`0035_upload_target_rate_limit.sql`), shared across serverless instances; database failures deny URL minting.
 - [x] Browser performance/error events are sent to a bounded same-origin endpoint (`/api/telemetry`) with route-ID normalization and no raw error details. The endpoint still needs deployment-level WAF/rate limits.
-- [x] Engineer, private Garage, field-test reporting, and public calibration implementation slices exist for ACC/LMU. The setup detail page includes an “Open in Garage” CTA for those reviewed games; signed-out users retain a validated setup ID through the same-origin OAuth callback. In this worktree, 65 Vitest files (337 tests), ESLint, TypeScript checking, production build, and `npm run build:budget` pass (39 JS/CSS chunks; 435.8 KiB gzip total). Next.js and `eslint-config-next` are on patched 16.3.8; both `npm audit --audit-level=high` and `npm audit --omit=dev --audit-level=high` report zero vulnerabilities after lockfile updates. Build logs can include external-font and placeholder-Supabase fetch failures in offline development environments, while the build completes. Configured-Supabase validation and domain review of the first-pass Engineer rule corpus remain outstanding.
+- [x] Engineer, private Garage, field-test reporting, and public calibration implementation slices exist for ACC/LMU. The setup detail page includes an “Open in Garage” CTA for those reviewed games; signed-out users retain a validated setup ID through the same-origin OAuth callback. In this worktree, 69 Vitest files (349 tests), ESLint, TypeScript checking, production build, and `npm run build:budget` pass (39 JS/CSS chunks; 435.8 KiB gzip total). Next.js and `eslint-config-next` are on patched 16.3.8; both `npm audit --audit-level=high` and `npm audit --omit=dev --audit-level=high` report zero vulnerabilities after lockfile updates. Build logs can include external-font and placeholder-Supabase fetch failures in offline development environments, while the build completes. Configured-Supabase validation and domain review of the first-pass Engineer rule corpus remain outstanding.
 
 ## Supabase deployment
 
@@ -115,9 +115,9 @@ environment variables are configured, so a live migration/smoke test is still re
 - `/setups/<junk>` still returns HTTP 200 with a "not found" body. Next cannot set the status
   from a Server Component while the root layout streams, so the crawler-facing contract is
   `noindex, nofollow` (verified in the built output: no canonical, and the OG route 404s).
-- Production dependency tree is clean (`npm audit --omit=dev` → 0). Two moderate advisories
-  remain in the vitest chain and are accepted, not ignored: the fix is a vitest major (5.x),
-  which does not belong in a release PR. Revisit right after launch.
+- Current dependency audits are clean for both the full tree and production-only tree
+  (`npm audit --audit-level=high` and `npm audit --omit=dev --audit-level=high` → 0 vulnerabilities).
+  Re-run them on every dependency update; do not carry the earlier Vitest-chain advisory note forward.
 
 ## Hosting and security operations
 
@@ -136,7 +136,7 @@ environment variables are configured, so a live migration/smoke test is still re
 ## Browser and performance validation
 
 - [x] Chromium is installed in CI and `npx playwright test` runs (the `e2e` job passed 14/14 in CI run `36431167843` on feature commit `bf22886`).
-- [ ] Re-run Playwright locally after obtaining the Chromium binary: 3 browser-independent checks passed, while 11 browser-backed tests could not launch because Chromium is missing; `npx playwright install chromium` failed with TLS `ECONNRESET` in this sandbox.
+- [ ] Full local Playwright run is blocked: the sandbox lacks Chromium, and `npx playwright install chromium` failed with TLS `ECONNRESET`. The latest local attempt had one passing test; browser-backed tests could not launch, so rely on the CI E2E job for this change. The sitemap and malformed-ID specs were updated to assert the current intentional 503/404 behavior.
 - [ ] Run Lighthouse or PageSpeed on mobile and desktop for `/`, `/setups`, a populated `/setups/[id]`, and `/profile/[userId]`.
 - [ ] Record LCP element/time, INP, CLS, TTFB, HTML/RSC size, JavaScript long tasks, and image bytes.
 - [ ] Establish budgets and monitor real-user Web Vitals after launch.

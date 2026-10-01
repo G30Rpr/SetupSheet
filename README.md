@@ -588,11 +588,12 @@ automatically, so no `vercel.json` or custom build settings are needed.
   style (Radix primitives + `class-variance-authority` + Tailwind), so
   `npx shadcn@latest add <component>` continues to work against
   `components.json` if you want to add more.
-- `next.config.ts` sets a Content-Security-Policy and the standard security
-  headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
-  `Permissions-Policy`). The CSP allows `'unsafe-eval'` in development only
-  — webpack's Fast Refresh needs it, production never does — so it can't be
-  loosened for real visitors by a dev-mode change.
+- `src/proxy.ts` sets a per-request nonce Content-Security-Policy; browser
+  image requests are limited to same-origin and Discord avatars, while API
+  connections are limited to the configured Supabase origin. The policy denies
+  framing and reports violations to a bounded, privacy-scrubbed same-origin
+  endpoint. `next.config.ts` supplies the other standard security headers.
+  `'unsafe-eval'` is development-only for Fast Refresh and is absent in production.
 - `src/app/error.tsx` and `global-error.tsx` catch client-side rendering
   errors that would otherwise fall through to Next.js's generic, unstyled,
   unlogged crash page; both log the real error to the console before
