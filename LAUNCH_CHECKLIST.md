@@ -95,11 +95,7 @@ Run the repository migration harness locally or in CI:
 npm run test:db
 ```
 
-GitHub Actions run `36431167843` passed all three jobs, including the PostgreSQL 16 migration
-suite and Playwright E2E, on feature commit `bf22886b6dfc98a8d2e7bd9961a3a6859fa3a4bd`.
-That is repository/CI validation, not a run against the configured production Supabase
-project. In the current sandbox, `psql` is unavailable locally and no Supabase deployment
-environment variables are configured, so a live migration/smoke test is still required.
+GitHub Actions run `36912157423` passed all three jobs on commit `2ee80839aa8ad963e1ad497ec7c823b187337f1d`: lint/typecheck/unit/build/budget/audit, PostgreSQL 16 migrations, and Playwright E2E (14/14). This validates repository migrations and CI behavior, not the configured production Supabase project. The local sandbox has no `psql` or production Supabase configuration; a live migration/smoke test is still required.
 
 ## Deploy notes specific to this release
 
@@ -112,9 +108,10 @@ environment variables are configured, so a live migration/smoke test is still re
   token, so edited setups get a fresh card, but previously-shared junk URLs (and any stale
   card) stay cached at the edge until they expire — a CDN purge is the only way to clear them
   sooner.
-- `/setups/<junk>` still returns HTTP 200 with a "not found" body. Next cannot set the status
-  from a Server Component while the root layout streams, so the crawler-facing contract is
-  `noindex, nofollow` (verified in the built output: no canonical, and the OG route 404s).
+- Malformed setup/profile IDs are intercepted in `src/proxy.ts` and return a static HTTP 404
+  with `noindex, nofollow`; malformed setup OG-image IDs return a bodyless 404 before rendering.
+  A valid-UUID setup that is genuinely missing still uses the App Router not-found UI; database
+  outages render a separate temporary-unavailable state and are not presented as missing.
 - Current dependency audits are clean for both the full tree and production-only tree
   (`npm audit --audit-level=high` and `npm audit --omit=dev --audit-level=high` → 0 vulnerabilities).
   Re-run them on every dependency update; do not carry the earlier Vitest-chain advisory note forward.
@@ -123,7 +120,7 @@ environment variables are configured, so a live migration/smoke test is still re
 
 - [ ] Deploy the current branch and confirm the environment contains `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 - [ ] Turn on Dependabot for the repo (`.github/dependabot.yml` is committed but the feature is off: `GET /dependabot/alerts` returns "Dependabot alerts are disabled for this repository"), and enable code scanning or accept the gap in writing.
-- [x] GitHub Actions run `36431167843` on feature commit `bf22886` passed all three jobs: `lint-test-build`, `e2e`, and `db-migrations`.
+- [x] GitHub Actions run `36912157423` on commit `2ee8083` passed all three jobs: `lint-test-build`, `e2e`, and `db-migrations`.
 - [ ] Confirm branch protection requires those three checks before merging to the default branch; the CI pass does not verify repository protection settings.
 - [ ] Configure shared edge/WAF limits for upload-target requests, `/api/telemetry`, Server Actions, anonymous download-counter traffic, and repeated auth failures. Migration `0035` enforces an atomic 30-requests/user/hour upload-target quota; edge limits remain defense in depth and are needed for unauthenticated endpoints.
 - [ ] Configure upload quarantine/malware scanning if arbitrary community files are accepted at scale.
@@ -135,8 +132,8 @@ environment variables are configured, so a live migration/smoke test is still re
 
 ## Browser and performance validation
 
-- [x] Chromium is installed in CI and `npx playwright test` runs (the `e2e` job passed 14/14 in CI run `36431167843` on feature commit `bf22886`).
-- [ ] Full local Playwright run is blocked: the sandbox lacks Chromium, and `npx playwright install chromium` failed with TLS `ECONNRESET`. The latest local attempt had one passing test; browser-backed tests could not launch, so rely on the CI E2E job for this change. The sitemap and malformed-ID specs were updated to assert the current intentional 503/404 behavior.
+- [x] Chromium is installed in CI and Playwright passes 14/14 in CI run `36912157423` on commit `2ee8083`.
+- [ ] A local browser run was not available: Chromium is absent and `npx playwright install chromium` failed with TLS `ECONNRESET`. Current-head E2E coverage passed in GitHub Actions run `36912157423`.
 - [ ] Run Lighthouse or PageSpeed on mobile and desktop for `/`, `/setups`, a populated `/setups/[id]`, and `/profile/[userId]`.
 - [ ] Record LCP element/time, INP, CLS, TTFB, HTML/RSC size, JavaScript long tasks, and image bytes.
 - [ ] Establish budgets and monitor real-user Web Vitals after launch.
