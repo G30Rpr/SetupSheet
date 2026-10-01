@@ -51,8 +51,8 @@ src/
                          menu each mount once regardless of viewport
     site-footer.tsx     Footer
     json-ld.tsx         Nonce-protected JSON-LD renderer shared by public routes
-    telemetry-provider.tsx  Field Core Web Vitals (LCP/INP/CLS/TTFB/FCP) + client-error
-                            reporting to the structured log stream; no third-party scripts
+    telemetry-provider.tsx  Batched Core Web Vitals + path-only client-error categories,
+                            sent to the bounded same-origin /api/telemetry log receiver
     related-setups.tsx  Streamed below-the-fold internal setup links
     setup-card.tsx      The setup card (car/track, lap time, tags, ratings, author byline...)
     setup-card-install-guide.tsx  Expandable install panel: resolved destination folder with
@@ -219,8 +219,11 @@ the production build and checks gzipped JS/CSS chunk budgets.
   adds private setup/comment report intake for operator review. Migrations `0030`–`0033`
   create the private ACC/LMU Garage workflow and its server-derived start-from-setup path,
   server-derived field-test reports with a sanitized public projection, and a 90-day
-  privacy-safe Engineer calibration aggregate. Apply these in numeric order before deploying
-  the corresponding app code; live configured-Supabase validation is still a release check.
+  privacy-safe Engineer calibration aggregate. Migration `0034` applies database audit
+  remediations, and `0035` adds the shared atomic per-user upload-target rate limit used by
+  Vercel instances. Apply these in numeric order
+  before deploying the corresponding app code; live configured-Supabase validation is
+  still a release check.
 
 ## Auth: Supabase + Discord OAuth
 
@@ -585,11 +588,12 @@ automatically, so no `vercel.json` or custom build settings are needed.
   style (Radix primitives + `class-variance-authority` + Tailwind), so
   `npx shadcn@latest add <component>` continues to work against
   `components.json` if you want to add more.
-- `next.config.ts` sets a Content-Security-Policy and the standard security
-  headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
-  `Permissions-Policy`). The CSP allows `'unsafe-eval'` in development only
-  — webpack's Fast Refresh needs it, production never does — so it can't be
-  loosened for real visitors by a dev-mode change.
+- `src/proxy.ts` sets a per-request nonce Content-Security-Policy; browser
+  image requests are limited to same-origin and Discord avatars, while API
+  connections are limited to the configured Supabase origin. The policy denies
+  framing and reports violations to a bounded, privacy-scrubbed same-origin
+  endpoint. `next.config.ts` supplies the other standard security headers.
+  `'unsafe-eval'` is development-only for Fast Refresh and is absent in production.
 - `src/app/error.tsx` and `global-error.tsx` catch client-side rendering
   errors that would otherwise fall through to Next.js's generic, unstyled,
   unlogged crash page; both log the real error to the console before

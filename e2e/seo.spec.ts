@@ -44,7 +44,15 @@ test("robots and sitemap endpoints advertise crawl configuration", async ({ requ
   expect(robotsText).toContain("Disallow: /auth/");
 
   const sitemap = await request.get("/sitemap.xml");
-  expect(sitemap.ok()).toBe(true);
+  if (sitemap.status() === 503) {
+    // CI uses a deliberately unreachable Supabase placeholder. An unavailable
+    // sitemap must be explicit and non-cacheable, never a successful empty file.
+    expect(sitemap.headers()["cache-control"]).toBe("no-store");
+    expect(await sitemap.text()).toBe("Sitemap temporarily unavailable.");
+    return;
+  }
+
+  expect(sitemap.status()).toBe(200);
   expect(sitemap.headers()["content-type"]).toContain("application/xml");
   expect(await sitemap.text()).toContain("https://setupsheet.app/setups");
 });

@@ -6,11 +6,10 @@ import { isUuid } from "@/lib/utils";
 import { updateSession } from "@/lib/supabase/proxy";
 
 // Least-privilege CSP for what this app actually does: same-origin pages
-// and Server Actions, next/font self-hosted fonts, avatars/setup files
-// served from Discord's CDN and Supabase Storage (both https), and the
-// Supabase client's own REST/auth calls (plus its realtime websocket,
-// which the SDK can open even though this app doesn't subscribe to any
-// channel). No third-party scripts at all.
+// and Server Actions, Discord-hosted OAuth avatars, the configured Supabase
+// project's REST/auth calls (plus its realtime websocket), and the embedded
+// YouTube player. Setup files are download links, not embedded images. No
+// third-party scripts or webfonts are loaded by the browser.
 //
 // script-src uses a fresh per-request nonce instead of 'unsafe-inline' --
 // this app has zero hand-authored inline <script> tags (the one exception,
@@ -29,16 +28,84 @@ import { updateSession } from "@/lib/supabase/proxy";
 // bundle never does, so this doesn't loosen anything for real visitors.
 const isDev = process.env.NODE_ENV !== "production";
 
+// Keep malformed-ID requests as a real, useful 404 without invoking the
+// streamed App Router layout. This response is intentionally static: never
+// interpolate the rejected path segment into HTML.
+const INVALID_ID_NOT_FOUND_HTML = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Page not found — SetupSheet</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #17191d; color: #f4f4f5; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; }
+    main { box-sizing: border-box; width: min(100% - 2rem, 38rem); padding: 2rem; border: 1px solid #383b41; border-radius: 1rem; background: #202227; }
+    h1 { margin-top: 0; font-size: clamp(1.6rem, 5vw, 2.25rem); }
+    p { color: #c1c4ca; line-height: 1.6; }
+    nav { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
+    a { color: #ff9884; text-underline-offset: .2em; }
+    a:focus-visible { outline: 2px solid #ff9884; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <main>
+    <p>SetupSheet · 404</p>
+    <h1>We couldn’t find that page</h1>
+    <p>The link may be incomplete or the page may no longer be available.</p>
+    <nav aria-label="Helpful links"><a href="/setups">Browse setups</a><a href="/">Go to homepage</a></nav>
+  </main>
+</body>
+</html>`;
+
+function malformedIdResponse(pathname: string) {
+  // Social-image endpoints must remain bodyless image 404s, not HTML documents.
+  if (/\/opengraph-image\/?$/.test(pathname)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  return new NextResponse(INVALID_ID_NOT_FOUND_HTML, {
+    status: 404,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+    },
+  });
+}
+
+function supabaseConnectSources(): string[] {
+  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!configuredUrl) return [];
+
+  try {
+    const url = new URL(configuredUrl);
+    const isLocalDevelopment =
+      isDev && ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+    if (url.protocol !== "https:" && !(url.protocol === "http:" && isLocalDevelopment)) return [];
+    if (url.username || url.password) return [];
+
+    const websocketScheme = url.protocol === "https:" ? "wss:" : "ws:";
+    return [url.origin, `${websocketScheme}//${url.host}`];
+  } catch {
+    return [];
+  }
+}
+
 function buildCsp(nonce: string) {
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' https:",
+    "img-src 'self' https://cdn.discordapp.com",
     "font-src 'self'",
     "frame-src 'self' https://www.youtube-nocookie.com",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-    "frame-ancestors 'self'",
+    `connect-src 'self' ${supabaseConnectSources().join(" ")}`.trim(),
+    "frame-ancestors 'none'",
     "form-action 'self'",
     "base-uri 'self'",
     "object-src 'none'",
@@ -71,8 +138,8 @@ export async function proxy(request: NextRequest) {
   // Real setup ids are UUIDs, so anything else is either a typo or someone
   // discovering that arbitrary paths buy them free image renders plus one
   // `unstable_cache` entry each. Refuse it as a plain 404 -- no page render, no
-  // edge cache entry, no CPU -- and let the already-200 page own the "not found"
-  // copy the visitor actually sees.
+  // edge cache entry, no CPU. Image endpoints intentionally have no body in
+  // their 404 response because HTML would be incorrect for an image request.
   const ogImageSegment = setupOgImageSegment(pathname);
   if (ogImageSegment !== null && !isUuid(ogImageSegment)) {
     return new NextResponse(null, { status: 404 });
@@ -89,7 +156,14 @@ export async function proxy(request: NextRequest) {
   // and it costs nothing: no render, no database round trip.
   const notFoundSegment = unresolvableIdSegment(pathname);
   if (notFoundSegment !== null) {
-    return new NextResponse(null, { status: 404 });
+    return malformedIdResponse(pathname);
+  }
+
+  // RUM requests are public and do not need a refreshed Supabase session.
+  // Avoid spending an auth round trip on every beacon, especially when a
+  // signed-in visitor leaves a page. The API route is bounded and stateless.
+  if (pathname === "/api/telemetry") {
+    return NextResponse.next();
   }
 
   const nonce = crypto.randomUUID();

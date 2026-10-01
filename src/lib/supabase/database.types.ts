@@ -639,6 +639,10 @@ export type Database = {
       };
     };
     Functions: {
+      consume_upload_target_rate_limit: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
       increment_downloads: {
         Args: { setup_id: string };
         Returns: undefined;

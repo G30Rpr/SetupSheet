@@ -57,7 +57,7 @@ export function SetupsBrowser({
   fieldTestCounts = {},
 }: {
   setups: Setup[];
-  totalCount: number;
+  totalCount: number | null;
   initialFilters: BrowseFilters;
   fieldTestCounts?: Record<string, number>;
   /** True when the server's browse read failed -- the grid is empty because the
@@ -79,7 +79,9 @@ export function SetupsBrowser({
     () => [...setups, ...additionalSetups],
     [setups, additionalSetups]
   );
-  const hasMoreRemote = Boolean(remoteCursor && loadedSetups.length < totalCount);
+  const hasMoreRemote = Boolean(
+    remoteCursor && (totalCount === null || loadedSetups.length < totalCount)
+  );
 
   const [search, setSearch] = useState(initialFilters.search);
   const [game, setGame] = useState<string>(initialFilters.game);

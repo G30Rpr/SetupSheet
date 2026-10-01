@@ -527,3 +527,26 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3100/setups/not-a-uuid
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3100/setups/compare            # 200
 curl -s -D - -o /dev/null http://127.0.0.1:3100/ | grep -i 'report-uri\|reporting-endpoints'
 ```
+
+---
+
+## 11. Follow-up code/security verification (2026-10-01)
+
+This section records the later repository pass; older measurements and status notes above are historical and may predate the current implementation.
+
+### Implemented and verified on `arena/01a0f303-setupsheet`
+
+- Cached Supabase errors now throw instead of being cached as empty/zero success. The home and browse pages distinguish unavailable data from an actually empty catalog; setup detail has a separate temporary-unavailable state and does not mislabel a database outage as a missing setup.
+- `/sitemap.xml` is dynamic: healthy responses are hour-cacheable, while a failed read returns a generic `503` with `Cache-Control: no-store`. Production-build smoke testing with the placeholder database confirmed the status/header behavior.
+- The CSP now restricts images to same-origin and Discord avatars, limits Supabase connections to the configured project, and denies framing. CSP reports have bounded reads/counts and sanitized URL fields. Telemetry is sent to a same-origin route with normalized route paths and no raw error details; origin checks account for the trusted reverse-proxy host/scheme.
+- Signed upload-target creation has a shared atomic per-user quota in migration `0035`; the routine fails closed and its SQL regression suite passed in CI.
+- Automated verification on commit `2ee80839aa8ad963e1ad497ec7c823b187337f1d`: 69 Vitest files / 349 tests, lint, typecheck, build, performance budget, npm audit, PostgreSQL 16 migration tests, and Playwright E2E (14/14) all passed in CI run `36912157423`. Both full-tree and production-only local npm audits report zero vulnerabilities. Production-build smoke tests returned 200 for `/` and `/setups`, 404 for malformed setup/profile/image IDs, and 503/no-store for `/sitemap.xml` under simulated database failure.
+
+### Still required outside this checkout
+
+- Configure and verify shared edge/WAF limits for `/api/telemetry`, `/api/csp-report`, Next Server Actions, bundle downloads/anonymous counter actions, and auth abuse. `OPERATIONS.md` gives suggested starting ceilings. No reliable distributed IP limiter can be created from process-local application memory; no Vercel credentials/project configuration are available in this environment.
+- Apply and verify migrations `0023`–`0035` against the configured Supabase project; CI verified them against PostgreSQL 16, not production. Confirm live Auth settings, RLS/Storage policies, bucket limits, and upload quota behavior with a real account.
+- Confirm Dependabot/code-scanning and default-branch protection settings. The GitHub integration returned 403 for repository administration endpoints, so those settings could not be read or changed here.
+- Replace the repository privacy contact and obtain legal review of the privacy/terms language. Verify provider log retention/visibility for the new privacy-minimized telemetry and CSP reports.
+
+The UI audit remains a separate, unstarted phase. Repository code checks are green; production/deployment controls above remain release gates rather than claims of completion.

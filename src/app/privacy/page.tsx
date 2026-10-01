@@ -18,7 +18,7 @@ export default function PrivacyPage() {
       <header className="mb-10">
         <p className="mb-2 font-mono text-xs uppercase tracking-wide text-racing-coral">Trust & transparency</p>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
-        <p className="mt-3 text-muted-foreground">Effective August 28, 2026. This plain-language policy describes the current SetupSheet implementation.</p>
+        <p className="mt-3 text-muted-foreground">Effective September 30, 2026. This plain-language policy describes the current SetupSheet implementation.</p>
       </header>
 
       <div className="flex flex-col gap-8 leading-7 text-muted-foreground">
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
 
         <section aria-labelledby="privacy-use">
           <h2 id="privacy-use" className="mb-2 text-xl font-semibold text-foreground">How we use information</h2>
-          <p>We use this information to authenticate contributors, publish and attribute community setups, calculate ratings and contributor statistics, provide downloads, show notifications, and protect the service from abuse. The current application does not include advertising, analytics, tracking pixels, or third-party chat widgets.</p>
+          <p>We use this information to authenticate contributors, publish and attribute community setups, calculate ratings and contributor statistics, provide downloads, show notifications, and protect the service from abuse. The application sends path-level performance measurements and error categories to its hosting provider for reliability monitoring. These events exclude account IDs, query strings, referrers, raw error text, and browser storage values; infrastructure providers may process request metadata such as IP address as part of delivering and protecting the service. SetupSheet does not use advertising, tracking pixels, or third-party chat widgets.</p>
         </section>
 
         <section aria-labelledby="privacy-services">

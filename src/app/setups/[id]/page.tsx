@@ -40,7 +40,17 @@ export async function generateMetadata({
   const { id } = await params;
   if (!isUuid(id)) return NOT_FOUND_METADATA;
 
-  const setup = await getSetupSeoData(id);
+  let setup;
+  try {
+    setup = await getSetupSeoData(id);
+  } catch {
+    // A database outage is not evidence that the setup is missing. Keep the
+    // error non-indexable and avoid publishing canonical/social metadata.
+    return {
+      title: "Setup temporarily unavailable",
+      robots: { index: false, follow: false },
+    };
+  }
 
   if (!setup) return NOT_FOUND_METADATA;
 
@@ -93,7 +103,26 @@ export default async function SetupDetailPage({
   // metadata short-circuit in generateMetadata.
   if (!isUuid(id)) notFound();
 
-  const setup = await getSetupById(id);
+  let setup: Awaited<ReturnType<typeof getSetupById>>;
+  try {
+    setup = await getSetupById(id);
+  } catch {
+    // Do not convert a cached read failure into notFound(): that would turn a
+    // transient database outage into a misleading 404 state.
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
+        <section role="alert" className="rounded-xl border border-border bg-card p-6">
+          <h1 className="text-2xl font-bold tracking-tight">Setup temporarily unavailable</h1>
+          <p className="mt-2 text-muted-foreground">
+            We couldn&apos;t load this setup. Please try again shortly.
+          </p>
+          <Link href="/setups" className="mt-4 inline-flex text-racing-coral underline underline-offset-4">
+            Back to Browse Setups
+          </Link>
+        </section>
+      </div>
+    );
+  }
 
   if (!setup) notFound();
 

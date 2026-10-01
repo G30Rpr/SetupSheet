@@ -72,13 +72,34 @@ describe("POST /api/csp-report", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it("truncates oversized attacker-supplied fields instead of logging them whole", async () => {
-    const huge = "a".repeat(50_000);
-    await postJson({ "csp-report": { "blocked-uri": huge, "violated-directive": "script-src" } });
+  it("bounds field lengths and skips request bodies over the byte ceiling", async () => {
+    const longButBounded = "a".repeat(700);
+    await postJson({ "csp-report": { "violated-directive": longButBounded } });
 
     const logged = loggedPayload(warn.mock.calls[0]);
-    expect(logged.length).toBeLessThan(4000);
+    expect(logged.length).toBeLessThan(2000);
     expect(logged).toContain("…");
+
+    warn.mockClear();
+    const oversized = await postJson({ "csp-report": { "violated-directive": "x".repeat(20_000) } });
+    expect(oversized.status).toBe(204);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("redacts query strings and external URL paths before logging", async () => {
+    await postJson({
+      "csp-report": {
+        "blocked-uri": "https://evil.example/user/secret?token=do-not-log",
+        "document-uri": "https://setupsheet.app/auth/callback?code=oauth-secret",
+      },
+    });
+
+    const logged = loggedPayload(warn.mock.calls[0]);
+    expect(logged).toContain("https://evil.example");
+    expect(logged).not.toContain("/user/secret");
+    expect(logged).toContain("https://setupsheet.app/auth/callback");
+    expect(logged).not.toContain("oauth-secret");
+    expect(logged).not.toContain("do-not-log");
   });
 
   it("ignores unexpected fields instead of copying them through", async () => {
@@ -90,7 +111,7 @@ describe("POST /api/csp-report", () => {
   });
 
   it("caps how many array reports it will process", async () => {
-    const entries = Array.from({ length: 500 }, () => ({
+    const entries = Array.from({ length: 25 }, () => ({
       type: "csp-violation",
       body: { blockedURI: "https://evil.example/x", effectiveDirective: "script-src" },
     }));

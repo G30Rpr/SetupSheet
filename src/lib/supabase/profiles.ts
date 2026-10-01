@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache";
 import { CACHE_TAG } from "@/lib/cache-tags";
 import { cache } from "react";
 
-import { unwrapSingle } from "@/lib/supabase/query-helpers";
+import { unwrapCachedSingle } from "@/lib/supabase/query-helpers";
 import { normalizeHttpsUrl } from "@/lib/safe-url";
 import { createPublicClient } from "@/lib/supabase/public";
 import { sanitizeDisplayName } from "@/lib/user-display";
@@ -25,7 +25,7 @@ const getCachedProfileRow = unstable_cache(
       .eq("id", userId)
       .maybeSingle();
 
-    return unwrapSingle(result, "getCachedProfileRow: failed to load profile");
+    return unwrapCachedSingle(result, "getCachedProfileRow: failed to load profile");
   },
   ["profile-by-id"],
   { revalidate: 60, tags: [CACHE_TAG.publicProfiles] }
