@@ -25,15 +25,15 @@ export function StarRating({
             key={i}
             type="button"
             onClick={() => onChange(i + 1)}
-            className="flex size-7 items-center justify-center rounded-sm p-1 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-sm p-1 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
             aria-label={`Rate ${i + 1} out of ${max}`}
           >
             <Star
               className={cn(
-                "size-4 transition-colors",
+                "size-4",
                 i < value
-                  ? "fill-racing-coral text-racing-coral"
-                  : "fill-transparent text-muted-foreground/40 hover:text-racing-coral/60"
+                  ? "fill-primary text-primary"
+                  : "fill-transparent text-muted-foreground/40 hover:text-foreground"
               )}
             />
           </button>
@@ -50,7 +50,7 @@ export function StarRating({
           className={cn(
             "size-3.5",
             i < value
-              ? "fill-racing-coral text-racing-coral"
+              ? "fill-foreground text-foreground"
               : "fill-transparent text-muted-foreground/40"
           )}
         />

@@ -95,7 +95,7 @@ export function ProfileSetupsGrid({
                 : "Load more setups"}
           </Button>
           {loadError && (
-            <p role="alert" className="text-sm text-racing-red">
+            <p role="alert" className="text-sm text-destructive">
               {loadError}
             </p>
           )}

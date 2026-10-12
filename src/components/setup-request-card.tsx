@@ -35,6 +35,8 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
   const { user, signInWithDiscord } = useAuth();
   const [showPicker, setShowPicker] = useState(false);
   const [candidates, setCandidates] = useState<{ id: string; car: string; track: string }[] | null>(null);
+  const [isLoadingCandidates, setIsLoadingCandidates] = useState(false);
+  const [candidateLoadError, setCandidateLoadError] = useState<string | null>(null);
   const [selectedSetupId, setSelectedSetupId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -67,6 +69,25 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
     });
   }
 
+  async function loadCandidates() {
+    setCandidateLoadError(null);
+    setIsLoadingCandidates(true);
+    try {
+      const result = await getMyMatchingSetupsAction(request.game, request.car, request.track);
+      if (result.error) {
+        setCandidates(null);
+        setCandidateLoadError(result.error);
+        return;
+      }
+      setCandidates(result.setups);
+    } catch {
+      setCandidates(null);
+      setCandidateLoadError("Couldn't load your setups right now.");
+    } finally {
+      setIsLoadingCandidates(false);
+    }
+  }
+
   function handleOpenPicker() {
     if (!user) {
       void signInWithDiscord();
@@ -74,14 +95,7 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
     }
     setError(null);
     setShowPicker(true);
-    if (candidates === null) {
-      getMyMatchingSetupsAction(request.game, request.car, request.track)
-        .then(setCandidates)
-        .catch(() => {
-          setCandidates([]);
-          setError("Couldn't load your setups right now.");
-        });
-    }
+    if (candidates === null && !isLoadingCandidates) void loadCandidates();
   }
 
   function handleFulfill() {
@@ -121,14 +135,16 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
             Fulfilled
           </Badge>
         ) : isOwnRequest ? (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={handleDelete}
             aria-label="Cancel request"
-            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-racing-red disabled:opacity-60"
+            className="hover:text-destructive"
           >
-            <Trash2 className="size-3.5" />
-          </button>
+            <Trash2 className="size-4" />
+          </Button>
         ) : null}
       </div>
 
@@ -141,7 +157,7 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
       {isFulfilled ? (
         <Link
           href={`/setups/${request.fulfilledSetupId}`}
-          className="text-sm font-medium text-racing-coral hover:underline"
+          className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
         >
           {request.fulfilledByUsername} shared {request.fulfilledCar} @ {request.fulfilledTrack}
         </Link>
@@ -149,15 +165,28 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
         <div className="flex flex-col gap-2">
           {!showPicker ? (
             <Button type="button" variant="outline" size="sm" onClick={handleOpenPicker} className="self-start">
-              <Wrench className="size-3.5" />
+              <Wrench className="size-4" />
               Fulfill with one of your setups
             </Button>
+          ) : candidateLoadError ? (
+            <div className="flex flex-col items-start gap-2">
+              <p role="alert" className="text-sm text-destructive">{candidateLoadError}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void loadCandidates()}
+                disabled={isLoadingCandidates}
+              >
+                {isLoadingCandidates ? "Loading your setups…" : "Try again"}
+              </Button>
+            </div>
           ) : candidates === null ? (
             <p className="text-xs text-muted-foreground">Loading your setups...</p>
           ) : candidates.length === 0 ? (
             <p className="text-xs text-muted-foreground">
               You don&apos;t have a matching {request.car} @ {request.track} setup yet —{" "}
-              <Link href="/upload" className="text-racing-coral hover:underline">
+              <Link href="/upload" className="font-medium text-foreground underline-offset-4 hover:underline">
                 upload one
               </Link>
               .
@@ -182,7 +211,7 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
             </div>
           )}
           {error && (
-            <p role="alert" className="text-xs text-racing-red">
+            <p role="alert" className="text-xs text-destructive">
               {error}
             </p>
           )}

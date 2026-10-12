@@ -116,7 +116,7 @@ export default async function SetupDetailPage({
           <p className="mt-2 text-muted-foreground">
             We couldn&apos;t load this setup. Please try again shortly.
           </p>
-          <Link href="/setups" className="mt-4 inline-flex text-racing-coral underline underline-offset-4">
+          <Link href="/setups" className="mt-4 inline-flex text-foreground underline underline-offset-4">
             Back to Browse Setups
           </Link>
         </section>
@@ -188,11 +188,11 @@ export default async function SetupDetailPage({
       <nav aria-label="Breadcrumb" className="mb-6">
         <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
           <li>
-            <Link href="/" className="transition-colors hover:text-foreground">Home</Link>
+            <Link href="/" className=" hover:text-foreground">Home</Link>
           </li>
           <li aria-hidden="true">/</li>
           <li>
-            <Link href="/setups" className="transition-colors hover:text-foreground">Browse Setups</Link>
+            <Link href="/setups" className=" hover:text-foreground">Browse Setups</Link>
           </li>
           <li aria-hidden="true">/</li>
           <li aria-current="page" className="max-w-[14rem] truncate text-foreground">{setupTitle}</li>

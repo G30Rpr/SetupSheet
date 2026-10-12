@@ -40,7 +40,7 @@ export default async function ComparePage({
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
       <Link
         href="/setups"
-        className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground  hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
         Back to Browse Setups
@@ -77,7 +77,7 @@ export default async function ComparePage({
               <Card key={setup.id} className="gap-1.5 px-4 py-3">
                 <Link
                   href={`/setups/${setup.id}`}
-                  className="truncate font-semibold hover:text-racing-coral"
+                  className="truncate font-semibold hover:text-foreground"
                 >
                   {setup.car}
                 </Link>

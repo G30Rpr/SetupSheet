@@ -97,7 +97,7 @@ function ErrorMessage({ children }: { children: string | null }) {
   return (
     <div
       role="alert"
-      className="flex items-start gap-2 rounded-md border border-racing-red/30 bg-racing-red/10 px-3 py-2.5 text-sm text-racing-red"
+      className="flex items-start gap-2 rounded-md border border-border/80 bg-secondary/30 px-3 py-2.5 text-sm text-destructive"
     >
       <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <span>{children}</span>
@@ -126,7 +126,7 @@ export function GarageDashboard({
         <div>
           <div className="mb-2 flex items-center gap-2">
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Garage</h1>
-            <Badge variant="blue">Private</Badge>
+            <Badge variant="secondary">Private</Badge>
           </div>
           <p className="max-w-2xl text-muted-foreground">
             Keep setup snapshots, one-change tests, and lap notes together for each car and track.
@@ -135,7 +135,7 @@ export function GarageDashboard({
         </div>
         <Link
           href="/engineer"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-racing-cyan transition-colors hover:text-foreground"
+          className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
           <Wrench className="size-4" aria-hidden="true" />
           Open Setup Engineer
@@ -171,14 +171,14 @@ export function GarageDashboard({
                         href={`/garage?session=${encodeURIComponent(session.id)}`}
                         scroll={false}
                         aria-current={selected ? "page" : undefined}
-                        className={`flex flex-col gap-1 rounded-lg border px-3 py-3 transition-colors ${
+                        className={`flex flex-col gap-1 rounded-lg border px-3 py-3  ${
                           selected
-                            ? "border-racing-coral/50 bg-racing-coral/10"
+                            ? "border-border bg-accent"
                             : "border-border/70 bg-secondary/20 hover:bg-secondary/50"
                         }`}
                       >
                         <span className="flex items-center gap-2 text-sm font-medium">
-                          <CarFront className="size-4 shrink-0 text-racing-coral" aria-hidden="true" />
+                          <CarFront className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                           <span className="truncate">{session.car}</span>
                         </span>
                         <span className="truncate pl-6 text-xs text-muted-foreground">
@@ -199,7 +199,7 @@ export function GarageDashboard({
         <main className="min-w-0">
           {detailError ? (
             <Card className="items-center gap-3 px-6 py-12 text-center">
-              <AlertCircle className="size-8 text-racing-amber" aria-hidden="true" />
+              <AlertCircle className="size-8 text-destructive" aria-hidden="true" />
               <h2 className="text-lg font-semibold">Session details unavailable</h2>
               <p className="max-w-md text-sm text-muted-foreground">
                 The session may have been deleted, or its private records could not be loaded. Refresh and try again.
@@ -212,8 +212,8 @@ export function GarageDashboard({
             />
           ) : (
             <Card className="items-center gap-3 px-6 py-14 text-center">
-              <span className="flex size-14 items-center justify-center rounded-full bg-racing-cyan/10 text-racing-cyan ring-1 ring-inset ring-racing-cyan/25">
-                <CarFront className="size-7" aria-hidden="true" />
+              <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground ring-1 ring-inset ring-border">
+                <CarFront className="size-6" aria-hidden="true" />
               </span>
               <div>
                 <h2 className="text-lg font-semibold">
@@ -309,24 +309,24 @@ function NewGarageSessionForm({
     <details
       open={isOpen}
       onToggle={(event) => setIsOpen(event.currentTarget.open)}
-      className="rounded-xl border border-border/80 bg-card shadow-sm"
+      className="rounded-xl border border-border/80 bg-card shadow-card"
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-4 [&::-webkit-details-marker]:hidden">
         <span className="flex items-center gap-2 text-sm font-semibold">
-          <Plus className="size-4 text-racing-coral" aria-hidden="true" />
+          <Plus className="size-4 text-muted-foreground" aria-hidden="true" />
           New session
         </span>
         <span className="text-xs text-muted-foreground">ACC · LMU</span>
       </summary>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 border-t border-border/70 px-4 py-4">
         {sourceSetup ? (
-          <div className="rounded-lg border border-racing-cyan/25 bg-racing-cyan/5 px-3 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-racing-cyan">Starting from public setup</p>
+          <div className="rounded-lg border border-border/80 bg-secondary/30 px-3 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Starting from public setup</p>
             <p className="mt-1 font-medium">{sourceSetup.car} <span className="text-muted-foreground">@ {sourceSetup.track}</span></p>
             <p className="mt-0.5 text-xs text-muted-foreground">{sourceSetup.game} · {sourceSetup.condition}</p>
             <Link
               href={`/setups/${encodeURIComponent(sourceSetup.id)}`}
-              className="mt-2 inline-flex text-xs font-medium text-racing-cyan hover:text-foreground"
+              className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
             >
               View source setup
             </Link>
@@ -410,12 +410,12 @@ function NewGarageSessionForm({
         )}
 
         {sourceSetup && copySourceSetupValues ? (
-          <div className="rounded-lg border border-racing-cyan/25 bg-racing-cyan/5 px-3 py-2.5 text-xs text-muted-foreground">
+          <div className="rounded-lg border border-border/80 bg-secondary/30 px-3 py-2.5 text-sm text-muted-foreground">
             The baseline will use the saved values exactly as published. You can add a revision to test changes after creating the session.
           </div>
         ) : (
           <details className="rounded-lg border border-border/70 bg-secondary/15">
-            <summary className="cursor-pointer px-3 py-2.5 text-sm font-medium">
+            <summary className="flex min-h-11 cursor-pointer items-center px-3 py-2.5 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
               {sourceSetup ? "Enter baseline setup values manually (optional)" : "Add baseline setup values (optional)"}
             </summary>
             <div className="border-t border-border/70 p-3">
@@ -590,8 +590,8 @@ function GarageSessionWorkspace({ detail }: { detail: GarageSessionDetail }) {
             </Link>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-2xl font-semibold tracking-tight">{session.car}</h2>
-              <Badge variant="blue">{session.game === "Assetto Corsa Competizione" ? "ACC" : "LMU"}</Badge>
-              <Badge variant={session.condition === "Wet" ? "blue" : "secondary"}>{session.condition}</Badge>
+              <Badge variant="secondary">{session.game === "Assetto Corsa Competizione" ? "ACC" : "LMU"}</Badge>
+              <Badge variant="secondary">{session.condition}</Badge>
             </div>
             <p className="mt-1 text-muted-foreground">{session.track}</p>
             <p className="mt-2 text-xs text-muted-foreground">
@@ -607,7 +607,7 @@ function GarageSessionWorkspace({ detail }: { detail: GarageSessionDetail }) {
         </div>
         <ErrorMessage>{deleteError}</ErrorMessage>
         <div className="flex justify-end border-t border-border/70 pt-3">
-          <Button variant="ghost" size="sm" disabled={deletePending} onClick={handleDelete} className="text-muted-foreground hover:text-racing-red">
+          <Button variant="ghost" size="sm" disabled={deletePending} onClick={handleDelete} className="text-muted-foreground hover:text-destructive">
             <Trash2 aria-hidden="true" />
             {deletePending ? "Deleting…" : "Delete session"}
           </Button>
@@ -624,10 +624,10 @@ function GarageSessionWorkspace({ detail }: { detail: GarageSessionDetail }) {
           </p>
 
           <details className="rounded-lg border border-border/70 bg-secondary/10">
-            <summary className="cursor-pointer px-3 py-3 text-sm font-medium">Capture a new revision</summary>
+            <summary className="flex min-h-11 cursor-pointer items-center px-3 py-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">Capture a new revision</summary>
             <form onSubmit={handleRevisionSubmit} className="flex flex-col gap-4 border-t border-border/70 p-3">
               <details className="rounded-md border border-border/60 bg-background/30">
-                <summary className="cursor-pointer px-3 py-2.5 text-sm">Edit setup values</summary>
+                <summary className="flex min-h-11 cursor-pointer items-center px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">Edit setup values</summary>
                 <div className="border-t border-border/60 p-3">
                   <SetupValuesFields
                     game={session.game}
@@ -800,7 +800,7 @@ function GarageSessionWorkspace({ detail }: { detail: GarageSessionDetail }) {
 function SummaryStat({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {
   return (
     <div className="min-w-0 rounded-lg border border-border/70 bg-secondary/20 px-2 py-2 text-center">
-      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={`mt-1 truncate font-mono font-semibold ${compact ? "text-xs" : "text-base"}`}>{value}</p>
     </div>
   );
@@ -810,7 +810,7 @@ function SectionHeading({ icon, title, count }: { icon: ReactNode; title: string
   return (
     <div className="flex items-center justify-between gap-3">
       <h3 className="flex items-center gap-2 text-base font-semibold">
-        <span className="text-racing-coral">{icon}</span>
+        <span className="text-muted-foreground">{icon}</span>
         {title}
       </h3>
       <Badge variant="secondary">{count}</Badge>
@@ -873,7 +873,7 @@ function LapHistory({ laps, revisions }: { laps: GarageLap[]; revisions: GarageR
             </p>
             {lap.note && <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{lap.note}</p>}
           </div>
-          <Badge variant={lap.condition === "Wet" ? "blue" : "secondary"}>{lap.condition}</Badge>
+          <Badge variant="secondary">{lap.condition}</Badge>
         </li>
       ))}
     </ol>

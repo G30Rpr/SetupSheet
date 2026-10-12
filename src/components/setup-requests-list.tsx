@@ -93,7 +93,7 @@ export function SetupRequestsList({
             </Button>
           )}
           {error && (
-            <p role="alert" className="text-sm text-racing-red">
+            <p role="alert" className="text-sm text-destructive">
               {error}
             </p>
           )}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { History } from "lucide-react";
 
+import { RetryButton } from "@/components/retry-button";
 import { SetupValuesDiff } from "@/components/setup-values-diff";
 import { getSetupVersionsAction } from "@/lib/actions/setup-versions";
 import { diffSetupValues, diffTopLevelFields } from "@/lib/diff-setup-values";
@@ -29,12 +30,16 @@ function formatTimestamp(dateStr: string) {
 export default function SetupCardHistory({ setup }: { setup: Setup }) {
   const [versions, setVersions] = useState<SetupVersion[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     getSetupVersionsAction(setup.id)
       .then((result) => {
-        if (!cancelled) setVersions(result);
+        if (!cancelled) {
+          setVersions(result.versions);
+          setLoadError(result.error);
+        }
       })
       .catch(() => {
         if (!cancelled) setLoadError("Couldn't load history right now.");
@@ -42,10 +47,21 @@ export default function SetupCardHistory({ setup }: { setup: Setup }) {
     return () => {
       cancelled = true;
     };
-  }, [setup.id]);
+  }, [setup.id, retryCount]);
+
+  function handleRetry() {
+    setLoadError(null);
+    setVersions(null);
+    setRetryCount((count) => count + 1);
+  }
 
   if (loadError) {
-    return <p role="alert" className="text-xs text-racing-red">{loadError}</p>;
+    return (
+      <div className="flex flex-col items-start gap-2">
+        <p role="alert" className="text-sm text-destructive">{loadError}</p>
+        <RetryButton onRetry={handleRetry} />
+      </div>
+    );
   }
 
   if (versions === null) {
@@ -66,7 +82,7 @@ export default function SetupCardHistory({ setup }: { setup: Setup }) {
 
         return (
           <div key={version.id} className="flex flex-col gap-2 rounded-md border border-border/60 px-3 py-2.5">
-            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground/70">
+            <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground/70">
               <History className="size-3" />
               Edited {formatTimestamp(version.createdAt)}
             </div>

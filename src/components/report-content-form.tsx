@@ -70,8 +70,8 @@ export function ReportContentForm({
 
   if (submitted) {
     return (
-      <Card className="items-center gap-3 border-racing-green/30 px-6 py-10 text-center">
-        <span className="flex size-12 items-center justify-center rounded-full bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30">
+      <Card className="items-center gap-3 px-6 py-10 text-center">
+        <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-racing-green ring-1 ring-inset ring-border">
           <CheckCircle2 className="size-6" />
         </span>
         <h2 className="text-xl font-semibold">Report received</h2>
@@ -86,7 +86,7 @@ export function ReportContentForm({
     <Card className="px-5 py-6 sm:px-7">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-racing-coral/15 text-racing-coral ring-1 ring-inset ring-racing-coral/30">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground ring-1 ring-inset ring-border">
             <Flag className="size-5" />
           </span>
           <div>
@@ -126,7 +126,7 @@ export function ReportContentForm({
         </div>
 
         {error && (
-          <p role="alert" className="text-sm text-racing-red">
+          <p role="alert" className="text-sm text-destructive">
             {error}
           </p>
         )}

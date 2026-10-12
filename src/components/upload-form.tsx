@@ -42,7 +42,6 @@ import { validateVideoUrl } from "@/lib/video-url";
 import { normalizeSetupValues } from "@/lib/setup-values";
 import { resolveEffectiveSetupValues } from "@/lib/resolve-effective-setup-values";
 import { isKnownOption, type SelectOptionGroup } from "@/lib/select-options";
-import { cn } from "@/lib/utils";
 import {
   MAX_CAR_LENGTH,
   MAX_DESCRIPTION_LENGTH,
@@ -483,8 +482,8 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
 
   if (!user) {
     return (
-      <Card className="items-center gap-4 border-racing-green/30 px-6 py-14 text-center">
-        <span className="flex size-14 items-center justify-center rounded-full bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30">
+      <Card className="items-center gap-4 px-6 py-14 text-center">
+        <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground ring-1 ring-inset ring-border">
           <PenLine className="size-7" />
         </span>
         <div>
@@ -503,8 +502,8 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
 
   if (!isEditing && status === "success") {
     return (
-      <Card className="items-center gap-4 border-racing-green/40 px-6 py-14 text-center">
-        <span className="flex size-14 items-center justify-center rounded-full bg-racing-green/15 text-racing-green ring-1 ring-inset ring-racing-green/30">
+      <Card className="items-center gap-4 px-6 py-14 text-center">
+        <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-racing-green ring-1 ring-inset ring-border">
           <CheckCircle2 className="size-7" />
         </span>
         <div>
@@ -560,59 +559,55 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           </section>
 
           <section className="flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Setup data
               </h2>
-              <div className="flex items-center gap-1 rounded-lg border border-border/80 bg-secondary/40 p-1">
-                <button
+              <div className="flex w-full items-center gap-1 rounded-lg border border-border/80 bg-secondary/40 p-1 sm:w-auto">
+                <Button
                   type="button"
+                  variant={entryMode === "file" ? "secondary" : "ghost"}
+                  size="sm"
                   onClick={() => setEntryMode("file")}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                    entryMode === "file"
-                      ? "bg-racing-coral/15 text-racing-coral ring-1 ring-inset ring-racing-coral/30"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
+                  className="flex-1 sm:flex-none"
                 >
-                  <FileUp className="size-3.5" />
+                  <FileUp className="size-4" />
                   Upload file
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant={entryMode === "manual" ? "secondary" : "ghost"}
+                  size="sm"
                   onClick={() => setEntryMode("manual")}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                    entryMode === "manual"
-                      ? "bg-racing-coral/15 text-racing-coral ring-1 ring-inset ring-racing-coral/30"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
+                  className="flex-1 sm:flex-none"
                 >
-                  <PenLine className="size-3.5" />
+                  <PenLine className="size-4" />
                   Enter manually
-                </button>
+                </Button>
               </div>
             </div>
 
             {entryMode === "file" ? (
               <div className="flex flex-col gap-2">
                 {isEditing && keepExistingFile && !file ? (
-                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/40 px-3 py-2 text-sm">
+                  <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/40 px-3 py-2 text-sm">
                     <div className="flex min-w-0 items-center gap-2">
-                      <FileIcon className="size-4 shrink-0 text-racing-coral" />
+                      <FileIcon className="size-4 shrink-0 text-muted-foreground" />
                       <span className="truncate">{existingSetup?.fileName}</span>
                       <span className="shrink-0 text-xs text-muted-foreground">
                         current file
                       </span>
                     </div>
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setKeepExistingFile(false)}
-                      className="shrink-0 rounded-full p-1 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
                       aria-label="Remove current file"
+                      className="shrink-0 hover:text-destructive"
                     >
                       <X className="size-4" />
-                    </button>
+                    </Button>
                   </div>
                 ) : (
                   <FileDropzone file={file} onFileChange={handleFileChange} />
@@ -623,8 +618,8 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                 </p>
 
                 {detectedCar || Object.keys(detectedSetupValues).length > 0 ? (
-                  <div className="flex items-center gap-2 rounded-md border border-racing-green/30 bg-racing-green/10 px-3 py-2.5 text-xs text-racing-green">
-                    <CheckCircle2 className="size-4 shrink-0" />
+                  <div role="status" className="flex items-start gap-2 rounded-md border border-border/80 bg-secondary/30 px-3 py-2.5 text-sm text-muted-foreground">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-racing-green" />
                     <span>
                       {detectedCar && "Detected " + detectedCar + " — car field pre-filled below. "}
                       {Object.keys(detectedSetupValues).length > 0 &&
@@ -738,7 +733,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
               {setupTags.map((tag) => (
                 <label
                   key={tag}
-                  className="flex items-center gap-2 rounded-lg border border-border/80 px-3 py-2.5 text-sm has-[[data-state=checked]]:border-racing-coral/50 has-[[data-state=checked]]:bg-racing-coral/10"
+                  className="flex min-h-11 items-center gap-2 rounded-lg border border-border/80 px-3 py-2.5 text-sm has-[[data-state=checked]]:border-primary/50 has-[[data-state=checked]]:bg-primary/10"
                 >
                   <Checkbox
                     checked={tags.includes(tag)}
@@ -766,13 +761,10 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
       </Card>
 
       {error && (
-        <div
-          role="alert"
-          className="flex items-center gap-2 rounded-md border border-racing-red/30 bg-racing-red/10 px-4 py-3 text-sm text-racing-red"
-        >
-          <AlertCircle className="size-4 shrink-0" />
+        <p role="alert" className="flex items-start gap-2 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
           {error}
-        </div>
+        </p>
       )}
 
       <Button type="submit" size="lg" disabled={isPending}>

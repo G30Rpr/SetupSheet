@@ -10,14 +10,14 @@ export function OpenInGarageLink({ setupId, game }: { setupId: string; game: Gam
   if (!ENGINEER_GAMES.includes(game as EngineerGame)) return null;
 
   return (
-    <section className="mb-6 flex flex-col gap-4 rounded-xl border border-racing-cyan/25 bg-racing-cyan/5 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+    <section className="mb-6 flex flex-col gap-4 rounded-xl border border-border/80 bg-card p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <div>
         <p className="font-semibold">Ready to test this setup?</p>
         <p className="mt-1 text-sm text-muted-foreground">
           Start a private Garage session. Setup values are copied only if you opt in.
         </p>
       </div>
-      <Button asChild variant="secondary" className="shrink-0">
+      <Button asChild className="shrink-0">
         <Link href={`/garage?from=${encodeURIComponent(setupId)}`}>
           Open in Garage
           <ArrowRight aria-hidden="true" />

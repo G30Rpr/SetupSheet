@@ -16,7 +16,7 @@ export default function PrivacyPage() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
       <header className="mb-10">
-        <p className="mb-2 font-mono text-xs uppercase tracking-wide text-racing-coral">Trust & transparency</p>
+        <p className="mb-2 font-mono text-xs uppercase tracking-wide text-foreground">Trust & transparency</p>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
         <p className="mt-3 text-muted-foreground">Effective September 30, 2026. This plain-language policy describes the current SetupSheet implementation.</p>
       </header>
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
 
         <section id="privacy-deletion" aria-labelledby="privacy-rights">
           <h2 id="privacy-rights" className="mb-2 text-xl font-semibold text-foreground">Your choices and deletion requests</h2>
-          <p>You can remove your own setups, comments, favorites, follows, and notifications through the available product controls. You can also <Link href="/account/data-deletion" className="text-racing-coral underline underline-offset-4">submit an account and data-deletion request</Link> for manual review. Do not include passwords, access tokens, private Discord information, or other sensitive data in a public issue.</p>
+          <p>You can remove your own setups, comments, favorites, follows, and notifications through the available product controls. You can also <Link href="/account/data-deletion" className="text-foreground underline underline-offset-4">submit an account and data-deletion request</Link> for manual review. Do not include passwords, access tokens, private Discord information, or other sensitive data in a public issue.</p>
           <p className="mt-3">The request workflow records your request for a trusted project operator; it does not automatically delete the Supabase Auth account. If the service later operates under a formal legal entity or adds a privacy contact address, that contact should replace the repository link in this policy.</p>
         </section>
 
@@ -58,9 +58,9 @@ export default function PrivacyPage() {
       </div>
 
       <nav aria-label="Privacy navigation" className="mt-10 border-t border-border/80 pt-5 text-sm text-muted-foreground">
-        <Link href="/community-guidelines" className="text-racing-coral hover:underline">Read the Community Guidelines</Link>
+        <Link href="/community-guidelines" className="text-foreground hover:underline">Read the Community Guidelines</Link>
         <span aria-hidden="true" className="mx-2">·</span>
-        <Link href="/terms" className="text-racing-coral hover:underline">Read the Terms of Use</Link>
+        <Link href="/terms" className="text-foreground hover:underline">Read the Terms of Use</Link>
       </nav>
     </article>
   );

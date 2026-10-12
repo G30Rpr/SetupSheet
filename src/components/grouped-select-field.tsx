@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -58,13 +59,15 @@ export function GroupedSelectField({
             ))}
           </SelectContent>
         </Select>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => onToggleManual(true)}
-          className="self-start text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          className="self-start px-0 text-sm font-normal"
         >
           Not listed? Enter it manually
-        </button>
+        </Button>
       </>
     );
   }
@@ -80,13 +83,15 @@ export function GroupedSelectField({
         required
       />
       {groups && (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => onToggleManual(false)}
-          className="self-start text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          className="self-start px-0 text-sm font-normal"
         >
           Choose from the list instead
-        </button>
+        </Button>
       )}
     </>
   );

@@ -1,7 +1,7 @@
 import { normalizeHttpsUrl } from "@/lib/safe-url";
 import { getCurrentUser } from "@/lib/supabase/auth";
+import { logger } from "@/lib/logger";
 import { sanitizeDisplayName } from "@/lib/user-display";
-import { unwrapList } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
 import type { SetupComment } from "@/lib/types";
 
@@ -22,7 +22,9 @@ interface SetupCommentRow {
  * and then reversed, so a capped thread still shows its most recent
  * activity rather than silently truncating to the oldest 200 comments.
  */
-export async function getSetupComments(setupId: string): Promise<SetupComment[]> {
+export async function getSetupComments(
+  setupId: string
+): Promise<{ comments: SetupComment[]; error: string | null }> {
   const supabase = await createClient();
 
   const [user, result] = await Promise.all([
@@ -35,8 +37,11 @@ export async function getSetupComments(setupId: string): Promise<SetupComment[]>
       .limit(200),
   ]);
 
-  const rows = unwrapList(result, "getSetupComments: failed to load comments");
-  const typedRows = (rows as unknown as SetupCommentRow[]).slice().reverse();
+  if (result.error) {
+    logger.error("getSetupComments: failed to load comments", result.error);
+    return { comments: [], error: "Couldn't load comments right now." };
+  }
+  const typedRows = ((result.data ?? []) as unknown as SetupCommentRow[]).slice().reverse();
 
   const userIds = Array.from(new Set(typedRows.map((r) => r.user_id)));
   const { data: profiles } =
@@ -46,7 +51,7 @@ export async function getSetupComments(setupId: string): Promise<SetupComment[]>
 
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
 
-  return typedRows.map((row) => {
+  const comments = typedRows.map((row) => {
     const profile = profileById.get(row.user_id);
     return {
       id: row.id,
@@ -59,4 +64,6 @@ export async function getSetupComments(setupId: string): Promise<SetupComment[]>
       isOwner: user?.id === row.user_id,
     };
   });
+
+  return { comments, error: null };
 }

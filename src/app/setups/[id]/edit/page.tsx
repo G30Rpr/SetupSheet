@@ -26,8 +26,8 @@ export default async function EditSetupPage({
   if (!setup || !setup.isOwner) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
-        <Card className="items-center gap-4 border-racing-red/30 px-6 py-14 text-center">
-          <span className="flex size-14 items-center justify-center rounded-full bg-racing-red/15 text-racing-red ring-1 ring-inset ring-racing-red/30">
+        <Card className="items-center gap-4 px-6 py-14 text-center">
+          <span className="flex size-14 items-center justify-center rounded-full bg-secondary text-destructive ring-1 ring-inset ring-border">
             <AlertCircle className="size-7" />
           </span>
           <div>

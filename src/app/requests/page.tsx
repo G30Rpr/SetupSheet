@@ -51,20 +51,20 @@ export default async function RequestsPage() {
       {mostWanted.length > 0 && (
         <Card as="section" aria-labelledby="most-wanted-heading" className="mb-8 gap-3 px-5 py-4">
           <h2 id="most-wanted-heading" className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            <Flame className="size-4 text-racing-coral" />
+            <Flame className="size-4 text-foreground" />
             Most wanted
           </h2>
           <ul className="flex flex-col gap-2">
             {mostWanted.map((entry) => (
               <li
                 key={`${entry.game}-${entry.car}-${entry.track}`}
-                className="flex items-center justify-between gap-3 text-sm"
+                className="flex min-w-0 flex-wrap items-center justify-between gap-2 text-sm"
               >
-                <span>
+                <span className="min-w-0 flex-1 break-words">
                   <span className="font-medium">{entry.car}</span> @ {entry.track}
                   <span className="text-muted-foreground"> · {entry.game}</span>
                 </span>
-                <Badge variant="amber">
+                <Badge variant="secondary" className="shrink-0">
                   {entry.requestCount} {entry.requestCount === 1 ? "request" : "requests"}
                 </Badge>
               </li>
@@ -86,7 +86,7 @@ export default async function RequestsPage() {
             board -- otherwise "nobody has posted yet" and "the database is
             unreachable" render identically. */}
         {requestPage.error && !isEmpty && (
-          <p role="alert" className="mb-4 flex items-center gap-2 text-sm text-racing-red">
+          <p role="alert" className="mb-4 flex items-center gap-2 text-sm text-destructive">
             <TriangleAlert className="size-4 shrink-0" aria-hidden="true" />
             {requestPage.error}
           </p>

@@ -12,8 +12,10 @@ import type { SetupComment } from "@/lib/types";
 import { isUuid } from "@/lib/utils";
 
 /** A read, not a mutation -- lets the client-side comment panel fetch/refetch on demand. */
-export async function getSetupCommentsAction(setupId: string): Promise<SetupComment[]> {
-  if (!isUuid(setupId)) return [];
+export async function getSetupCommentsAction(
+  setupId: string
+): Promise<{ comments: SetupComment[]; error: string | null }> {
+  if (!isUuid(setupId)) return { comments: [], error: "That setup id is invalid." };
   return getSetupComments(setupId);
 }
 

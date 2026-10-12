@@ -366,7 +366,7 @@ export function SetupsBrowser({
             }
           />
           {!search && (
-            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border/80 bg-secondary/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border/80 bg-secondary/60 px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
               /
             </kbd>
           )}
@@ -375,7 +375,7 @@ export function SetupsBrowser({
             <ul
               id="setup-search-suggestions"
               role="listbox"
-              className="absolute z-10 mt-1.5 w-full overflow-hidden rounded-md border border-border/80 bg-popover shadow-lg"
+              className="absolute z-10 mt-1.5 w-full overflow-hidden rounded-md border border-border/80 bg-popover shadow-popover"
             >
               {suggestions.map((suggestion, index) => (
                 <li key={suggestion}>
@@ -396,7 +396,7 @@ export function SetupsBrowser({
                       setShowSuggestions(false);
                     }}
                     className={cn(
-                      "w-full truncate px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-accent",
+                      "min-h-11 w-full truncate px-3 py-2 text-left text-sm text-foreground hover:bg-accent",
                       activeSuggestionIndex === index && "bg-accent"
                     )}
                   >
@@ -504,8 +504,8 @@ export function SetupsBrowser({
       </div>
 
       {compareMode && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-racing-coral/30 bg-racing-coral/10 px-4 py-2.5 text-sm">
-          <span className="text-racing-coral">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/40 px-4 py-2.5 text-sm">
+          <span className="text-muted-foreground">
             {compareIds.length === 0
               ? "Pick two setups to compare"
               : compareIds.length === 1
@@ -586,7 +586,7 @@ export function SetupsBrowser({
           </Button>
           {remoteError && (
             <div className="flex flex-col items-center gap-2 text-center">
-              <p role="alert" className="text-sm text-racing-red">
+              <p role="alert" className="text-sm text-destructive">
                 {remoteError}
               </p>
               <RetryButton label="Retry loading older setups" onRetry={handleLoadOlder} />

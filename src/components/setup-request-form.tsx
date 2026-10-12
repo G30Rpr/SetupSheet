@@ -33,7 +33,10 @@ export function SetupRequestForm() {
     e.preventDefault();
     setError(null);
 
-    const formData = new FormData(e.currentTarget);
+    // Keep the element itself, not the SyntheticEvent: React clears
+    // currentTarget after dispatch, before the async transition finishes.
+    const form = e.currentTarget;
+    const formData = new FormData(form);
     const car = String(formData.get("car") ?? "");
     const track = String(formData.get("track") ?? "");
     const notes = String(formData.get("notes") ?? "");
@@ -46,7 +49,7 @@ export function SetupRequestForm() {
           return;
         }
         setGame("");
-        e.currentTarget.reset();
+        form.reset();
         toast.success("Request posted");
         router.refresh();
       } catch {
@@ -61,7 +64,7 @@ export function SetupRequestForm() {
 
   if (!user) {
     return (
-      <Card className="items-center gap-3 border-racing-green/30 px-6 py-8 text-center">
+      <Card className="items-center gap-3 px-6 py-8 text-center">
         <p className="text-sm text-muted-foreground">
           Log in to post a setup request.
         </p>
@@ -117,13 +120,10 @@ export function SetupRequestForm() {
         </div>
 
         {error && (
-          <div
-            role="alert"
-            className="flex items-center gap-2 rounded-md border border-racing-red/30 bg-racing-red/10 px-4 py-2.5 text-sm text-racing-red"
-          >
-            <AlertCircle className="size-4 shrink-0" />
+          <p role="alert" className="flex items-start gap-2 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 size-4 shrink-0" />
             {error}
-          </div>
+          </p>
         )}
 
         <Button type="submit" disabled={isPending} className="self-start">

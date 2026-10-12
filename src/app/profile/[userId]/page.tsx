@@ -95,11 +95,11 @@ export default async function PublicProfilePage({
         <nav aria-label="Breadcrumb" className="mb-6">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
             <li>
-              <Link href="/" className="transition-colors hover:text-foreground">Home</Link>
+              <Link href="/" className=" hover:text-foreground">Home</Link>
             </li>
             <li aria-hidden="true">/</li>
             <li>
-              <Link href="/leaderboard" className="transition-colors hover:text-foreground">Leaderboard</Link>
+              <Link href="/leaderboard" className=" hover:text-foreground">Leaderboard</Link>
             </li>
             <li aria-hidden="true">/</li>
             <li aria-current="page" className="max-w-[14rem] truncate text-foreground">{profile.username}</li>
