@@ -67,9 +67,9 @@ export function AccountDeletionRequest({
   }
 
   return (
-    <Card className="gap-4 border-racing-red/30 px-5 py-6 sm:px-7">
+    <Card className="gap-4 px-5 py-6 sm:px-7">
       <div className="flex items-start gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-racing-red/15 text-racing-red ring-1 ring-inset ring-racing-red/30">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary text-destructive ring-1 ring-inset ring-border">
           <AlertTriangle className="size-5" />
         </span>
         <div>
@@ -81,9 +81,9 @@ export function AccountDeletionRequest({
       </div>
 
       {request?.status === "pending" ? (
-        <div className="flex flex-col gap-3 rounded-md border border-racing-amber/30 bg-racing-amber/10 px-4 py-3 text-sm">
-          <p className="flex items-center gap-2 font-medium text-racing-amber">
-            <Clock3 className="size-4" />
+        <div className="flex flex-col gap-3 rounded-md border border-border/80 bg-secondary/30 px-4 py-3 text-sm">
+          <p className="flex items-center gap-2 font-medium text-foreground">
+            <Clock3 className="size-4 text-racing-amber" />
             Deletion request pending review
           </p>
           <p className="text-muted-foreground">
@@ -95,19 +95,19 @@ export function AccountDeletionRequest({
           </Button>
         </div>
       ) : request?.status === "processing" ? (
-        <p className="flex items-center gap-2 rounded-md border border-racing-amber/30 bg-racing-amber/10 px-4 py-3 text-sm text-racing-amber">
-          <Clock3 className="size-4" />
+        <p className="flex items-center gap-2 rounded-md border border-border/80 bg-secondary/30 px-4 py-3 text-sm text-muted-foreground">
+          <Clock3 className="size-4 shrink-0 text-racing-amber" />
           Your deletion request is being processed. Cancellation is no longer available.
         </p>
       ) : request?.status === "completed" ? (
-        <p className="flex items-center gap-2 rounded-md border border-racing-green/30 bg-racing-green/10 px-4 py-3 text-sm text-racing-green">
-          <CheckCircle2 className="size-4" />
+        <p className="flex items-center gap-2 rounded-md border border-border/80 bg-secondary/30 px-4 py-3 text-sm text-muted-foreground">
+          <CheckCircle2 className="size-4 shrink-0 text-racing-green" />
           Your deletion request has been marked complete.
         </p>
       ) : (
         <div className="flex flex-col gap-3">
           {confirming && (
-            <p className="text-sm font-medium text-racing-red">
+            <p className="text-sm font-medium text-destructive">
               Click the button again to confirm. This starts a manual deletion review.
             </p>
           )}
@@ -125,7 +125,7 @@ export function AccountDeletionRequest({
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-racing-red">
+        <p role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}

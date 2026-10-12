@@ -3,6 +3,7 @@
 import { CheckCircle2, ChevronDown, X } from "lucide-react";
 
 import { FileDropzone } from "@/components/file-dropzone";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ALLOWED_TELEMETRY_FILE_EXTENSIONS } from "@/lib/storage";
@@ -35,29 +36,31 @@ export function UploadProofSection({
 }) {
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-border/80 bg-secondary/20 p-4">
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="sm"
         onClick={onToggleFields}
         aria-expanded={showFields}
         aria-controls="lap-proof-fields"
-        className="flex w-full items-center justify-between gap-3 rounded-md text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="w-full justify-between text-left"
       >
         <span
           role="heading"
           aria-level={3}
           className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
         >
-          <CheckCircle2 className="size-4 text-racing-green" />
+          <CheckCircle2 className="size-4 text-muted-foreground" />
           Verified Lap Proof &amp; Telemetry
           <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
         </span>
         <ChevronDown
           className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-transform",
+            "size-4 shrink-0 text-muted-foreground motion-safe:motion-transform",
             showFields && "rotate-180"
           )}
         />
-      </button>
+      </Button>
       <p className="text-xs text-muted-foreground">
         Add proof only if you have it. A video link or telemetry file adds a
         &ldquo;Verified Lap&rdquo; badge to your setup card.
@@ -82,18 +85,20 @@ export function UploadProofSection({
           <div className="flex flex-col gap-1.5">
             <Label>Telemetry / Data Logging File</Label>
             {isEditing && keepExistingTelemetry && existingTelemetryFileName ? (
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/40 px-3 py-2 text-sm">
-                <span className="truncate text-xs font-medium text-racing-cyan">
+              <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/40 px-3 py-2 text-sm">
+                <span className="min-w-0 truncate text-sm font-medium text-muted-foreground">
                   Telemetry attached: {existingTelemetryFileName}
                 </span>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={onRemoveExistingTelemetry}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
                   aria-label="Remove telemetry file"
+                  className="shrink-0 hover:text-destructive"
                 >
                   <X className="size-4" />
-                </button>
+                </Button>
               </div>
             ) : (
               <FileDropzone

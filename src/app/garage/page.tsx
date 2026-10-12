@@ -35,8 +35,8 @@ export default async function GaragePage({
   if (!user) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
-        <Card className="items-center gap-4 border-racing-cyan/30 px-6 py-14 text-center">
-          <span className="flex size-14 items-center justify-center rounded-full bg-racing-cyan/10 text-racing-cyan ring-1 ring-inset ring-racing-cyan/25">
+        <Card className="items-center gap-4 px-6 py-14 text-center">
+          <span className="flex size-14 items-center justify-center rounded-full bg-secondary text-muted-foreground ring-1 ring-inset ring-border">
             <LockKeyhole className="size-7" aria-hidden="true" />
           </span>
           <div>

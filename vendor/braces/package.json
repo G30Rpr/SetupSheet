@@ -1,0 +1,14 @@
+{
+  "name": "braces",
+  "version": "3.0.4+setupsheet.0",
+  "description": "Bash-like brace expansion with a bounded AST nesting depth.",
+  "main": "index.js",
+  "license": "MIT",
+  "repository": "https://github.com/micromatch/braces",
+  "engines": {
+    "node": ">=8"
+  },
+  "dependencies": {
+    "fill-range": "^7.1.1"
+  }
+}

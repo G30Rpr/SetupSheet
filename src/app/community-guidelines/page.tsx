@@ -16,7 +16,7 @@ export default function CommunityGuidelinesPage() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
       <header className="mb-10">
-        <p className="mb-2 font-mono text-xs uppercase tracking-wide text-racing-green">Race clean</p>
+        <p className="mb-2 font-mono text-xs uppercase tracking-wide text-muted-foreground">Race clean</p>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
         <p className="mt-3 text-muted-foreground">Help other racers find setups they can trust, understand, and safely try.</p>
       </header>
@@ -50,14 +50,14 @@ export default function CommunityGuidelinesPage() {
 
         <section aria-labelledby="guidelines-enforcement">
           <h2 id="guidelines-enforcement" className="mb-2 text-xl font-semibold text-foreground">Moderation and reports</h2>
-          <p>Content that breaks these guidelines may be removed and accounts may be limited or suspended. Use the in-app report link on a setup or comment when available. For broader service issues, contact the project through the <a className="text-racing-coral underline underline-offset-4" href="https://github.com/G30Rpr/SetupSheet" target="_blank" rel="noopener noreferrer">SetupSheet repository</a>. Do not include private credentials or sensitive personal information in a public issue.</p>
+          <p>Content that breaks these guidelines may be removed and accounts may be limited or suspended. Use the in-app report link on a setup or comment when available. For broader service issues, contact the project through the <a className="text-foreground underline underline-offset-4" href="https://github.com/G30Rpr/SetupSheet" target="_blank" rel="noopener noreferrer">SetupSheet repository</a>. Do not include private credentials or sensitive personal information in a public issue.</p>
         </section>
       </div>
 
       <nav aria-label="Community policy navigation" className="mt-10 border-t border-border/80 pt-5 text-sm text-muted-foreground">
-        <Link href="/privacy" className="text-racing-coral hover:underline">Read the Privacy Policy</Link>
+        <Link href="/privacy" className="text-foreground hover:underline">Read the Privacy Policy</Link>
         <span aria-hidden="true" className="mx-2">·</span>
-        <Link href="/terms" className="text-racing-coral hover:underline">Read the Terms of Use</Link>
+        <Link href="/terms" className="text-foreground hover:underline">Read the Terms of Use</Link>
       </nav>
     </article>
   );

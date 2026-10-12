@@ -21,17 +21,17 @@ export function SiteFooter() {
 
         <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
           {navLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="hover:text-foreground transition-colors">
+            <Link key={link.href} href={link.href} className="hover:text-foreground ">
               {link.label}
             </Link>
           ))}
-          <Link href="/privacy" className="hover:text-foreground transition-colors">
+          <Link href="/privacy" className="hover:text-foreground ">
             Privacy
           </Link>
-          <Link href="/community-guidelines" className="hover:text-foreground transition-colors">
+          <Link href="/community-guidelines" className="hover:text-foreground ">
             Guidelines
           </Link>
-          <Link href="/terms" className="hover:text-foreground transition-colors">
+          <Link href="/terms" className="hover:text-foreground ">
             Terms
           </Link>
         </nav>

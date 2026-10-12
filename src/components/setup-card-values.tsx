@@ -13,7 +13,7 @@ export default function SetupCardValues({ setup }: { setup: Setup }) {
         if (rows.length === 0) return null;
         return (
           <div key={group.title} className="flex flex-col gap-1.5">
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground/70">
               {group.title}
             </p>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1">

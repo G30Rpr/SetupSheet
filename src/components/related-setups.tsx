@@ -19,7 +19,7 @@ export async function RelatedSetups({ setupId, game }: { setupId: string; game: 
         </div>
         <Link
           href={`/setups?game=${encodeURIComponent(game)}`}
-          className="shrink-0 text-sm font-medium text-racing-coral hover:underline"
+          className="inline-flex min-h-11 shrink-0 items-center text-sm font-medium text-foreground underline-offset-4 hover:underline"
         >
           View all
         </Link>
@@ -29,7 +29,7 @@ export async function RelatedSetups({ setupId, game }: { setupId: string; game: 
           <li key={related.id}>
             <Link
               href={`/setups/${encodeURIComponent(related.id)}`}
-              className="block rounded-lg border border-border/80 bg-card px-3.5 py-3 transition-colors hover:border-racing-coral/40 hover:bg-accent/50"
+              className="block min-h-11 rounded-lg border border-border/80 bg-card px-3.5 py-3 hover:bg-accent/50"
             >
               <span className="block truncate font-medium">{related.car}</span>
               <span className="block truncate text-sm text-muted-foreground">

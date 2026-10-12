@@ -43,7 +43,7 @@ export function DiscordLoginButton({
       onClick={() => void signInWithDiscord(nextPath)}
       size="sm"
       className={cn(
-        "bg-[#5865F2] text-white hover:bg-[#4752C4] hover:shadow-[0_0_24px_-4px_rgba(88,101,242,0.6)]",
+        "bg-discord text-white hover:bg-discord-hover",
         className
       )}
     >
@@ -70,14 +70,15 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="rounded-full ring-offset-background transition-shadow outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          type="button"
+          className="flex size-11 items-center justify-center rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           aria-label="Account menu"
         >
-          <Avatar className="ring-1 ring-border transition-colors hover:ring-racing-coral/50">
+          <Avatar className="size-10 ring-1 ring-border">
             {/* Decorative: the trigger has an accessible name and the menu shows the
                 display name in text, so repeating it here is a duplicate. */}
             <AvatarImage src={avatarUrl ?? undefined} alt="" />
-            <AvatarFallback className="bg-racing-coral/15 text-racing-coral">
+            <AvatarFallback className="bg-secondary text-xs text-muted-foreground">
               {getInitials(displayName)}
             </AvatarFallback>
           </Avatar>
@@ -112,7 +113,7 @@ export function AuthNav() {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="size-9 animate-pulse rounded-full bg-secondary" />;
+    return <div role="status" aria-label="Loading account" className="size-11 animate-pulse rounded-full bg-secondary" />;
   }
 
   return user ? <UserMenu /> : <DiscordLoginButton />;

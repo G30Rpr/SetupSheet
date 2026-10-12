@@ -1,4 +1,4 @@
-import { unwrapList } from "@/lib/supabase/query-helpers";
+import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/database.types";
 import { normalizeSetupValues } from "@/lib/setup-values";
@@ -22,7 +22,9 @@ const SETUP_VERSION_COLUMNS =
  * owner's own edit, so `edited_by` is always the setup's current author,
  * already known to the caller from the parent Setup.
  */
-export async function getSetupVersions(setupId: string): Promise<SetupVersion[]> {
+export async function getSetupVersions(
+  setupId: string
+): Promise<{ versions: SetupVersion[]; error: string | null }> {
   const supabase = await createClient();
 
   const result = await supabase
@@ -32,9 +34,12 @@ export async function getSetupVersions(setupId: string): Promise<SetupVersion[]>
     .order("created_at", { ascending: false })
     .limit(200);
 
-  const rows = unwrapList(result, "getSetupVersions: failed to load setup history");
+  if (result.error) {
+    logger.error("getSetupVersions: failed to load setup history", result.error);
+    return { versions: [], error: "Couldn't load history right now." };
+  }
 
-  return (rows as unknown as SetupVersionRow[]).map((row) => ({
+  const versions = ((result.data ?? []) as unknown as SetupVersionRow[]).map((row) => ({
     id: row.id,
     createdAt: row.created_at,
     game: row.game as Game,
@@ -50,4 +55,6 @@ export async function getSetupVersions(setupId: string): Promise<SetupVersion[]>
     videoUrl: normalizeVideoUrl(row.video_url),
     telemetryFileName: sanitizeStoredFileName(row.telemetry_file_name),
   }));
+
+  return { versions, error: null };
 }

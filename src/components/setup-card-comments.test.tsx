@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import SetupCardComments from "@/components/setup-card-comments";
@@ -50,7 +52,7 @@ const comment: SetupComment = {
 describe("SetupCardComments", () => {
   it("shows a login gate instead of the composer when logged out", async () => {
     useAuthMock.mockReturnValue({ user: null, signInWithDiscord: vi.fn() });
-    getSetupCommentsActionMock.mockResolvedValue([]);
+    getSetupCommentsActionMock.mockResolvedValue({ comments: [], error: null });
 
     render(<SetupCardComments setup={baseSetup} />);
 
@@ -61,7 +63,7 @@ describe("SetupCardComments", () => {
 
   it("lists fetched comments and lets the owner delete one", async () => {
     useAuthMock.mockReturnValue({ user: { id: "user-1" }, signInWithDiscord: vi.fn() });
-    getSetupCommentsActionMock.mockResolvedValue([comment]);
+    getSetupCommentsActionMock.mockResolvedValue({ comments: [comment], error: null });
     deleteCommentMock.mockResolvedValue({ error: null });
 
     render(<SetupCardComments setup={baseSetup} />);
@@ -78,7 +80,7 @@ describe("SetupCardComments", () => {
   it("posts a new comment and clears the composer on success", async () => {
     const user = { id: "user-1" };
     useAuthMock.mockReturnValue({ user, signInWithDiscord: vi.fn() });
-    getSetupCommentsActionMock.mockResolvedValue([]);
+    getSetupCommentsActionMock.mockResolvedValue({ comments: [], error: null });
     createCommentMock.mockResolvedValue({ error: null });
 
     render(<SetupCardComments setup={baseSetup} />);
@@ -94,9 +96,24 @@ describe("SetupCardComments", () => {
     expect(getSetupCommentsActionMock).toHaveBeenCalledTimes(2);
   });
 
+  it("distinguishes a failed read from an empty thread and can retry", async () => {
+    useAuthMock.mockReturnValue({ user: null, signInWithDiscord: vi.fn() });
+    getSetupCommentsActionMock
+      .mockResolvedValueOnce({ comments: [], error: "Couldn't load comments right now." })
+      .mockResolvedValueOnce({ comments: [], error: null });
+
+    render(<SetupCardComments setup={baseSetup} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load comments right now.");
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+
+    expect(await screen.findByText("No comments yet.")).toBeInTheDocument();
+    expect(getSetupCommentsActionMock).toHaveBeenCalledTimes(2);
+  });
+
   it("surfaces the server error and keeps the draft when posting fails", async () => {
     useAuthMock.mockReturnValue({ user: { id: "user-1" }, signInWithDiscord: vi.fn() });
-    getSetupCommentsActionMock.mockResolvedValue([]);
+    getSetupCommentsActionMock.mockResolvedValue({ comments: [], error: null });
     createCommentMock.mockResolvedValue({ error: "Comment is too long." });
 
     render(<SetupCardComments setup={baseSetup} />);

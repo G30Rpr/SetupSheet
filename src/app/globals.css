@@ -5,6 +5,13 @@
 
 :root {
   --radius: 0.75rem;
+  --space-unit: 0.25rem;
+  --discord: #5865f2;
+  --discord-hover: #4752c4;
+  --motion-duration-standard: 200ms;
+  --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --elevation-card: 0 1px 2px oklch(0 0 0 / 16%);
+  --elevation-popover: 0 8px 24px oklch(0 0 0 / 20%);
   --font-inter: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-jetbrains-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
@@ -144,6 +151,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-discord: var(--discord);
+  --color-discord-hover: var(--discord-hover);
   --color-racing-red: var(--racing-red);
   --color-racing-red-foreground: var(--racing-red-foreground);
   --color-racing-green: var(--racing-green);
@@ -158,6 +167,9 @@
 
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
+  --spacing: var(--space-unit);
+  --shadow-card: var(--elevation-card);
+  --shadow-popover: var(--elevation-popover);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -183,13 +195,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image:
-      radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.62 0.19 25 / 12%), transparent),
-      radial-gradient(ellipse 60% 40% at 100% 0%, oklch(0.62 0.19 200 / 8%), transparent);
-    /* A fixed attachment forces an expensive repaint while scrolling on
-       mobile browsers. The gradients are decorative, so let the page scroll
-       naturally and keep the main content paint-friendly. */
-    background-attachment: scroll;
   }
 }
 
@@ -205,6 +210,18 @@
 }
 
 @layer utilities {
+  .motion-transform {
+    transition-property: transform;
+    transition-duration: var(--motion-duration-standard);
+    transition-timing-function: var(--motion-easing-standard);
+  }
+
+  .motion-opacity {
+    transition-property: opacity;
+    transition-duration: var(--motion-duration-standard);
+    transition-timing-function: var(--motion-easing-standard);
+  }
+
   /* Skip layout/paint work for cards below the fold while preserving a
      stable approximate size for the grid's scrollbar and scroll position. */
   .content-auto {

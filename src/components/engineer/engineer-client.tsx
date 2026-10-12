@@ -125,7 +125,7 @@ export function EngineerClient() {
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
       <header className="mb-8 flex flex-col gap-5 border-b border-border/80 pb-8 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-3xl">
-          <Badge variant="blue" className="mb-4 gap-1.5">
+          <Badge variant="secondary" className="mb-4 gap-1.5">
             <ShieldCheck aria-hidden="true" />
             Static Engineer · No account required
           </Badge>
@@ -135,16 +135,16 @@ export function EngineerClient() {
             Advice is available immediately from a local knowledge base; it does not depend on live data.
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2 rounded-lg border border-racing-green/25 bg-racing-green/5 px-3 py-2 text-xs text-racing-green">
-          <span className="size-2 rounded-full bg-racing-green" aria-hidden="true" />
+        <p className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
+          <span className="size-2 rounded-full bg-muted-foreground" aria-hidden="true" />
           Static recommendations ready
-        </div>
+        </p>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
-        <section aria-labelledby="engineer-input-heading" className="rounded-xl border border-border/80 bg-card p-5 shadow-sm sm:p-7">
+        <section aria-labelledby="engineer-input-heading" className="rounded-xl border border-border/80 bg-card p-5 shadow-card sm:p-7">
           <div className="mb-6">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-racing-cyan">01 / Describe</p>
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">01 / Describe</p>
             <h2 id="engineer-input-heading" className="mt-2 text-xl font-semibold">What are you feeling?</h2>
             <p className="mt-1 text-sm text-muted-foreground">Start with one repeatable symptom.</p>
           </div>
@@ -230,21 +230,21 @@ export function EngineerClient() {
           </div>
 
           <div className="mt-7 flex gap-3 rounded-lg border border-border/80 bg-secondary/35 p-3.5 text-xs leading-5 text-muted-foreground">
-            <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-racing-cyan" />
+            <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <p>Make one change at a time, repeat the same test, and revert if the car gets worse. Suggested amounts are small starting points, not universal targets.</p>
           </div>
         </section>
 
-        <section aria-labelledby="engineer-results-heading" aria-live="polite" className="rounded-xl border border-border/80 bg-card p-5 shadow-sm sm:p-7">
+        <section aria-labelledby="engineer-results-heading" aria-live="polite" className="rounded-xl border border-border/80 bg-card p-5 shadow-card sm:p-7">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-racing-coral">02 / Test plan</p>
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">02 / Test plan</p>
               <h2 id="engineer-results-heading" className="mt-2 text-xl font-semibold">Recommended changes</h2>
               <p className="mt-1 text-sm text-muted-foreground">Ranked starting points for {game}.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {hasAppliedEvidence && <Badge variant="blue">Public evidence · rank only</Badge>}
-              <Badge variant={condition === "wet" ? "blue" : "outline"} className="gap-1.5">
+              {hasAppliedEvidence && <Badge variant="secondary">Public evidence · rank only</Badge>}
+              <Badge variant="secondary" className="gap-1.5">
                 {condition === "wet" ? <CloudRain aria-hidden="true" /> : <Sun aria-hidden="true" />}
                 {condition === "wet" ? "Wet rules applied" : "Dry baseline"}
               </Badge>
@@ -252,14 +252,14 @@ export function EngineerClient() {
           </div>
 
           {result.notices.map((notice) => (
-            <div key={notice} role="status" className="mb-4 rounded-lg border border-racing-amber/30 bg-racing-amber/5 px-3.5 py-3 text-sm text-muted-foreground">
+            <div key={notice} role="status" className="mb-4 rounded-lg border border-border/80 bg-secondary/30 px-3.5 py-3 text-sm text-muted-foreground">
               <span className="font-medium text-racing-amber">Note: </span>{notice}
             </div>
           ))}
 
           {result.conflicts.length > 0 && (
-            <div role="alert" className="mb-4 rounded-lg border border-racing-red/30 bg-racing-red/5 p-3.5">
-              <div className="flex gap-2 text-sm font-medium text-racing-red">
+            <div role="alert" className="mb-4 rounded-lg border border-border/80 bg-secondary/30 p-3.5">
+              <div className="flex gap-2 text-sm font-medium text-destructive">
                 <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
                 Conflicting directions found
               </div>
@@ -273,29 +273,25 @@ export function EngineerClient() {
             <ol className="space-y-3" aria-label="Ranked setup changes">
               {result.recommendations.map((recommendation, index) => {
                 const isPrimary = index === 0;
-                const directionTone = recommendation.direction === "increase" || recommendation.direction === "stiffen"
-                  ? "text-racing-green"
-                  : "text-racing-cyan";
-
                 return (
                   <li key={`${recommendation.parameter}-${recommendation.direction}`} className="rounded-lg border border-border/80 bg-background/45 p-4 sm:p-5">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        <span className={`flex size-8 shrink-0 items-center justify-center rounded-md font-mono text-xs font-bold ${isPrimary ? "bg-racing-coral/15 text-racing-coral" : "bg-secondary text-muted-foreground"}`}>
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary font-mono text-xs font-bold text-muted-foreground">
                           {String(index + 1).padStart(2, "0")}
                         </span>
                         <div className="min-w-0">
-                          {isPrimary && <p className="mb-0.5 font-mono text-[10px] uppercase tracking-[0.15em] text-racing-coral">First test</p>}
+                          {isPrimary && <p className="mb-0.5 font-mono text-xs uppercase tracking-[0.15em] text-muted-foreground">First test</p>}
                           <h3 className="font-semibold">{recommendation.parameter}</h3>
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         {recommendation.publicEvidence && (
-                          <Badge variant="blue" className="shrink-0">
+                          <Badge variant="secondary" className="shrink-0">
                             {recommendation.publicEvidence.sampleCount} public setups
                           </Badge>
                         )}
-                        <Badge variant="outline" className={`shrink-0 gap-1.5 ${directionTone}`}>
+                        <Badge variant="outline" className="shrink-0 gap-1.5">
                           <DirectionIcon direction={recommendation.direction} />
                           {directionLabels[recommendation.direction]}
                         </Badge>

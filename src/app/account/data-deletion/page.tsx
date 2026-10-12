@@ -23,13 +23,13 @@ export default async function DataDeletionPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
-      <Link href="/privacy" className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
+      <Link href="/privacy" className="mb-6 inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-4" />
         Back to Privacy Policy
       </Link>
 
       <div className="mb-8">
-        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-racing-green">
+        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <ShieldCheck className="size-4" />
           Account privacy
         </div>
@@ -40,7 +40,7 @@ export default async function DataDeletionPage() {
       </div>
 
       {!user ? (
-        <Card className="items-center gap-4 border-racing-green/30 px-6 py-12 text-center">
+        <Card className="items-center gap-4 px-6 py-12 text-center">
           <h2 className="text-xl font-semibold">Log in to submit a request</h2>
           <p className="max-w-sm text-sm text-muted-foreground">
             Sign in with Discord so the request can be tied to the correct account.

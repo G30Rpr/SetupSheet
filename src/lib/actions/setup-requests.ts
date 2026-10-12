@@ -182,11 +182,17 @@ export async function getMyMatchingSetupsAction(
   game: string,
   car: string,
   track: string
-): Promise<{ id: string; car: string; track: string }[]> {
+): Promise<{
+  setups: { id: string; car: string; track: string }[];
+  error: string | null;
+}> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
 
-  if (!user || typeof game !== "string" || typeof car !== "string" || typeof track !== "string") return [];
+  if (!user) return { setups: [], error: "You need to be logged in to load your setups." };
+  if (typeof game !== "string" || typeof car !== "string" || typeof track !== "string") {
+    return { setups: [], error: "That request is invalid." };
+  }
 
   const { data, error } = await supabase
     .from("setups")
@@ -198,13 +204,16 @@ export async function getMyMatchingSetupsAction(
 
   if (error) {
     logger.error("getMyMatchingSetupsAction: failed to load setups", error);
-    return [];
+    return { setups: [], error: "Couldn't load your setups right now." };
   }
 
   const normalize = (s: string) => s.trim().toLowerCase();
-  return data.filter(
-    (setup) => normalize(setup.car) === normalize(car) && normalize(setup.track) === normalize(track)
-  );
+  return {
+    setups: data.filter(
+      (setup) => normalize(setup.car) === normalize(car) && normalize(setup.track) === normalize(track)
+    ),
+    error: null,
+  };
 }
 
 /**

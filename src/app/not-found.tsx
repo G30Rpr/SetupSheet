@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-24 text-center sm:px-6">
-      <Card className="w-full items-center gap-4 border-racing-coral/30 px-6 py-14">
-        <span className="flex size-14 items-center justify-center rounded-full bg-racing-coral/15 text-racing-coral ring-1 ring-inset ring-racing-coral/30">
+      <Card className="w-full items-center gap-4 px-6 py-14">
+        <span className="flex size-14 items-center justify-center rounded-full bg-secondary text-muted-foreground ring-1 ring-inset ring-border">
           <SearchX className="size-7" />
         </span>
         <div>

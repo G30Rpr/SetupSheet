@@ -9,7 +9,9 @@ import { isUuid } from "@/lib/utils";
  * panel on SetupCard can fetch on first expand rather than loading every
  * setup's history on every render of the browse grid.
  */
-export async function getSetupVersionsAction(setupId: string): Promise<SetupVersion[]> {
-  if (!isUuid(setupId)) return [];
+export async function getSetupVersionsAction(
+  setupId: string
+): Promise<{ versions: SetupVersion[]; error: string | null }> {
+  if (!isUuid(setupId)) return { versions: [], error: "That setup id is invalid." };
   return getSetupVersions(setupId);
 }

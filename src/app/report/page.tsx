@@ -36,13 +36,13 @@ export default async function ReportPage({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
-      <Link href="/" className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
+      <Link href="/" className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground  hover:text-foreground">
         <ArrowLeft className="size-4" />
         Back to {SITE_NAME}
       </Link>
 
       <div className="mb-8">
-        <p className="mb-2 font-mono text-xs uppercase tracking-wide text-racing-coral">Community safety</p>
+        <p className="mb-2 font-mono text-xs uppercase tracking-wide text-foreground">Community safety</p>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Report Content</h1>
         <p className="mt-2 text-muted-foreground">
           Help us review content that may be unsafe, abusive, misleading, or inappropriate.
@@ -57,7 +57,7 @@ export default async function ReportPage({
           </p>
         </Card>
       ) : !user ? (
-        <Card className="items-center gap-4 border-racing-green/30 px-6 py-12 text-center">
+        <Card className="items-center gap-4 px-6 py-12 text-center">
           <h2 className="text-xl font-semibold">Log in to submit a report</h2>
           <p className="max-w-sm text-sm text-muted-foreground">
             Reports are tied to your account so operators can prevent duplicate or abusive submissions.

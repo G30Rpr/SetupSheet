@@ -16,7 +16,7 @@ export default function TermsPage() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
       <header className="mb-10">
-        <p className="mb-2 font-mono text-xs uppercase tracking-wide text-racing-coral">Community service</p>
+        <p className="mb-2 font-mono text-xs uppercase tracking-wide text-foreground">Community service</p>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
         <p className="mt-3 text-muted-foreground">Effective August 28, 2026. These terms are a practical product draft and should receive legal review before a public commercial launch.</p>
       </header>
@@ -24,7 +24,7 @@ export default function TermsPage() {
       <div className="flex flex-col gap-8 leading-7 text-muted-foreground">
         <section aria-labelledby="terms-acceptance">
           <h2 id="terms-acceptance" className="mb-2 text-xl font-semibold text-foreground">Using {SITE_NAME}</h2>
-          <p>By browsing or contributing to SetupSheet, you agree to use the service lawfully, respect other racers, and follow these terms and the <Link href="/community-guidelines" className="text-racing-coral underline underline-offset-4">Community Guidelines</Link>. You may browse public setups without an account; Discord authentication is required for contributions and account-bound actions.</p>
+          <p>By browsing or contributing to SetupSheet, you agree to use the service lawfully, respect other racers, and follow these terms and the <Link href="/community-guidelines" className="text-foreground underline underline-offset-4">Community Guidelines</Link>. You may browse public setups without an account; Discord authentication is required for contributions and account-bound actions.</p>
         </section>
 
         <section aria-labelledby="terms-content">
@@ -50,14 +50,14 @@ export default function TermsPage() {
 
         <section aria-labelledby="terms-contact">
           <h2 id="terms-contact" className="mb-2 text-xl font-semibold text-foreground">Questions and reports</h2>
-          <p>For setup or comment reports, use the in-app report link. For account questions, deletion requests, or broader service issues, use the <a className="text-racing-coral underline underline-offset-4" href="https://github.com/G30Rpr/SetupSheet" target="_blank" rel="noopener noreferrer">SetupSheet repository</a>. Do not post private credentials or sensitive personal information publicly.</p>
+          <p>For setup or comment reports, use the in-app report link. For account questions, deletion requests, or broader service issues, use the <a className="text-foreground underline underline-offset-4" href="https://github.com/G30Rpr/SetupSheet" target="_blank" rel="noopener noreferrer">SetupSheet repository</a>. Do not post private credentials or sensitive personal information publicly.</p>
         </section>
       </div>
 
       <nav aria-label="Terms navigation" className="mt-10 border-t border-border/80 pt-5 text-sm text-muted-foreground">
-        <Link href="/privacy" className="text-racing-coral hover:underline">Read the Privacy Policy</Link>
+        <Link href="/privacy" className="text-foreground hover:underline">Read the Privacy Policy</Link>
         <span aria-hidden="true" className="mx-2">·</span>
-        <Link href="/community-guidelines" className="text-racing-coral hover:underline">Read the Community Guidelines</Link>
+        <Link href="/community-guidelines" className="text-foreground hover:underline">Read the Community Guidelines</Link>
       </nav>
     </article>
   );

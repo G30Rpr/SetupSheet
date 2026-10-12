@@ -86,11 +86,11 @@ export function FieldTestReportForm({ detail }: { detail: GarageSessionDetail })
       {!session.sourceSetupId ? (
         <p className="rounded-md border border-border/70 bg-secondary/20 px-3 py-2.5 text-sm text-muted-foreground">
           To share a field test, start a Garage session from a public setup so the source can be verified.
-          <Link href="/setups" className="ml-1 font-medium text-racing-cyan hover:underline">Browse setups</Link>.
+          <Link href="/setups" className="ml-1 font-medium text-foreground underline-offset-4 hover:underline">Browse setups</Link>.
         </p>
       ) : (
         <p className="text-sm text-muted-foreground">
-          For <Link href={`/setups/${encodeURIComponent(session.sourceSetupId)}`} className="font-medium text-racing-cyan hover:underline">
+          For <Link href={`/setups/${encodeURIComponent(session.sourceSetupId)}`} className="font-medium text-foreground underline-offset-4 hover:underline">
             {session.car} at {session.track}
           </Link>
           {laps.length === 0 && " · Log at least one lap"}
@@ -99,7 +99,7 @@ export function FieldTestReportForm({ detail }: { detail: GarageSessionDetail })
       )}
 
       {createdReportId ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-racing-green/25 bg-racing-green/5 p-3">
+        <div className="flex flex-col gap-3 rounded-lg border border-border/80 bg-secondary/30 p-3">
           <p className="text-sm">
             Your report is {nameIsVisible ? "attributed to your profile" : "anonymous by default"}.
           </p>
@@ -131,13 +131,13 @@ export function FieldTestReportForm({ detail }: { detail: GarageSessionDetail })
             />
           </div>
           <p className="text-xs text-muted-foreground">Public attribution is off. You can opt in separately after submitting.</p>
-          {error && <p role="alert" className="text-sm text-racing-red">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <Button type="submit" disabled={!isEligible || createPending} className="self-start">
             {createPending ? "Submitting…" : "Submit field test anonymously"}
           </Button>
         </form>
       )}
-      {createdReportId && error && <p role="alert" className="text-sm text-racing-red">{error}</p>}
+      {createdReportId && error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     </Card>
   );
 }

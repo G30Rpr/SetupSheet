@@ -11,7 +11,7 @@ import { JsonLd } from "@/components/json-ld";
 import { fullPageTitle } from "@/lib/seo";
 import { getLeaderboard } from "@/lib/supabase/leaderboard";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
-import { cn, getInitials } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
 
 const title = "Leaderboard";
 const socialTitle = fullPageTitle(title);
@@ -23,12 +23,6 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/leaderboard` },
   openGraph: { title: socialTitle, description, url: "/leaderboard", type: "website", siteName: SITE_NAME },
   twitter: { card: "summary_large_image", title: socialTitle, description },
-};
-
-const rankMedalClass: Record<number, string> = {
-  1: "bg-racing-amber/15 text-racing-amber ring-1 ring-inset ring-racing-amber/30",
-  2: "bg-secondary text-foreground ring-1 ring-inset ring-border",
-  3: "bg-racing-red/10 text-racing-red/90 ring-1 ring-inset ring-racing-red/20",
 };
 
 export default async function LeaderboardPage() {
@@ -55,7 +49,7 @@ export default async function LeaderboardPage() {
       <JsonLd data={jsonLd}/>
       <div className="mb-8">
         <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight sm:text-4xl">
-          <Trophy className="size-8 text-racing-amber" />
+          <Trophy className="size-8 text-muted-foreground" />
           Top Contributors
         </h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
@@ -88,20 +82,17 @@ export default async function LeaderboardPage() {
                 <li key={entry.userId}>
                   <Link
                     href={`/profile/${encodeURIComponent(entry.userId)}`}
-                    className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-accent/50"
+                    className="flex min-h-11 min-w-0 items-center gap-3 px-4 py-3 hover:bg-accent/50 sm:gap-4 sm:px-5 sm:py-4"
                   >
                     <span
-                      className={cn(
-                        "flex size-8 shrink-0 items-center justify-center rounded-full font-mono text-sm font-bold tabular-nums",
-                        rankMedalClass[rank] ?? "bg-secondary text-muted-foreground"
-                      )}
+                      className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary font-mono text-sm font-bold tabular-nums text-foreground ring-1 ring-inset ring-border"
                     >
                       {rank}
                     </span>
 
                     <Avatar className="size-10 shrink-0 ring-1 ring-border">
                       <AvatarImage src={entry.avatarUrl ?? undefined} alt="" />
-                      <AvatarFallback className="bg-racing-coral/15 text-sm text-racing-coral">
+                      <AvatarFallback className="bg-secondary text-sm text-muted-foreground">
                         {getInitials(entry.username)}
                       </AvatarFallback>
                     </Avatar>
@@ -116,7 +107,7 @@ export default async function LeaderboardPage() {
 
                     <ContributorBadge totalUpvotes={entry.totalUpvotes} />
 
-                    <span className="flex shrink-0 items-center gap-1 font-mono text-lg font-semibold tabular-nums text-racing-coral">
+                    <span className="flex shrink-0 items-center gap-1 font-mono text-lg font-semibold tabular-nums text-foreground">
                       <TrendingUp className="size-4" />
                       {entry.totalUpvotes}
                     </span>

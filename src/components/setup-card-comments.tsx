@@ -9,6 +9,7 @@ import { useAuth } from "@/components/auth-provider";
 import { DiscordLoginButton } from "@/components/auth-nav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { RetryButton } from "@/components/retry-button";
 import { Textarea } from "@/components/ui/textarea";
 import { createComment, deleteComment, getSetupCommentsAction } from "@/lib/actions/setup-comments";
 import { MAX_COMMENT_LENGTH } from "@/lib/data";
@@ -39,8 +40,8 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
   const refetch = useCallback(() => {
     getSetupCommentsAction(setup.id)
       .then((result) => {
-        setLoadError(null);
-        setComments(result);
+        setLoadError(result.error);
+        setComments(result.comments);
       })
       .catch(() => {
         setComments([]);
@@ -49,6 +50,12 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
   }, [setup.id]);
 
   useEffect(refetch, [refetch]);
+
+  function handleRetry() {
+    setLoadError(null);
+    setComments(null);
+    refetch();
+  }
 
   function clearPendingDelete(commentId: string) {
     setPendingDeleteIds((prev) => {
@@ -115,9 +122,10 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
   return (
     <div className="mt-2 flex flex-col gap-3 text-xs">
       {loadError ? (
-        <p role="alert" className="text-racing-red">
-          {loadError}
-        </p>
+        <div className="flex flex-col items-start gap-2">
+          <p role="alert" className="text-destructive">{loadError}</p>
+          <RetryButton onRetry={handleRetry} />
+        </div>
       ) : visibleComments === null ? (
         <p className="text-muted-foreground">Loading comments...</p>
       ) : visibleComments.length === 0 ? (
@@ -128,35 +136,41 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
             <li key={comment.id} className="flex items-start gap-2">
               <Avatar className="size-6 shrink-0 ring-1 ring-border">
                 <AvatarImage src={comment.avatarUrl ?? undefined} alt="" />
-                <AvatarFallback className="bg-racing-green/15 text-[9px] text-racing-green">
+                <AvatarFallback className="bg-secondary text-xs text-muted-foreground">
                   {getInitials(comment.username)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div className="flex items-center gap-1.5">
                   <span className="font-semibold text-foreground">{comment.username}</span>
-                  <span className="text-[10px] text-muted-foreground/70">
+                  <span className="text-xs text-muted-foreground/70">
                     {formatTimestamp(comment.createdAt)}
                   </span>
                 </div>
                 <p className="whitespace-pre-wrap text-muted-foreground">{comment.body}</p>
               </div>
-              <Link
-                href={`/report?type=comment&id=${encodeURIComponent(comment.id)}`}
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
                 aria-label="Report comment"
-                className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                className="shrink-0"
               >
-                <Flag className="size-3" />
-              </Link>
+                <Link href={`/report?type=comment&id=${encodeURIComponent(comment.id)}`}>
+                  <Flag className="size-4" />
+                </Link>
+              </Button>
               {comment.isOwner && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => handleDelete(comment.id)}
                   aria-label="Delete comment"
-                  className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-racing-red disabled:opacity-60"
+                  className="shrink-0 hover:text-destructive"
                 >
-                  <Trash2 className="size-3" />
-                </button>
+                  <Trash2 className="size-4" />
+                </Button>
               )}
             </li>
           ))}
@@ -171,10 +185,10 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
             placeholder="Add a comment..."
             maxLength={MAX_COMMENT_LENGTH}
             rows={2}
-            className="text-xs"
+            className="text-sm"
           />
           {error && (
-            <p role="alert" className="text-racing-red">
+            <p role="alert" className="text-destructive">
               {error}
             </p>
           )}

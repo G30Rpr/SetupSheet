@@ -30,6 +30,7 @@ import {
 import { useAuth } from "@/components/auth-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -98,12 +99,6 @@ function parseVideoEmbed(urlStr?: string | null) {
     return null;
   }
 }
-
-const conditionVariant = {
-  Dry: "secondary",
-  Wet: "blue",
-  Mixed: "amber",
-} as const;
 
 export function SetupCard({
   setup,
@@ -337,7 +332,7 @@ export function SetupCard({
   if (isDeleted) return null;
 
   return (
-    <Card as="article" className="content-auto group relative overflow-hidden border-border/80 py-0 transition-all duration-200 hover:-translate-y-1 hover:border-racing-coral/40 hover:shadow-[0_8px_30px_-8px_oklch(0.62_0.19_25/25%)]">
+    <Card as="article" className="content-auto group relative overflow-hidden border-border/80 py-0 motion-safe:motion-transform motion-safe:hover:-translate-y-0.5">
       <div className="flex flex-col gap-3 p-5">
         {/* Top row: game + condition + owner controls */}
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -357,7 +352,7 @@ export function SetupCard({
               </Badge>
             )}
             {onToggleCompare && (
-              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <label className="flex min-h-11 items-center gap-1.5 px-2 text-xs text-muted-foreground">
                 <Checkbox
                   checked={compareSelected}
                   onCheckedChange={() => onToggleCompare()}
@@ -368,21 +363,21 @@ export function SetupCard({
             )}
             {setup.isOwner && (
               <div className="flex items-center gap-1">
-                <Link
-                  href={`/setups/${setup.id}/edit`}
-                  aria-label="Edit setup"
-                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                >
-                  <Pencil className="size-3.5" />
-                </Link>
-                <button
+                <Button asChild variant="ghost" size="icon" aria-label="Edit setup">
+                  <Link href={`/setups/${setup.id}/edit`}>
+                    <Pencil className="size-4" />
+                  </Link>
+                </Button>
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={handleDelete}
                   aria-label="Delete setup"
-                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-racing-red disabled:opacity-60"
+                  className="hover:text-destructive"
                 >
-                  <Trash2 className="size-3.5" />
-                </button>
+                  <Trash2 className="size-4" />
+                </Button>
               </div>
             )}
             {/* Share and report used to be two permanent icons on every card
@@ -390,13 +385,9 @@ export function SetupCard({
                 rather than competing with Download for attention. */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="More actions"
-                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                >
-                  <Ellipsis className="size-3.5" />
-                </button>
+                <Button type="button" variant="ghost" size="icon" aria-label="More actions">
+                  <Ellipsis className="size-4" />
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuItem onSelect={handleShare}>
@@ -412,7 +403,7 @@ export function SetupCard({
               </DropdownMenuContent>
             </DropdownMenu>
             {fieldTestCount > 0 && (
-              <Badge variant="blue" asChild>
+              <Badge variant="secondary" asChild>
                 <Link
                   href={`/setups/${encodeURIComponent(setup.id)}#field-tests`}
                   title="Public self-reported field tests derived from logged Garage laps and changes."
@@ -422,20 +413,20 @@ export function SetupCard({
                 </Link>
               </Badge>
             )}
-            <Badge variant={conditionVariant[setup.condition]}>{setup.condition}</Badge>
+            <Badge variant="secondary">{setup.condition}</Badge>
           </div>
         </div>
 
         {/* Author byline */}
         <Link
           href={`/profile/${setup.authorId}`}
-          className="flex w-fit items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="flex min-h-11 w-fit items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground"
         >
-          <Avatar className="size-5">
+            <Avatar className="size-6 shrink-0">
             {/* alt="": the byline link renders the author name as text right beside
               this avatar, so a name here announces it twice, once per card. */}
             <AvatarImage src={setup.authorAvatarUrl ?? undefined} alt="" />
-            <AvatarFallback className="bg-racing-coral/15 text-[9px] text-racing-coral">
+            <AvatarFallback className="bg-secondary text-xs text-muted-foreground">
               {getInitials(setup.author)}
             </AvatarFallback>
           </Avatar>
@@ -446,7 +437,7 @@ export function SetupCard({
         <div>
           <Title className="text-lg font-semibold leading-tight tracking-tight text-foreground">
             {linkTitle ? (
-              <Link href={`/setups/${setup.id}`} className="transition-colors hover:text-racing-coral">
+              <Link href={`/setups/${setup.id}`} className="underline-offset-4 hover:underline">
                 {setup.car}
               </Link>
             ) : (
@@ -458,8 +449,8 @@ export function SetupCard({
 
         {/* Lap time */}
         <div className="flex items-center gap-2 rounded-md bg-secondary/60 px-3 py-2.5">
-          <Timer className="size-5 shrink-0 text-racing-cyan" />
-          <span className="font-mono text-2xl font-bold tabular-nums text-racing-cyan">
+          <Timer className="size-5 shrink-0 text-muted-foreground" />
+          <span className="font-mono text-2xl font-bold tabular-nums text-foreground">
             {setup.lapTime}
           </span>
           <span className="text-xs text-muted-foreground">lap time</span>
@@ -490,19 +481,22 @@ export function SetupCard({
         {/* Hotlap Video Proof */}
         {safeVideoUrl && (
           <div>
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setShowVideo((s) => !s)}
-              className="flex w-full items-center justify-between rounded-md border border-racing-green/30 bg-racing-green/10 px-3 py-2 text-xs font-medium text-racing-green transition-colors hover:bg-racing-green/15"
+              aria-expanded={showVideo}
+              className="w-full justify-between text-left"
             >
               <span className="flex items-center gap-1.5">
                 <Video className="size-3.5" />
                 Watch Hotlap Proof Video
               </span>
               <ChevronDown
-                className={cn("size-3.5 transition-transform", showVideo && "rotate-180")}
+                className={cn("size-3.5 motion-transform", showVideo && "rotate-180")}
               />
-            </button>
+            </Button>
 
             {showVideo && (
               <div className="mt-2.5 overflow-hidden rounded-lg border border-border bg-black/40 p-1">
@@ -525,7 +519,7 @@ export function SetupCard({
                       href={safeVideoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 font-medium text-racing-coral hover:underline shrink-0"
+                      className="inline-flex min-h-11 shrink-0 items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline"
                     >
                       Open Video <ExternalLink className="size-3" />
                     </a>
@@ -538,7 +532,7 @@ export function SetupCard({
 
         {/* Telemetry File Attachment */}
         {setup.telemetryFileUrl && (
-          <div className="flex items-center justify-between rounded-md border border-racing-cyan/30 bg-racing-cyan/10 px-3 py-2 text-xs text-racing-cyan">
+          <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-md border border-border/80 bg-secondary/30 px-3 py-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5 min-w-0 font-medium">
               <Activity className="size-3.5 shrink-0" />
               <span className="truncate">Telemetry: {setup.telemetryFileName ?? "telemetry.ld"}</span>
@@ -546,7 +540,7 @@ export function SetupCard({
             <a
               href={setup.telemetryFileUrl}
               download={setup.telemetryFileName ?? "telemetry-data"}
-              className="inline-flex shrink-0 items-center gap-1 font-semibold hover:underline"
+              className="inline-flex min-h-11 shrink-0 items-center gap-1 font-semibold text-foreground underline-offset-4 hover:underline"
             >
               Download Telemetry <FileDown className="size-3" />
             </a>
@@ -556,16 +550,19 @@ export function SetupCard({
         {/* Setup values (expandable) */}
         {v && (
           <div>
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setShowValues((s) => !s)}
-              className="flex w-full items-center justify-between rounded-md border border-border/80 bg-secondary/30 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              aria-expanded={showValues}
+              className="w-full justify-between text-left"
             >
               Setup values
               <ChevronDown
-                className={cn("size-3.5 transition-transform", showValues && "rotate-180")}
+                className={cn("size-3.5 motion-safe:motion-transform", showValues && "rotate-180")}
               />
-            </button>
+            </Button>
 
             {showValues && <SetupCardValues setup={setup} />}
           </div>
@@ -574,13 +571,15 @@ export function SetupCard({
         {/* Export formats for setups with values */}
         {setup.setupValues && Object.keys(setup.setupValues).length > 0 && (
           <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
+            <span className="font-mono text-xs uppercase tracking-wide text-muted-foreground">
               Export format:
             </span>
             {getAvailableExportFormats(setup).map((fmt) => (
-              <button
+              <Button
                 key={fmt.id}
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   const content = fmt.generate(setup);
                   triggerBlobDownload(
@@ -589,11 +588,11 @@ export function SetupCard({
                   );
                   toast.success(`Exported as ${fmt.ext}`);
                 }}
-                className="inline-flex items-center gap-1 rounded-md border border-border/80 bg-secondary/50 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-racing-coral/40 hover:text-foreground"
+                className="gap-1"
               >
-                <FileDown className="size-3 text-racing-coral" />
+                <FileDown className="size-4 text-muted-foreground" />
                 {fmt.label}
-              </button>
+              </Button>
             ))}
           </div>
         )}
@@ -602,12 +601,13 @@ export function SetupCard({
             a generated text export of the manually-entered values */}
         {(setup.fileUrl || setup.setupValues) && (
           <div className="flex items-stretch gap-1.5">
-            <button
+            <Button
               type="button"
               onClick={handleDownload}
               disabled={isDownloading}
+              aria-busy={isDownloading}
               title={setup.fileName ?? undefined}
-              className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-md bg-racing-coral/10 px-3 py-2.5 text-sm font-semibold text-racing-coral ring-1 ring-inset ring-racing-coral/30 transition-colors hover:bg-racing-coral/15 disabled:opacity-60"
+              className="min-w-0 flex-1 justify-between"
             >
               <span className="flex min-w-0 items-center gap-2">
                 <FileDown className="size-4 shrink-0" />
@@ -615,7 +615,7 @@ export function SetupCard({
                   {isDownloading ? "Preparing download..." : "Download Setup"}
                 </span>
               </span>
-              <span className="shrink-0 text-xs font-normal text-racing-coral/70">
+              <span className="shrink-0 text-xs font-normal text-primary-foreground/80">
                 {downloads > 0 ? (
                   <>
                     <span className="font-mono tabular-nums">{downloads}</span>{" "}
@@ -625,74 +625,85 @@ export function SetupCard({
                   "Be the first"
                 )}
               </span>
-            </button>
+            </Button>
             {setup.setupValues && (
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="icon"
                 onClick={handleCopyValues}
                 aria-label="Copy setup values to clipboard"
                 title="Copy setup values"
-                className="flex shrink-0 items-center justify-center rounded-md bg-racing-coral/10 px-3 text-racing-coral ring-1 ring-inset ring-racing-coral/30 transition-colors hover:bg-racing-coral/15"
+                className="shrink-0"
               >
                 <Clipboard className="size-4" />
-              </button>
+              </Button>
             )}
           </div>
         )}
 
         {/* How to install (expandable) */}
         <div>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setShowInstallGuide((s) => !s)}
-            className="flex w-full items-center justify-between rounded-md border border-border/80 bg-secondary/30 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            aria-expanded={showInstallGuide}
+            className="w-full justify-between text-left"
           >
             <span className="flex items-center gap-1.5">
               <BookOpen className="size-3.5" />
               How to install this setup
             </span>
             <ChevronDown
-              className={cn("size-3.5 transition-transform", showInstallGuide && "rotate-180")}
+              className={cn("size-3.5 motion-safe:motion-transform", showInstallGuide && "rotate-180")}
             />
-          </button>
+          </Button>
 
           {showInstallGuide && <SetupCardInstallGuide setup={setup} />}
         </div>
 
         {/* Version history (expandable) */}
         <div>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setShowHistory((s) => !s)}
-            className="flex w-full items-center justify-between rounded-md border border-border/80 bg-secondary/30 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            aria-expanded={showHistory}
+            className="w-full justify-between text-left"
           >
             <span className="flex items-center gap-1.5">
               <History className="size-3.5" />
               Version history
             </span>
             <ChevronDown
-              className={cn("size-3.5 transition-transform", showHistory && "rotate-180")}
+              className={cn("size-3.5 motion-safe:motion-transform", showHistory && "rotate-180")}
             />
-          </button>
+          </Button>
 
           {showHistory && <SetupCardHistory setup={setup} />}
         </div>
 
         {/* Comments (expandable) */}
         <div>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => setShowComments((s) => !s)}
-            className="flex w-full items-center justify-between rounded-md border border-border/80 bg-secondary/30 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            aria-expanded={showComments}
+            className="w-full justify-between text-left"
           >
             <span className="flex items-center gap-1.5">
               <MessageSquare className="size-3.5" />
               Comments
             </span>
             <ChevronDown
-              className={cn("size-3.5 transition-transform", showComments && "rotate-180")}
+              className={cn("size-3.5 motion-safe:motion-transform", showComments && "rotate-180")}
             />
-          </button>
+          </Button>
 
           {showComments && <SetupCardComments setup={setup} />}
         </div>

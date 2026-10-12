@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/components/auth-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,7 +55,7 @@ function RelativeTime({ dateStr }: { dateStr: string }) {
     return () => clearInterval(id);
   }, [dateStr]);
 
-  return <span className="text-[11px] text-muted-foreground">{label ?? " "}</span>;
+  return <span className="text-xs text-muted-foreground">{label ?? " "}</span>;
 }
 
 /**
@@ -166,32 +167,34 @@ export function NotificationBell({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          className="relative rounded-full p-2 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          aria-label="Notifications"
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="relative rounded-full"
+          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
         >
           <Bell className="size-5" />
           {unreadCount > 0 && (
-            // racing-red-foreground, not text-white: the red is light enough
-            // now that a white digit on it misses AA (10px bold is not "large
-            // text"). The token flips per theme along with the surface.
-            <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-racing-red text-[10px] font-bold text-racing-red-foreground">
+            <span className="absolute -right-0.5 -top-0.5 flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
-        </button>
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <div className="flex items-center justify-between px-2 py-1.5">
           <DropdownMenuLabel className="p-0">Notifications</DropdownMenuLabel>
           {unreadCount > 0 && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={handleMarkAllRead}
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="text-sm"
             >
               Mark all read
-            </button>
+            </Button>
           )}
         </div>
         <DropdownMenuSeparator />
@@ -204,11 +207,11 @@ export function NotificationBell({
             <DropdownMenuItem
               key={n.id}
               onSelect={() => handleItemClick(n)}
-              className={cn("flex items-start gap-2.5 py-2", !n.read && "bg-racing-green/5")}
+              className={cn("flex items-start gap-2.5 py-2", !n.read && "bg-accent/60")}
             >
               <Avatar className="size-8 shrink-0 ring-1 ring-border">
                 <AvatarImage src={n.actorAvatarUrl ?? undefined} alt="" />
-                <AvatarFallback className="bg-racing-green/15 text-xs text-racing-green">
+                <AvatarFallback className="bg-secondary text-xs text-muted-foreground">
                   {getInitials(n.actorUsername)}
                 </AvatarFallback>
               </Avatar>
@@ -231,20 +234,22 @@ export function NotificationBell({
                 </p>
                 <RelativeTime dateStr={n.createdAt} />
               </div>
-              {!n.read && <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-racing-green" />}
+              {!n.read && <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />}
             </DropdownMenuItem>
           ))
         )}
         {hasReadNotifications && (
           <>
             <DropdownMenuSeparator />
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={handleClearRead}
-              className="w-full px-2 py-1.5 text-center text-xs text-muted-foreground hover:text-foreground"
+              className="w-full text-sm"
             >
               Clear read notifications
-            </button>
+            </Button>
           </>
         )}
       </DropdownMenuContent>

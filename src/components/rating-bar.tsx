@@ -14,12 +14,10 @@ import { cn } from "@/lib/utils";
 export function RatingBar({
   value,
   max = 5,
-  color,
   className,
 }: {
   value: number;
   max?: number;
-  color: "coral" | "cyan";
   className?: string;
 }) {
   const safeValue = Number.isFinite(value) ? Math.min(Math.max(value, 0), max) : 0;
@@ -36,25 +34,13 @@ export function RatingBar({
         aria-valuemin={0}
         aria-valuemax={max}
       >
-        <div
-          className={cn(
-            "h-full rounded-full",
-            color === "coral" ? "bg-racing-coral" : "bg-racing-cyan"
-          )}
-          style={{ width: `${pct}%` }}
-        />
+        <div className="h-full rounded-full bg-foreground/70" style={{ width: `${pct}%` }} />
       </div>
       <span
-        className="flex w-11 shrink-0 items-center gap-0.5 font-mono text-[11px] tabular-nums text-muted-foreground"
+        className="flex w-11 shrink-0 items-center gap-0.5 font-mono text-xs tabular-nums text-muted-foreground"
         title={`${pct}% — community average of ratings out of ${max}`}
       >
-        <Star
-          className={cn(
-            "size-3 shrink-0 fill-current",
-            color === "coral" ? "text-racing-coral" : "text-racing-cyan"
-          )}
-          aria-hidden="true"
-        />
+        <Star className="size-3 shrink-0 fill-current" aria-hidden="true" />
         {safeValue.toFixed(1)}
       </span>
     </div>

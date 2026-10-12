@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Check, ClipboardCopy, Download, PackageOpen } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { resolveInstallGuide } from "@/lib/install-guides";
 import type { Setup } from "@/lib/types";
 
@@ -52,53 +53,53 @@ export default function SetupCardInstallGuide({ setup }: { setup: Setup }) {
 
       {guide.folderPath && (
         <div className="flex flex-col gap-1.5 rounded border border-border/60 bg-secondary/40 px-2.5 py-2">
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground/70">
             Destination folder
           </span>
           <div className="flex items-start gap-2">
-            <code className="min-w-0 flex-1 break-all font-mono text-[11px] text-foreground">
+            <code className="min-w-0 flex-1 break-all font-mono text-xs text-foreground">
               {guide.folderPath}
             </code>
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={copyFolder}
               aria-label="Copy the destination folder path"
-              className="flex shrink-0 items-center gap-1 rounded border border-border/80 bg-background px-1.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-racing-coral/40 hover:text-foreground"
+              className="shrink-0 gap-1"
             >
               {copied === "folder" ? (
-                <Check className="size-3 text-racing-green" aria-hidden="true" />
+                <Check className="size-4 text-racing-green" aria-hidden="true" />
               ) : (
-                <ClipboardCopy className="size-3" aria-hidden="true" />
+                <ClipboardCopy className="size-4" aria-hidden="true" />
               )}
               {copied === "folder" ? "Copied" : "Copy"}
-            </button>
+            </Button>
           </div>
           {guide.folderNote && (
-            <p className="text-[11px] text-muted-foreground/80">{guide.folderNote}</p>
+            <p className="text-xs text-muted-foreground/80">{guide.folderNote}</p>
           )}
         </div>
       )}
 
       {canBundle && guide.supportsFileImport && (
-        <a
-          href={`/api/setups/${encodeURIComponent(setup.id)}/bundle`}
-          download
-          className="flex w-fit items-center gap-1.5 rounded-md border border-racing-coral/40 bg-racing-coral/10 px-2.5 py-1.5 font-medium text-racing-coral transition-colors hover:bg-racing-coral/15"
-        >
-          <PackageOpen className="size-3.5" aria-hidden="true" />
-          Download install bundle
-        </a>
+        <Button asChild variant="outline" size="sm" className="w-fit self-start">
+          <a href={`/api/setups/${encodeURIComponent(setup.id)}/bundle`} download>
+            <PackageOpen className="size-4" aria-hidden="true" />
+            Download install bundle
+          </a>
+        </Button>
       )}
 
       {canBundle && guide.supportsFileImport && (
-        <p className="text-[11px] text-muted-foreground/80">
+        <p className="text-xs text-muted-foreground/80">
           The bundle contains the setup file, your values as text, and these
           instructions — so you don&apos;t need to come back to this page mid-install.
         </p>
       )}
 
       {!guide.supportsFileImport && (
-        <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground/80">
+        <p className="flex items-start gap-1.5 text-xs text-muted-foreground/80">
           <Download className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
           <span>
             This title can&apos;t import a file, so use the{" "}

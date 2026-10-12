@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { File, UploadCloud, X } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { ALLOWED_SETUP_FILE_EXTENSIONS } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
@@ -58,13 +59,13 @@ export function FileDropzone({
             pickFile(e.dataTransfer.files);
           }}
           className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors",
+            "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 text-center ",
             isDragging
-              ? "border-racing-coral bg-racing-coral/10"
-              : "border-border hover:border-racing-coral/50 hover:bg-accent/40"
+              ? "border-primary bg-primary/10"
+              : "border-border hover:border-primary/50 hover:bg-accent/40"
           )}
         >
-          <span className="flex size-12 items-center justify-center rounded-full bg-racing-coral/15 text-racing-coral ring-1 ring-inset ring-racing-coral/30">
+          <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground ring-1 ring-inset ring-border">
             <UploadCloud className="size-6" />
           </span>
           <div>
@@ -87,22 +88,24 @@ export function FileDropzone({
       )}
 
       {file && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/40 px-3 py-2 text-sm">
+        <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/40 px-3 py-2 text-sm">
           <div className="flex min-w-0 items-center gap-2">
-            <File className="size-4 shrink-0 text-racing-coral" />
+            <File className="size-4 shrink-0 text-muted-foreground" />
             <span className="truncate">{file.name}</span>
             <span className="shrink-0 text-xs text-muted-foreground">
               {formatBytes(file.size)}
             </span>
           </div>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => onFileChange(null)}
-            className="shrink-0 rounded-full p-1 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
             aria-label={`Remove ${file.name}`}
+            className="shrink-0 hover:text-destructive"
           >
             <X className="size-4" />
-          </button>
+          </Button>
         </div>
       )}
     </div>

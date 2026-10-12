@@ -1,5 +1,6 @@
 import { ClipboardList, Gauge, Timer } from "lucide-react";
 
+import { RetryButton } from "@/components/retry-button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { PublicFieldTestSummary } from "@/lib/supabase/field-tests";
@@ -30,21 +31,22 @@ export function PublicFieldTestReports({ summary }: { summary: PublicFieldTestSu
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="mb-1 flex items-center gap-2">
-            <ClipboardList className="size-4 text-racing-cyan" aria-hidden="true" />
+            <ClipboardList className="size-4 text-muted-foreground" aria-hidden="true" />
             <h2 id="field-tests-heading" className="text-xl font-semibold">Field tests</h2>
           </div>
           <p className="text-sm text-muted-foreground">
             Self-reported results derived from drivers&apos; logged Garage laps and better run-plan changes.
           </p>
         </div>
-        <Badge variant="blue">
+        <Badge variant="secondary">
           {summary.reportCount} {summary.reportCount === 1 ? "report" : "reports"}
         </Badge>
       </div>
 
       {summary.error ? (
-        <Card className="px-4 py-5 text-sm text-muted-foreground">
-          Field-test reports couldn&apos;t be loaded right now. Try refreshing this page.
+        <Card className="flex-row flex-wrap items-center justify-between gap-3 px-4 py-5">
+          <p className="text-sm text-muted-foreground">Field-test reports couldn&apos;t be loaded right now.</p>
+          <RetryButton />
         </Card>
       ) : summary.reports.length === 0 ? (
         <Card className="px-4 py-5 text-sm text-muted-foreground">
@@ -92,7 +94,7 @@ export function PublicFieldTestReports({ summary }: { summary: PublicFieldTestSu
                         {report.consistencyPct === null ? "—" : `${report.consistencyPct.toFixed(1)}%`}
                       </p>
                       {report.consistencyPct === null && (
-                        <p className="text-[11px] text-muted-foreground">One lap logged</p>
+                        <p className="text-xs text-muted-foreground">One lap logged</p>
                       )}
                     </div>
                   </div>

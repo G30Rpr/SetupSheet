@@ -67,7 +67,7 @@ export function ProfileView({
       <Card className="mb-8 flex-row flex-wrap items-center gap-5 px-5 py-6 sm:px-8">
         <Avatar className="size-16 ring-1 ring-border">
           <AvatarImage src={avatarUrl} alt="" />
-          <AvatarFallback className="bg-racing-coral/15 text-lg text-racing-coral">
+          <AvatarFallback className="bg-secondary text-lg text-muted-foreground">
             {getInitials(displayName)}
           </AvatarFallback>
         </Avatar>
@@ -90,7 +90,7 @@ export function ProfileView({
             <FollowButton targetUserId={follow.targetUserId} initialIsFollowing={follow.initialIsFollowing} />
             <Link
               href={`/report?type=profile&id=${encodeURIComponent(follow.targetUserId)}`}
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
+              className="inline-flex min-h-11 items-center gap-1 px-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
             >
               <Flag className="size-3" />
               Report
@@ -104,7 +104,7 @@ export function ProfileView({
             <span className="text-xs text-muted-foreground">Setups</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="flex items-center gap-1 font-mono text-lg font-semibold tabular-nums text-racing-coral">
+            <span className="flex items-center gap-1 font-mono text-lg font-semibold tabular-nums text-foreground">
               <TrendingUp className="size-4" />
               {totalUpvotes}
             </span>
@@ -134,7 +134,7 @@ export function ProfileView({
       )}
 
       {setupsError && (
-        <p role="alert" className="-mt-4 mb-5 text-sm text-racing-red">
+        <p role="alert" className="-mt-4 mb-5 text-sm text-destructive">
           {setupsError}
         </p>
       )}
@@ -183,7 +183,7 @@ export function ProfileView({
       {favoritedSetups && favoritedSetups.length > 0 && (
         <div className="mt-10">
           <h2 className="mb-5 flex items-center gap-1.5 text-xl font-semibold tracking-tight">
-            <Bookmark className="size-4.5 fill-current text-racing-cyan" />
+            <Bookmark className="size-4.5 fill-current text-muted-foreground" />
             Saved Setups
           </h2>
           <ProfileSetupsGrid key={favoritedSetups[0]?.id ?? "no-saved-setups"} setups={favoritedSetups} />

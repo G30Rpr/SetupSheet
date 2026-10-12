@@ -23,42 +23,25 @@ export const metadata: Metadata = {
   alternates: { canonical: SITE_URL },
 };
 
-const colorClasses = {
-  coral: {
-    badge: "bg-racing-coral/15 text-racing-coral ring-racing-coral/30",
-    hoverBorder: "hover:border-racing-coral/40",
-  },
-  cyan: {
-    badge: "bg-racing-cyan/15 text-racing-cyan ring-racing-cyan/30",
-    hoverBorder: "hover:border-racing-cyan/40",
-  },
-  green: {
-    badge: "bg-racing-green/15 text-racing-green ring-racing-green/30",
-    hoverBorder: "hover:border-racing-green/40",
-  },
-} as const;
-
 const highlights = [
   {
     icon: ShieldCheck,
     title: "Rated, not ranked by hype",
     description:
       "Setups carry community Pace and Predictability scores, plus a rig profile — so you can see how a setup actually behaves. New ones show as unrated until racers have run them.",
-    color: "coral",
   },
+
   {
     icon: Gauge,
     title: "Built for your rig",
     description:
       "Filter by rig profile — gamepad, wheel, or direct drive — to find setups tuned for how you actually race.",
-    color: "cyan",
   },
   {
     icon: Users,
     title: "By racers, for racers",
     description:
       "No paywalls, no subscriptions. Just setups shared by the community, upvoted by the community.",
-    color: "green",
   },
 ] as const;
 
@@ -73,19 +56,15 @@ export default async function Home() {
     <div className="flex flex-col">
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-border/80 bg-grid">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
         <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-8 px-4 py-20 text-center sm:px-6 sm:py-28">
           <Badge variant="outline" className="gap-2 border-border/80 bg-secondary/50 px-3 py-1 text-xs text-muted-foreground">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex size-full animate-ping motion-reduce:animate-none rounded-full bg-racing-green opacity-75" />
-              <span className="relative inline-flex size-2 rounded-full bg-racing-green" />
-            </span>
+            <span aria-hidden="true" className="size-2 rounded-full bg-muted-foreground" />
             100% Free · No account required to browse
           </Badge>
 
           <h1 className="max-w-3xl text-balance text-4xl font-bold leading-tight tracking-tight sm:text-5xl md:text-6xl">
             Faster laps start with the{" "}
-            <span className="text-racing-coral">right setup</span>
+            <span className="text-foreground">right setup</span>
           </h1>
 
           <p className="max-w-xl text-balance text-base text-muted-foreground sm:text-lg">
@@ -122,11 +101,9 @@ export default async function Home() {
           {highlights.map((item) => (
             <div
               key={item.title}
-              className={`flex flex-col gap-3 rounded-xl border border-border/80 bg-card p-6 transition-colors ${colorClasses[item.color].hoverBorder}`}
+              className="flex flex-col gap-3 rounded-xl border border-border/80 bg-card p-6"
             >
-              <span
-                className={`flex size-10 items-center justify-center rounded-lg ring-1 ring-inset ${colorClasses[item.color].badge}`}
-              >
+              <span className="flex size-10 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
                 <item.icon className="size-5" />
               </span>
               <h3 className="font-semibold">{item.title}</h3>
@@ -141,7 +118,7 @@ export default async function Home() {
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-racing-coral">
+              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <Timer className="size-4" />
                 Most upvoted
               </div>
@@ -158,28 +135,28 @@ export default async function Home() {
           </div>
 
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
+            <span className="font-mono text-xs uppercase tracking-wide text-muted-foreground">
               Sim
             </span>
             {games.map((game) => (
               <Link
                 key={game}
                 href={`/setups?game=${encodeURIComponent(game)}`}
-                className="rounded-full border border-border/80 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-racing-coral/40 hover:text-foreground"
+                className="inline-flex min-h-11 items-center rounded-full border border-border/80 px-3 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 {game}
               </Link>
             ))}
           </div>
           <div className="mb-8 flex flex-wrap items-center gap-2">
-            <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
+            <span className="font-mono text-xs uppercase tracking-wide text-muted-foreground">
               Rig
             </span>
             {rigProfiles.map((rig) => (
               <Link
                 key={rig}
                 href={`/setups?rig=${encodeURIComponent(rig)}`}
-                className="rounded-full border border-border/80 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-racing-cyan/40 hover:text-foreground"
+                className="inline-flex min-h-11 items-center rounded-full border border-border/80 px-3 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 {rig}
               </Link>
@@ -228,9 +205,8 @@ export default async function Home() {
 
       {/* CTA */}
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="relative overflow-hidden rounded-2xl border border-racing-coral/30 bg-gradient-to-br from-secondary to-card p-8 text-center sm:p-14 sm:text-left">
-          <div className="pointer-events-none absolute -top-24 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-racing-coral/20 blur-3xl sm:left-1/4" />
-          <div className="relative flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+        <div className="rounded-2xl border border-border/80 bg-card p-8 text-center sm:p-14 sm:text-left">
+          <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
             <div className="flex flex-col gap-2">
               <h2 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">
                 Got a setup that&apos;s fast and safe?

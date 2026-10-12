@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Bookmark, Calendar, ChevronDown, Gauge, Star, TrendingUp } from "lucide-react";
 
 import { RatingBar } from "@/components/rating-bar";
+import { Button } from "@/components/ui/button";
 import { StarRating } from "@/components/star-rating";
 import type { Setup } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -66,18 +67,18 @@ export function SetupCardFooter({
           ) : (
             <>
               <div className="flex w-full items-center gap-2">
-                <span className="w-24 shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
+                <span className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
                   Pace
                 </span>
-                <RatingBar value={setup.pace} color="coral" className="max-w-[150px]" />
+                <RatingBar value={setup.pace} className="max-w-[150px]" />
               </div>
               <div className="flex w-full items-center gap-2">
-                <span className="w-24 shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
+                <span className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
                   Predictability
                 </span>
-                <RatingBar value={setup.predictability} color="cyan" className="max-w-[150px]" />
+                <RatingBar value={setup.predictability} className="max-w-[150px]" />
               </div>
-              <p className="pl-[102px] text-[11px] text-muted-foreground/70">
+              <p className="ml-24 pl-2 text-xs text-muted-foreground/70">
                 {setup.ratingCount} {setup.ratingCount === 1 ? "rating" : "ratings"} · average out of
                 5
               </p>
@@ -85,23 +86,21 @@ export function SetupCardFooter({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <button
+          <Button
             type="button"
+            variant={hasFavorited ? "secondary" : "ghost"}
+            size="icon"
             onClick={onFavorite}
             disabled={isFavoritePending}
             aria-pressed={hasFavorited}
             aria-label={hasFavorited ? "Remove from saved setups" : "Save setup"}
-            className={cn(
-              "flex size-8 items-center justify-center rounded-full transition-colors disabled:opacity-60",
-              hasFavorited
-                ? "bg-racing-cyan/15 text-racing-cyan ring-1 ring-inset ring-racing-cyan/40"
-                : "bg-secondary text-foreground hover:bg-racing-cyan/10 hover:text-racing-cyan"
-            )}
           >
-            <Bookmark className={cn("size-3.5", hasFavorited && "fill-current")} />
-          </button>
-          <button
+            <Bookmark className={cn("size-4", hasFavorited && "fill-current")} />
+          </Button>
+          <Button
             type="button"
+            variant={hasUpvoted ? "secondary" : "ghost"}
+            size="sm"
             onClick={onUpvote}
             disabled={isPending}
             aria-pressed={hasUpvoted}
@@ -111,14 +110,8 @@ export function SetupCardFooter({
                 : `Upvote this setup — ${upvotes} so far`
             }
             title={hasUpvoted ? "Remove your upvote" : "Upvote this setup"}
-            className={cn(
-              "flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium transition-colors disabled:opacity-60",
-              hasUpvoted
-                ? "bg-racing-coral/15 text-racing-coral ring-1 ring-inset ring-racing-coral/40"
-                : "bg-secondary text-foreground hover:bg-racing-coral/10 hover:text-racing-coral"
-            )}
           >
-            <TrendingUp className="size-3.5" />
+            <TrendingUp className="size-4" />
             {/* A bare number next to an icon read as an unlabelled counter. */}
             {upvotes > 0 ? (
               <span className="text-xs font-medium">
@@ -128,26 +121,28 @@ export function SetupCardFooter({
             ) : (
               <span className="text-xs font-medium">Upvote</span>
             )}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Rate this setup (expandable) */}
       <div>
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={() => setShowRateWidget((visible) => !visible)}
           aria-expanded={showRateWidget}
-          className="flex w-full items-center justify-between rounded-md border border-border/60 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="w-full justify-between text-left"
         >
           <span className="flex items-center gap-1.5">
             <Star className="size-3.5" />
             {myRating ? "Update your rating" : "Rate this setup"}
           </span>
           <ChevronDown
-            className={cn("size-3.5 transition-transform", showRateWidget && "rotate-180")}
+            className={cn("size-3.5 motion-safe:motion-transform", showRateWidget && "rotate-180")}
           />
-        </button>
+        </Button>
 
         {showRateWidget && (
           <div className="mt-2 flex flex-col gap-2 rounded-md border border-border/60 px-3 py-2.5">
