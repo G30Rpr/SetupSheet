@@ -357,8 +357,10 @@ from (values
        setup_values, pace, predictability, upvotes, downloads, created_at)
 where exists (select 1 from public.profiles);
 
--- Populate setup_ratings with each setup's initial baseline rating so
--- community ratings don't wipe out the seeded pace/predictability upon first vote.
+-- Demo-only baseline rows so the seeded setups have SOME rating data to
+-- render. Since 0036_rating_trust.sql these are self-ratings, which the
+-- aggregate excludes -- seeded setups correctly show Unrated until a
+-- different user rates them. (Dev fixture only; never run on production.)
 insert into public.setup_ratings (user_id, setup_id, pace, predictability, created_at, updated_at)
 select user_id, id, pace::smallint, predictability::smallint, created_at, updated_at
 from public.setups

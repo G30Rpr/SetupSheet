@@ -32,12 +32,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SetupValuesFields, type SetupValues } from "@/components/setup-values-fields";
-import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
 import { createSetup, discardUploadedFiles, updateSetup } from "@/lib/actions/setups";
 import { uploadFileDirectly } from "@/lib/upload-client";
 import { logger } from "@/lib/logger";
 import { parseAccSetupFile } from "@/lib/acc-setup-parser";
+import {
+  AUTHOR_NOTE_PROMPTS,
+  AUTHOR_NOTE_REQUIRED_ERROR,
+} from "@/lib/validate-setup-fields";
 import { validateVideoUrl } from "@/lib/video-url";
 import { normalizeSetupValues } from "@/lib/setup-values";
 import { resolveEffectiveSetupValues } from "@/lib/resolve-effective-setup-values";
@@ -107,8 +110,6 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   );
   const [telemetryFile, setTelemetryFile] = useState<File | null>(null);
   const [keepExistingTelemetry, setKeepExistingTelemetry] = useState(Boolean(existingSetup?.telemetryFileName));
-  const [pace, setPace] = useState(3);
-  const [predictability, setPredictability] = useState(3);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "success">("idle");
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
@@ -172,8 +173,6 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
       if (Array.isArray(draft.tags)) setTags(draft.tags);
       const restoredSetupValues = normalizeSetupValues(draft.setupValues);
       if (restoredSetupValues) setSetupValues(restoredSetupValues);
-      if (typeof draft.pace === "number") setPace(draft.pace);
-      if (typeof draft.predictability === "number") setPredictability(draft.predictability);
       if (draft.entryMode === "file" || draft.entryMode === "manual") setEntryMode(draft.entryMode);
 
       toast("Restored your unsaved draft", {
@@ -197,11 +196,11 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     const id = setTimeout(() => {
       localStorage.setItem(
         draftKey(user.id),
-        JSON.stringify({ game, condition, lapTime, rig, description, tags, setupValues, pace, predictability, entryMode })
+        JSON.stringify({ game, condition, lapTime, rig, description, tags, setupValues, entryMode })
       );
     }, 500);
     return () => clearTimeout(id);
-  }, [isEditing, user, game, condition, lapTime, rig, description, tags, setupValues, pace, predictability, entryMode]);
+  }, [isEditing, user, game, condition, lapTime, rig, description, tags, setupValues, entryMode]);
 
   function toggleTag(tag: SetupTag) {
     setTags((prev) =>
@@ -331,6 +330,14 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     e.preventDefault();
     setError(null);
 
+    // Uploads require the author note (P2). Legacy rows edited without one
+    // keep their "File only" label.
+    if (!isEditing && !description.trim()) {
+      setError(AUTHOR_NOTE_REQUIRED_ERROR);
+      toast.error(AUTHOR_NOTE_REQUIRED_ERROR);
+      return;
+    }
+
     const formData = new FormData(e.currentTarget);
     const car = String(formData.get("car") ?? "");
     const track = String(formData.get("track") ?? "");
@@ -415,8 +422,6 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           description,
           tags,
           rigProfile: rig,
-          pace,
-          predictability,
           setupValues: effectiveSetupValues,
           filePath: fileFields.filePath,
           fileName: fileFields.fileName,
@@ -468,8 +473,6 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     setUseManualTrackInput(false);
     setSetupValues({});
     setTags([]);
-    setPace(3);
-    setPredictability(3);
     setError(null);
     setStatus("idle");
   }
@@ -711,20 +714,11 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           />
 
           {!isEditing && (
-            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label>Pace</Label>
-                <StarRating value={pace} onChange={setPace} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Predictability</Label>
-                <StarRating value={predictability} onChange={setPredictability} />
-              </div>
-              <p className="text-xs text-muted-foreground sm:col-span-2">
-                Your own starting rating — the community (including you) can
-                update it any time from the setup card afterward.
-              </p>
-            </section>
+            <p className="text-xs text-muted-foreground">
+              Your setup starts Unrated. Other drivers score Pace and
+              Predictability after they&apos;ve run it — authors can&apos;t
+              rate their own setups.
+            </p>
           )}
 
           <section className="flex flex-col gap-3">
@@ -746,15 +740,23 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           </section>
 
           <section className="flex flex-col gap-1.5">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">
+              Author note {isEditing ? "" : "(required)"}
+            </Label>
+            <p id="author-note-hint" className="text-xs text-muted-foreground">
+              {AUTHOR_NOTE_PROMPTS.join(" ")} Say it in your own words — a
+              sentence each is plenty.
+            </p>
             <Textarea
               id="description"
               name="description"
-              placeholder="What makes this setup fast or safe? Any tips for using it?"
+              placeholder="What it likes. What it hates. What I changed from a baseline."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={MAX_DESCRIPTION_LENGTH}
               rows={4}
+              required={!isEditing}
+              aria-describedby="author-note-hint"
             />
           </section>
         </div>

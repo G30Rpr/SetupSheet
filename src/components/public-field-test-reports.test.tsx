@@ -42,11 +42,15 @@ describe("PublicFieldTestReports", () => {
     expect(container.textContent).not.toContain("user_id");
   });
 
-  it("distinguishes an unavailable feed from an empty feed", () => {
-    const { rerender } = render(<PublicFieldTestReports summary={{ ...summary, reports: [], error: false, reportCount: 0 }} />);
-    expect(screen.getByText(/No field tests have been shared/)).toBeInTheDocument();
+  it("shows a Garage empty state for an empty feed and hides the module when the feed fails", () => {
+    const { rerender, container } = render(
+      <PublicFieldTestReports summary={{ ...summary, reports: [], error: false, reportCount: 0 }} />
+    );
+    expect(screen.getByText(/No field tests yet/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "open in Garage" })).toHaveAttribute("href", "/garage");
 
+    // A failing feed renders nothing at all — never a public error card.
     rerender(<PublicFieldTestReports summary={{ ...summary, reports: [], error: true, reportCount: 0 }} />);
-    expect(screen.getByText(/couldn.t be loaded right now/)).toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 });

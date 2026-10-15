@@ -98,8 +98,7 @@ export default async function SetupsPage({
             ? "Community setups are temporarily unavailable. Please retry shortly."
             : totalCount === null
               ? "Setup total temporarily unavailable. You can still browse the setups currently loaded."
-              : `${totalCount} setups shared by the community. Filter by game, car,
-          track, or track condition to find your next fast lap.`}
+              : "Filter by game, car, track, condition, or rig."}
         </p>
         {isCapped && !loadFailed && (
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">

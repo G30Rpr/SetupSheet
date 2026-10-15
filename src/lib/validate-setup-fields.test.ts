@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { MAX_CAR_LENGTH, MAX_DESCRIPTION_LENGTH, MAX_TRACK_LENGTH } from "@/lib/data";
-import { validateSetupFields } from "@/lib/validate-setup-fields";
+import {
+  AUTHOR_NOTE_REQUIRED_ERROR,
+  validateSetupFields,
+} from "@/lib/validate-setup-fields";
 
 function validInput() {
   return {
@@ -90,5 +93,24 @@ describe("validateSetupFields", () => {
     expect(
       validateSetupFields({ ...validInput(), setupValues: { frontArb: "x".repeat(201) } })
     ).toBe("Setup values are invalid or too large.");
+  });
+
+  it("requires a non-empty author note when the caller demands one (uploads)", () => {
+    expect(validateSetupFields({ ...validInput(), description: "" }, { requireAuthorNote: true })).toBe(
+      AUTHOR_NOTE_REQUIRED_ERROR
+    );
+    expect(
+      validateSetupFields({ ...validInput(), description: "   \n " }, { requireAuthorNote: true })
+    ).toBe(AUTHOR_NOTE_REQUIRED_ERROR);
+    expect(
+      validateSetupFields(
+        { ...validInput(), description: "Likes a planted rear. Hates kerbs. Softened the ARB." },
+        { requireAuthorNote: true }
+      )
+    ).toBeNull();
+  });
+
+  it("stays lenient without the flag so legacy File only rows remain editable", () => {
+    expect(validateSetupFields({ ...validInput(), description: "" })).toBeNull();
   });
 });

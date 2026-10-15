@@ -71,7 +71,7 @@ describe("SetupCard favorite button", () => {
     useRouterMock.mockReturnValue({ refresh: vi.fn() });
     toggleFavoriteMock.mockResolvedValue({ error: null });
 
-    render(<SetupCard setup={baseSetup} />);
+    render(<SetupCard setup={baseSetup} variant="detail" />);
 
     const button = favoriteButton();
     expect(button).toHaveAttribute("aria-pressed", "false");
@@ -88,7 +88,7 @@ describe("SetupCard favorite button", () => {
     useRouterMock.mockReturnValue({ refresh: vi.fn() });
     toggleFavoriteMock.mockResolvedValue({ error: "Couldn't save that right now." });
 
-    render(<SetupCard setup={baseSetup} />);
+    render(<SetupCard setup={baseSetup} variant="detail" />);
 
     fireEvent.click(favoriteButton());
 
@@ -101,7 +101,7 @@ describe("SetupCard favorite button", () => {
     useAuthMock.mockReturnValue({ user: null, signInWithDiscord });
     useRouterMock.mockReturnValue({ refresh: vi.fn() });
 
-    render(<SetupCard setup={baseSetup} />);
+    render(<SetupCard setup={baseSetup} variant="detail" />);
 
     fireEvent.click(favoriteButton());
 

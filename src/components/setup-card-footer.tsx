@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { Bookmark, Calendar, ChevronDown, Gauge, Star, TrendingUp } from "lucide-react";
 
-import { RatingBar } from "@/components/rating-bar";
+import { ScoreMeters } from "@/components/rating-bar";
 import { Button } from "@/components/ui/button";
+import { SCORE_DEFINITIONS_SENTENCE } from "@/lib/ratings";
 import { StarRating } from "@/components/star-rating";
 import type { Setup } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -58,32 +59,15 @@ export function SetupCardFooter({
       {/* Pace & Predictability (community average) + upvotes */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          {setup.ratingCount === 0 ? (
-            // No fabricated 0% bars for an unrated setup -- two empty bars read
-            // as "rated badly" rather than "nobody has rated this yet".
-            <p className="text-xs text-muted-foreground">
-              Not yet rated — be the first to say how it drives.
-            </p>
-          ) : (
-            <>
-              <div className="flex w-full items-center gap-2">
-                <span className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
-                  Pace
-                </span>
-                <RatingBar value={setup.pace} className="max-w-[150px]" />
-              </div>
-              <div className="flex w-full items-center gap-2">
-                <span className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
-                  Predictability
-                </span>
-                <RatingBar value={setup.predictability} className="max-w-[150px]" />
-              </div>
-              <p className="ml-24 pl-2 text-xs text-muted-foreground/70">
-                {setup.ratingCount} {setup.ratingCount === 1 ? "rating" : "ratings"} · average out of
-                5
-              </p>
-            </>
-          )}
+          {/* Unrated setups render "Unrated" — no fabricated bars, no
+              "be the first" bait. Rated ones show score + count per meter. */}
+          <ScoreMeters
+            pace={setup.pace}
+            predictability={setup.predictability}
+            ratingCount={setup.ratingCount}
+          />
+          {/* One sentence total defining the two scores (P3 detail touch) */}
+          <p className="text-xs text-muted-foreground">{SCORE_DEFINITIONS_SENTENCE}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <Button
@@ -125,41 +109,44 @@ export function SetupCardFooter({
         </div>
       </div>
 
-      {/* Rate this setup (expandable) */}
-      <div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setShowRateWidget((visible) => !visible)}
-          aria-expanded={showRateWidget}
-          className="w-full justify-between text-left"
-        >
-          <span className="flex items-center gap-1.5">
-            <Star className="size-3.5" />
-            {myRating ? "Update your rating" : "Rate this setup"}
-          </span>
-          <ChevronDown
-            className={cn("size-3.5 motion-safe:motion-transform", showRateWidget && "rotate-180")}
-          />
-        </Button>
+      {/* Rate this setup (expandable). Authors never see it: self-rating is
+          blocked at the database level (0036_rating_trust.sql). */}
+      {!setup.isOwner && (
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowRateWidget((visible) => !visible)}
+            aria-expanded={showRateWidget}
+            className="w-full justify-between text-left"
+          >
+            <span className="flex items-center gap-1.5">
+              <Star className="size-3.5" />
+              {myRating ? "Update your rating" : "Rate this setup"}
+            </span>
+            <ChevronDown
+              className={cn("size-3.5 motion-safe:motion-transform", showRateWidget && "rotate-180")}
+            />
+          </Button>
 
-        {showRateWidget && (
-          <div className="mt-2 flex flex-col gap-2 rounded-md border border-border/60 px-3 py-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground">Pace</span>
-              <StarRating value={myRating?.pace ?? 0} onChange={(value) => onRate("pace", value)} />
+          {showRateWidget && (
+            <div className="mt-2 flex flex-col gap-2 rounded-md border border-border/60 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">Pace</span>
+                <StarRating value={myRating?.pace ?? 0} onChange={(value) => onRate("pace", value)} />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">Predictability</span>
+                <StarRating
+                  value={myRating?.predictability ?? 0}
+                  onChange={(value) => onRate("predictability", value)}
+                />
+              </div>
             </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground">Predictability</span>
-              <StarRating
-                value={myRating?.predictability ?? 0}
-                onChange={(value) => onRate("predictability", value)}
-              />
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import type { Setup } from "@/lib/types";
 
-export type SortOption = "newest" | "trending" | "mostDownloaded" | "safest" | "fastest";
+export type SortOption = "bestMatch" | "newest" | "trending" | "mostDownloaded" | "safest" | "fastest";
 
 export const ALL = "all";
 
@@ -64,7 +64,8 @@ function matchesQuery(haystack: string, query: string): boolean {
 export function filterAndSortSetups(
   setups: Setup[],
   filters: SetupFilters,
-  sort: SortOption
+  sort: SortOption,
+  preferredRig: string | null = null
 ): Setup[] {
   const query = filters.search.trim();
   const results = setups.filter((s) => {
@@ -81,6 +82,24 @@ export function filterAndSortSetups(
   });
 
   switch (sort) {
+    // Default. Evidence-first: setups matching the selected (or saved) rig
+    // lead, then more ratings beat fewer, then higher Predictability. A
+    // one-rating 5.0 can never outrank a well-evidenced 3.8 here -- see
+    // compareByEvidence in src/lib/ratings.ts for the same guarantee in
+    // score-only comparisons.
+    case "bestMatch": {
+      const rig = filters.rig !== ALL ? filters.rig : preferredRig;
+      return [...results].sort((a, b) => {
+        const rigA = rig && a.rigProfile === rig ? 0 : 1;
+        const rigB = rig && b.rigProfile === rig ? 0 : 1;
+        if (rigA !== rigB) return rigA - rigB;
+        if (a.ratingCount !== b.ratingCount) return b.ratingCount - a.ratingCount;
+        return b.predictability - a.predictability;
+      });
+    }
+    // Server fetch order is created_at desc; keep it as-is.
+    case "newest":
+      return results;
     // Surfaced in the UI as "Most upvoted": the value name is kept for URL
     // compatibility with links that already carry ?sort=trending, and there is
     // deliberately no recency weighting here.
@@ -92,8 +111,6 @@ export function filterAndSortSetups(
       return [...results].sort((a, b) => b.predictability - a.predictability);
     case "fastest":
       return [...results].sort((a, b) => lapTimeSeconds(a.lapTime) - lapTimeSeconds(b.lapTime));
-    default:
-      return results;
   }
 }
 

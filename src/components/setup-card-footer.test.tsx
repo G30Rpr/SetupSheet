@@ -60,21 +60,33 @@ describe("SetupCardFooter rating presentation", () => {
 
     // Two empty bars read as "rated badly"; the copy has to carry the state.
     expect(screen.queryAllByRole("progressbar")).toHaveLength(0);
-    expect(screen.getByText(/not yet rated/i)).toBeInTheDocument();
+    expect(screen.getByText("Unrated")).toBeInTheDocument();
+    // No "be the first" bait either.
+    expect(screen.queryByText(/be the first/i)).not.toBeInTheDocument();
   });
 
-  it("shows star values on the 5-star scale instead of bare percentages", () => {
+  it("shows 0-5 scores with their rating counts instead of percentages or stars", () => {
     renderFooter({ ratingCount: 3, pace: 4.25, predictability: 3.5 }, 2);
 
     const bars = screen.getAllByRole("progressbar");
     expect(bars).toHaveLength(2);
     expect(bars[0]).toHaveAttribute("aria-label", "4.3 out of 5");
     expect(bars[0]).toHaveAttribute("aria-valuemax", "5");
-    // The readout is the star value, not "85%".
+    // The readout is the score on the 0-5 scale, not "85%".
     expect(screen.getByText("4.3")).toBeInTheDocument();
     expect(screen.getByText("3.5")).toBeInTheDocument();
     expect(screen.queryByText("85%")).not.toBeInTheDocument();
-    expect(screen.getByText(/3 ratings · average out of 5/i)).toBeInTheDocument();
+    // Count sits beside each meter.
+    expect(screen.getAllByText("3 ratings")).toHaveLength(2);
+    // Pace = amber bar, Predictability = green bar.
+    expect(bars[0].firstElementChild).toHaveClass("bg-pace");
+    expect(bars[1].firstElementChild).toHaveClass("bg-predictability");
+  });
+
+  it("labels a single rating in the singular", () => {
+    renderFooter({ ratingCount: 1, pace: 5, predictability: 5 }, 0);
+
+    expect(screen.getAllByText("1 rating")).toHaveLength(2);
   });
 });
 

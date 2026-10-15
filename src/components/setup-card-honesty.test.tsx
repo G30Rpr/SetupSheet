@@ -85,10 +85,28 @@ describe("SetupCard trust labels", () => {
   });
 
   it("does not advertise a zero download count", () => {
-    render(<SetupCard setup={baseSetup} />);
+    // With a file attached and zero downloads, the card must show neither
+    // "0 downloads" nor "Be the first" bait (P3: honest score treatment).
+    render(
+      <SetupCard
+        setup={{ ...baseSetup, fileUrl: "https://example.com/x.json", fileName: "x.json", downloads: 0 }}
+      />
+    );
 
     expect(screen.queryByText("0 downloads")).not.toBeInTheDocument();
-    expect(screen.getByText(/be the first/i)).toBeInTheDocument();
+    expect(screen.queryByText(/be the first/i)).not.toBeInTheDocument();
+  });
+
+  it("shows the download count once it is real", () => {
+    render(
+      <SetupCard
+        setup={{ ...baseSetup, fileUrl: "https://example.com/x.json", fileName: "x.json", downloads: 2 }}
+      />
+    );
+
+    expect(
+      screen.getByRole("button", { name: /download setup/i })
+    ).toHaveTextContent("2 downloads");
   });
 
   it("shows a field-test badge only when the server supplies a positive public count", () => {

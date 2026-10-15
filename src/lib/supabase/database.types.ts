@@ -667,8 +667,10 @@ export type Database = {
           p_video_url: string | null;
           p_telemetry_file_path: string | null;
           p_telemetry_file_name: string | null;
-          p_pace: number;
-          p_predictability: number;
+          /** @deprecated Accepted for compatibility; ignored (0036_rating_trust.sql). */
+          p_pace?: number;
+          /** @deprecated Accepted for compatibility; ignored (0036_rating_trust.sql). */
+          p_predictability?: number;
         };
         Returns: string;
       };

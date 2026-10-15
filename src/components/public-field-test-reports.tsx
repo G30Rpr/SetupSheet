@@ -1,6 +1,6 @@
+import Link from "next/link";
 import { ClipboardList, Gauge, Timer } from "lucide-react";
 
-import { RetryButton } from "@/components/retry-button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { PublicFieldTestSummary } from "@/lib/supabase/field-tests";
@@ -26,6 +26,10 @@ const directionLabel = {
 } as const;
 
 export function PublicFieldTestReports({ summary }: { summary: PublicFieldTestSummary }) {
+  // A failed read is hidden entirely (P3): no public error card on empty or
+  // unreachable data. The module simply doesn't render until it can.
+  if (summary.error) return null;
+
   return (
     <section id="field-tests" aria-labelledby="field-tests-heading" className="mt-8 scroll-mt-24">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -43,14 +47,13 @@ export function PublicFieldTestReports({ summary }: { summary: PublicFieldTestSu
         </Badge>
       </div>
 
-      {summary.error ? (
-        <Card className="flex-row flex-wrap items-center justify-between gap-3 px-4 py-5">
-          <p className="text-sm text-muted-foreground">Field-test reports couldn&apos;t be loaded right now.</p>
-          <RetryButton />
-        </Card>
-      ) : summary.reports.length === 0 ? (
+      {summary.reports.length === 0 ? (
         <Card className="px-4 py-5 text-sm text-muted-foreground">
-          No field tests have been shared for this setup yet.
+          No field tests yet —{" "}
+          <Link href="/garage" className="text-foreground underline underline-offset-4">
+            open in Garage
+          </Link>{" "}
+          to log laps.
         </Card>
       ) : (
         <>
