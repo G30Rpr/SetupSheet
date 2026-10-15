@@ -34,6 +34,7 @@ import {
 import { SetupValuesFields, type SetupValues } from "@/components/setup-values-fields";
 import { Textarea } from "@/components/ui/textarea";
 import { createSetup, discardUploadedFiles, updateSetup } from "@/lib/actions/setups";
+import { fulfillSetupRequest } from "@/lib/actions/setup-requests";
 import { uploadFileDirectly } from "@/lib/upload-client";
 import { logger } from "@/lib/logger";
 import { parseAccSetupFile } from "@/lib/acc-setup-parser";
@@ -74,10 +75,28 @@ function draftKey(userId: string) {
   return `setupsheet:upload-draft:${userId}`;
 }
 
-export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
+/** An open setup request this upload is answering (P2 item 4). */
+export interface UploadRequestContext {
+  id: string;
+  game: Game;
+  car: string;
+  track: string;
+  notes: string;
+  requesterUsername: string;
+}
+
+export function UploadForm({
+  existingSetup,
+  requestContext,
+}: {
+  existingSetup?: Setup;
+  requestContext?: UploadRequestContext;
+}) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const isEditing = Boolean(existingSetup);
+  const answering = Boolean(requestContext) && !isEditing;
+  const [fulfillOutcome, setFulfillOutcome] = useState<"fulfilled" | "unfulfilled" | null>(null);
   // A file takes priority over setupValues when both are present -- that
   // only happens for an ACC setup whose file was auto-parsed for tuning
   // values (see handleFileChange), where the file is still the source of
@@ -85,7 +104,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   const [entryMode, setEntryMode] = useState<EntryMode>(
     existingSetup?.fileName ? "file" : existingSetup?.setupValues ? "manual" : "file"
   );
-  const [game, setGame] = useState<Game | "">(existingSetup?.game ?? "");
+  const [game, setGame] = useState<Game | "">(existingSetup?.game ?? requestContext?.game ?? "");
   // Both are plain per-game data modules (not components, so next/dynamic
   // doesn't apply) -- loaded via dynamic import() below so their ~150+ lines
   // of car/track rosters ship in their own chunk instead of every /upload
@@ -435,6 +454,14 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           toast.error(result.error);
           if (uploadedPaths.length > 0) void discardUploadedFiles(uploadedPaths);
         } else {
+          // P2 item 4: an upload answering an open request marks it
+          // fulfilled with this uploader credited. The setup is already
+          // published either way — if the combo drifted from the request
+          // (the RPC only accepts matching game/car/track), say so softly.
+          if (requestContext && result.setupId) {
+            const fulfillResult = await fulfillSetupRequest(requestContext.id, result.setupId);
+            setFulfillOutcome(fulfillResult.error ? "unfulfilled" : "fulfilled");
+          }
           if (user) localStorage.removeItem(draftKey(user.id));
           setStatus("success");
         }
@@ -515,6 +542,18 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
             Thanks for sharing with the community. Your setup will appear on
             the Browse Setups page shortly.
           </p>
+          {answering && requestContext && (
+            <p
+              className="mt-1 max-w-sm text-sm text-muted-foreground"
+              role={fulfillOutcome === "unfulfilled" ? "status" : undefined}
+            >
+              {fulfillOutcome === "fulfilled"
+                ? `${requestContext.requesterUsername}'s request is marked fulfilled — you're credited on it.`
+                : fulfillOutcome === "unfulfilled"
+                  ? `We published your setup, but couldn't mark ${requestContext.requesterUsername}'s request — it may already be fulfilled.`
+                  : `Marking ${requestContext.requesterUsername}'s request fulfilled…`}
+            </p>
+          )}
         </div>
         <Button onClick={resetForm} variant="outline">
           Upload another setup
@@ -525,6 +564,21 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      {answering && requestContext && (
+        <Card className="gap-1.5 border-racing-coral/40 px-5 py-4">
+          <p className="text-sm font-medium">
+            You&apos;re answering {requestContext.requesterUsername}&apos;s request
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {requestContext.game} · {requestContext.car} @ {requestContext.track}
+            {requestContext.notes ? ` — “${requestContext.notes}”` : ""}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Publish a setup for this combo and we&apos;ll mark their request
+            fulfilled, with you credited.
+          </p>
+        </Card>
+      )}
       <Card className="px-5 py-6 sm:px-8 sm:py-8">
         <div className="flex flex-col gap-6">
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -650,7 +704,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                 groups={game ? carLists[game] : undefined}
                 useManual={useManualCarInput}
                 onToggleManual={setUseManualCarInput}
-                defaultValue={existingSetup?.car ?? detectedCar ?? undefined}
+                defaultValue={existingSetup?.car ?? requestContext?.car ?? detectedCar ?? undefined}
                 selectPlaceholder="Select a car"
                 inputPlaceholder="e.g. Porsche 992 GT3 Cup"
                 maxLength={MAX_CAR_LENGTH}
@@ -664,7 +718,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                 groups={game ? trackLists[game] : undefined}
                 useManual={useManualTrackInput}
                 onToggleManual={setUseManualTrackInput}
-                defaultValue={existingSetup?.track}
+                defaultValue={existingSetup?.track ?? requestContext?.track ?? undefined}
                 selectPlaceholder="Select a track"
                 inputPlaceholder="e.g. Spa-Francorchamps"
                 maxLength={MAX_TRACK_LENGTH}

@@ -252,3 +252,27 @@ describe("createSetup author note", () => {
     expect(result.error).not.toBeNull();
   });
 });
+
+describe("createSetup request fulfillment support", () => {
+  const baseCreateInput = {
+    game: "iRacing",
+    car: "Porsche 911 GT3 Cup",
+    track: "Spa",
+    condition: "Dry",
+    description: "Likes a planted rear. Hates kerbs. Softened the ARB one click.",
+    tags: ["Safe"],
+    rigProfile: "Wheel + 3 Pedals",
+    lapTime: "",
+  };
+
+  it("returns the new setup id so the upload flow can fulfill a request with it", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    const newId = "22222222-2222-4222-8222-222222222222";
+    const rpc = vi.fn().mockResolvedValue({ data: newId, error: null });
+    createClientMock.mockResolvedValue({ rpc });
+
+    const result = await createSetup(baseCreateInput);
+
+    expect(result).toEqual({ error: null, setupId: newId });
+  });
+});

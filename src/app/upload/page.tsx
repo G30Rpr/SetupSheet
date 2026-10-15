@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 
 import { UploadForm } from "@/components/upload-form";
+import { getRequestById } from "@/lib/supabase/setup-requests";
 import { fullPageTitle } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+import { isUuid } from "@/lib/utils";
 
 const title = "Upload a Setup";
 const socialTitle = fullPageTitle(title);
@@ -16,7 +18,29 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: socialTitle, description },
 };
 
-export default function UploadPage() {
+export default async function UploadPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ request?: string }>;
+}) {
+  // ?request=<id> means this upload answers someone's open request (P2
+  // item 4): prefill the combo and, on publish, mark the request fulfilled
+  // with this uploader credited. Invalid/expired ids are ignored silently —
+  // the upload flow must never be blocked by a stale link.
+  const { request: requestId } = await searchParams;
+  const request = requestId && isUuid(requestId) ? await getRequestById(requestId) : null;
+  const requestContext =
+    request && !request.fulfilledSetupId
+      ? {
+          id: request.id,
+          game: request.game,
+          car: request.car,
+          track: request.track,
+          notes: request.notes,
+          requesterUsername: request.requesterUsername,
+        }
+      : undefined;
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
       <div className="mb-8 text-center sm:text-left">
@@ -29,7 +53,7 @@ export default function UploadPage() {
         </p>
       </div>
 
-      <UploadForm />
+      <UploadForm requestContext={requestContext} />
     </div>
   );
 }

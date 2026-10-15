@@ -272,7 +272,7 @@ export async function discardUploadedFiles(paths: unknown): Promise<{ error: nul
  */
 export async function createSetup(
   input: CreateSetupInput
-): Promise<{ error: string | null }> {
+): Promise<{ error: string | null; setupId?: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
 
@@ -335,7 +335,7 @@ export async function createSetup(
   revalidateSetupContent();
   revalidatePath("/setups");
   revalidatePath("/");
-  return { error: null };
+  return { error: null, setupId };
 }
 
 export async function updateSetup(
