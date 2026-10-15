@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 
 import { tagsForContentMutation, tagsForCounterMutation } from "@/lib/cache-tags";
 import { getActionError } from "@/lib/actions/action-errors";
+import { rigProfiles } from "@/lib/data";
 import { logger } from "@/lib/logger";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -588,7 +589,8 @@ export async function toggleUpvote(
 export async function rateSetup(
   setupId: string,
   pace: number,
-  predictability: number
+  predictability: number,
+  raterRig?: string | null
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
@@ -603,6 +605,14 @@ export async function rateSetup(
   if (!validateRating(pace) || !validateRating(predictability)) {
     return { error: "Pace and Predictability must be whole numbers from 1 to 5." };
   }
+
+  // The rater's rig is optional ("rig not shared" is a valid choice) but
+  // when present it must be one of the real rig profiles — same vocabulary
+  // as everything else, enforced again by the DB check in 0037.
+  const normalizedRig =
+    typeof raterRig === "string" && rigProfiles.includes(raterRig as (typeof rigProfiles)[number])
+      ? raterRig
+      : null;
 
   // Friendlier message for the database-level self-rating block
   // (0036_rating_trust.sql). The RLS policy + trigger are the enforcement;
@@ -619,7 +629,14 @@ export async function rateSetup(
   const { error } = await supabase
     .from("setup_ratings")
     .upsert(
-      { user_id: user.id, setup_id: setupId, pace, predictability, updated_at: new Date().toISOString() },
+      {
+        user_id: user.id,
+        setup_id: setupId,
+        pace,
+        predictability,
+        rater_rig: normalizedRig,
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: "user_id,setup_id" }
     );
 

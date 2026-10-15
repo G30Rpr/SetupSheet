@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bookmark, Calendar, ChevronDown, Gauge, Star, TrendingUp } from "lucide-react";
 
 import { ScoreMeters } from "@/components/rating-bar";
 import { Button } from "@/components/ui/button";
-import { SCORE_DEFINITIONS_SENTENCE } from "@/lib/ratings";
+import { SCORE_DEFINITIONS_SENTENCE, formatScore } from "@/lib/ratings";
+import { readLastRig } from "@/lib/last-rig";
+import { splitBySimilarRig, type ScoreTotals } from "@/lib/rating-splits";
 import { StarRating } from "@/components/star-rating";
 import type { Setup } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -15,6 +17,32 @@ function formatDate(dateStr: string) {
     month: "short",
     day: "numeric",
   });
+}
+
+function SplitScore({ sum, n }: { sum: number; n: number }) {
+  return (
+    <span className="whitespace-nowrap font-mono text-xs tabular-nums text-foreground">
+      {n > 0 ? `${formatScore(sum / n)} (${n})` : <span className="text-muted-foreground">Unrated</span>}
+    </span>
+  );
+}
+
+function SplitRow({
+  label,
+  title,
+  totals,
+}: {
+  label: string;
+  title: string;
+  totals: ScoreTotals;
+}) {
+  return (
+    <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3" title={title}>
+      <span className="truncate text-xs text-muted-foreground">{label}</span>
+      <SplitScore sum={totals.paceSum} n={totals.paceN} />
+      <SplitScore sum={totals.predSum} n={totals.predN} />
+    </div>
+  );
 }
 
 export function SetupCardFooter({
@@ -42,6 +70,27 @@ export function SetupCardFooter({
 }) {
   const [showRateWidget, setShowRateWidget] = useState(false);
 
+  // "On a similar rig" is anchored to the viewer's saved rig when they have
+  // one (the site is "matched to your rig"), else to the rig the setup is
+  // built for. Server HTML always renders the setup-rig anchor so hydration
+  // matches; the saved-rig swap happens after mount.
+  const [anchor, setAnchor] = useState<{ rig: string; isSavedRig: boolean }>({
+    rig: setup.rigProfile,
+    isSavedRig: false,
+  });
+  useEffect(() => {
+    const saved = readLastRig();
+    if (saved && saved !== setup.rigProfile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage hydration after mount
+      setAnchor({ rig: saved, isSavedRig: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only hydration of the viewer's saved rig
+  }, []);
+
+  const splits = setup.ratingSplits ?? [];
+  const showSplit = splits.length > 0;
+  const { similar, others } = splitBySimilarRig(splits, anchor.rig);
+
   return (
     <div className="flex flex-col gap-3 border-t border-border/80 bg-black/15 px-5 py-3">
       {/* Rig profile + upload date */}
@@ -68,6 +117,32 @@ export function SetupCardFooter({
           />
           {/* One sentence total defining the two scores (P3 detail touch) */}
           <p className="text-xs text-muted-foreground">{SCORE_DEFINITIONS_SENTENCE}</p>
+
+          {/* "On a similar rig" vs "Everyone else" (P2 item 3). Aggregates
+              only; a side with no ratings reads Unrated, never a zero. */}
+          {showSplit && (
+            <div className="mt-1 flex flex-col gap-1 border-t border-border/60 pt-2">
+              <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3 text-xs">
+                <span />
+                <span className="text-racing-amber">Pace</span>
+                <span className="text-racing-green">Predictability</span>
+              </div>
+              <SplitRow
+                label="On a similar rig"
+                title={
+                  anchor.isSavedRig
+                    ? `Ratings from drivers on ${anchor.rig} — your saved rig.`
+                    : `Ratings from drivers on ${anchor.rig} — the rig this setup is for.`
+                }
+                totals={similar}
+              />
+              <SplitRow
+                label="Everyone else"
+                title="Every other rating, including ratings that didn't share a rig."
+                totals={others}
+              />
+            </div>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <Button

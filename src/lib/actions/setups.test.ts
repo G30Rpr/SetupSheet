@@ -183,6 +183,36 @@ describe("rateSetup", () => {
     });
     expect(supabase.upsert).not.toHaveBeenCalled();
   });
+
+  it("stores the rater's rig alongside the rating", async () => {
+    const supabase = makeRateSupabase({ setupOwnerId: "other-user" });
+    createClientMock.mockResolvedValue(supabase);
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+
+    await expect(rateSetup(validSetupId, 4, 3, "Gamepad")).resolves.toEqual({ error: null });
+    expect(supabase.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: "user-1", rater_rig: "Gamepad" }),
+      { onConflict: "user_id,setup_id" }
+    );
+  });
+
+  it("stores null when the rig is missing or not a real profile", async () => {
+    const supabase = makeRateSupabase({ setupOwnerId: "other-user" });
+    createClientMock.mockResolvedValue(supabase);
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+
+    await rateSetup(validSetupId, 4, 3, "Steering Wheel Only");
+    expect(supabase.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ rater_rig: null }),
+      { onConflict: "user_id,setup_id" }
+    );
+
+    await rateSetup(validSetupId, 4, 3);
+    expect(supabase.upsert).toHaveBeenLastCalledWith(
+      expect.objectContaining({ rater_rig: null }),
+      { onConflict: "user_id,setup_id" }
+    );
+  });
 });
 
 describe("createSetup author note", () => {

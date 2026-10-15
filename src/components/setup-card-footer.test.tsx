@@ -106,3 +106,49 @@ describe("SetupCardFooter upvote counter", () => {
     expect(button).not.toHaveTextContent("0");
   });
 });
+
+describe("SetupCardFooter similar-rig split", () => {
+  it("shows On a similar rig vs Everyone else with counts, Unrated on empty sides", () => {
+    renderFooter(
+      {
+        ratingCount: 3,
+        pace: 4.0,
+        predictability: 3.7,
+        ratingSplits: [
+          { rigProfile: "Wheel + 3 Pedals", paceSum: 12, paceN: 3, predSum: 11, predN: 3 },
+          { rigProfile: "Gamepad", paceSum: 4, paceN: 1, predSum: 2, predN: 1 },
+          { rigProfile: null, paceSum: 5, paceN: 1, predSum: 4, predN: 1 },
+        ],
+      },
+      0
+    );
+
+    expect(screen.getByText("On a similar rig")).toBeInTheDocument();
+    expect(screen.getByText("Everyone else")).toBeInTheDocument();
+    // Anchor defaults to the setup's own rig (server HTML): 12/3 and 11/3.
+    expect(screen.getByText("4.0 (3)")).toBeInTheDocument();
+    expect(screen.getByText("3.7 (3)")).toBeInTheDocument();
+    // Everyone else merges the Gamepad bucket and the unshared-rig rating.
+    expect(screen.getByText("4.5 (2)")).toBeInTheDocument();
+    expect(screen.getByText("3.0 (2)")).toBeInTheDocument();
+  });
+
+  it("says Unrated on a side with no ratings, and hides the split entirely without rating data", () => {
+    renderFooter(
+      {
+        ratingCount: 1,
+        pace: 4.0,
+        predictability: 4.0,
+        ratingSplits: [{ rigProfile: "Gamepad", paceSum: 4, paceN: 1, predSum: 4, predN: 1 }],
+      },
+      0
+    );
+    // Similar (Wheel + 3 Pedals) has nothing — both cells read Unrated.
+    expect(screen.getAllByText("Unrated").length).toBeGreaterThanOrEqual(2);
+    cleanup();
+
+    renderFooter({ ratingCount: 0, pace: 0, predictability: 0, ratingSplits: [] }, 0);
+    expect(screen.queryByText("On a similar rig")).not.toBeInTheDocument();
+    expect(screen.queryByText("Everyone else")).not.toBeInTheDocument();
+  });
+});

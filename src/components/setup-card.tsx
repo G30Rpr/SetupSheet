@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SetupCardFooter } from "@/components/setup-card-footer";
 import { ScoreMeters } from "@/components/rating-bar";
+import { readLastRig } from "@/lib/last-rig";
 import { TagBadge } from "@/components/tag-badge";
 import {
   deleteSetup,
@@ -227,9 +228,13 @@ export function SetupCard({
     };
     setMyRating(next);
 
+    // Ratings carry the rig they were cast from (P2 item 3) — the viewer's
+    // saved rig when they have one, else null ("rig not shared").
+    const raterRig = readLastRig();
+
     startTransition(async () => {
       try {
-        const result = await rateSetup(setup.id, next.pace, next.predictability);
+        const result = await rateSetup(setup.id, next.pace, next.predictability, raterRig);
         if (result.error) {
           setMyRating(setup.myRating);
           toast.error(result.error);

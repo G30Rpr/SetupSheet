@@ -35,7 +35,7 @@ import type { Tables } from "@/lib/supabase/database.types";
 import { createPublicClient } from "@/lib/supabase/public";
 import { sanitizeDisplayName } from "@/lib/user-display";
 import { normalizeVideoUrl } from "@/lib/video-url";
-import type { Condition, Game, RigProfile, Setup, SetupTag } from "@/lib/types";
+import type { Condition, Game, RatingSplit, RigProfile, Setup, SetupTag } from "@/lib/types";
 import { SETUP_CARD_PAGE_SIZE } from "@/lib/ui-constants";
 import { isUuid } from "@/lib/utils";
 
@@ -544,7 +544,7 @@ async function hydrateSetupRows(
   const typedRows = rows;
   if (typedRows.length === 0) return [];
 
-  const [viewer, authors] = await Promise.all([
+  const [viewer, authors, splits] = await Promise.all([
     getViewer(
       supabase,
       typedRows.map((row) => row.id)
@@ -553,9 +553,55 @@ async function hydrateSetupRows(
       supabase,
       typedRows.map((row) => row.user_id)
     ),
+    getRatingSplitBuckets(
+      supabase,
+      typedRows.map((row) => row.id)
+    ),
   ]);
 
-  return typedRows.map((row) => mapRow(row, viewer, authors, supabase));
+  return typedRows.map((row) => {
+    const setup = mapRow(row, viewer, authors, supabase);
+    setup.ratingSplits = splits.get(row.id) ?? [];
+    return setup;
+  });
+}
+
+/**
+ * Per-rig rating aggregates (0037_rater_rig.sql). Enrichment only: a failed
+ * read yields no splits and the UI simply skips the "similar rig" split, so
+ * browsing never breaks over it. Sums/counts only — never per-rater rows.
+ */
+async function getRatingSplitBuckets(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  setupIds: string[]
+): Promise<Map<string, RatingSplit[]>> {
+  const bySetup = new Map<string, RatingSplit[]>();
+  if (setupIds.length === 0) return bySetup;
+
+  const { data, error } = await supabase.rpc("get_setup_rating_splits", {
+    p_setup_ids: setupIds,
+  });
+  if (error || !data) {
+    logger.warn("getRatingSplitBuckets: splits unavailable", error);
+    return bySetup;
+  }
+
+  for (const row of data) {
+    const bucket: RatingSplit = {
+      rigProfile: row.rater_rig,
+      paceSum: Number(row.pace_sum),
+      paceN: Number(row.pace_n),
+      predSum: Number(row.pred_sum),
+      predN: Number(row.pred_n),
+    };
+    const list = bySetup.get(row.setup_id);
+    if (list) {
+      list.push(bucket);
+    } else {
+      bySetup.set(row.setup_id, [bucket]);
+    }
+  }
+  return bySetup;
 }
 
 /**

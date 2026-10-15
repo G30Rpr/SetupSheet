@@ -130,6 +130,7 @@ export type Database = {
           setup_id: string;
           pace: number;
           predictability: number;
+          rater_rig: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -138,6 +139,7 @@ export type Database = {
           setup_id: string;
           pace: number;
           predictability: number;
+          rater_rig?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -146,6 +148,7 @@ export type Database = {
           setup_id?: string;
           pace?: number;
           predictability?: number;
+          rater_rig?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -642,6 +645,17 @@ export type Database = {
       consume_upload_target_rate_limit: {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
+      };
+      get_setup_rating_splits: {
+        Args: { p_setup_ids: string[] };
+        Returns: {
+          setup_id: string;
+          rater_rig: string | null;
+          pace_sum: number;
+          pace_n: number;
+          pred_sum: number;
+          pred_n: number;
+        }[];
       };
       increment_downloads: {
         Args: { setup_id: string };

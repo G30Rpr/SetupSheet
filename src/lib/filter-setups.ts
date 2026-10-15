@@ -1,3 +1,4 @@
+import { similarRigPredictability } from "@/lib/rating-splits";
 import type { Setup } from "@/lib/types";
 
 export type SortOption = "bestMatch" | "newest" | "trending" | "mostDownloaded" | "safest" | "fastest";
@@ -83,10 +84,11 @@ export function filterAndSortSetups(
 
   switch (sort) {
     // Default. Evidence-first: setups matching the selected (or saved) rig
-    // lead, then more ratings beat fewer, then higher Predictability. A
-    // one-rating 5.0 can never outrank a well-evidenced 3.8 here -- see
-    // compareByEvidence in src/lib/ratings.ts for the same guarantee in
-    // score-only comparisons.
+    // lead, then more ratings beat fewer, then similar-rig ratings are
+    // consulted before everyone-else ones (P2 item 3), then overall
+    // Predictability. A one-rating 5.0 can never outrank a well-evidenced
+    // 3.8 here -- see compareByEvidence in src/lib/ratings.ts for the same
+    // guarantee in score-only comparisons.
     case "bestMatch": {
       const rig = filters.rig !== ALL ? filters.rig : preferredRig;
       return [...results].sort((a, b) => {
@@ -94,6 +96,15 @@ export function filterAndSortSetups(
         const rigB = rig && b.rigProfile === rig ? 0 : 1;
         if (rigA !== rigB) return rigA - rigB;
         if (a.ratingCount !== b.ratingCount) return b.ratingCount - a.ratingCount;
+        // Similar-rig predictability (nulls last), only when there's a rig to
+        // be similar to. Stage order keeps the evidence guarantee above.
+        const simA = rig ? similarRigPredictability(a.ratingSplits, rig) : null;
+        const simB = rig ? similarRigPredictability(b.ratingSplits, rig) : null;
+        if (simA !== simB) {
+          if (simA === null) return 1;
+          if (simB === null) return -1;
+          return simB - simA;
+        }
         return b.predictability - a.predictability;
       });
     }
