@@ -55,13 +55,16 @@ begin
 end $$;
 
 \echo 'CHECK 3: the splits exclude author self-ratings (0036 trust rules)'
--- The self-rating trigger allows rows when auth.uid() is null (legacy
--- imports); a legacy self-rating must not reach the split aggregates.
+-- A pre-0036 self-rating (the row predates the trigger) must not reach the
+-- split aggregates. Plant it with the trigger off, exactly like the legacy
+-- rows already in production.
 create or replace function auth.uid() returns uuid language sql stable as
   $$ select null::uuid $$;
 
+alter table public.setup_ratings disable trigger setup_ratings_prevent_self;
 insert into public.setup_ratings (user_id, setup_id, pace, predictability, rater_rig)
 values ('c0a00005-0000-4000-8000-000000000005', 'c0a00007-0000-4000-8000-000000000007', 5, 5, 'Gamepad');
+alter table public.setup_ratings enable trigger setup_ratings_prevent_self;
 
 -- Put the real rater back on a Gamepad rig so the bucket is unambiguous.
 update public.setup_ratings
@@ -90,6 +93,7 @@ insert into public.setup_ratings (user_id, setup_id, pace, predictability, rater
 values ('c0a00006-0000-4000-8000-000000000006', 'c0a00007-0000-4000-8000-000000000007', 4, 2, 'Gamepad')
 on conflict (user_id, setup_id) do update set rater_rig = excluded.rater_rig;
 
+begin;
 set local role anon;
 do $$
 declare
@@ -103,3 +107,4 @@ begin
   raise notice 'CHECK 4 passed: RPC groups by rig and runs as anon';
 end $$;
 reset role;
+commit;

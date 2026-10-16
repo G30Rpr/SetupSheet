@@ -88,9 +88,13 @@ end $$;
 create or replace function auth.uid() returns uuid language sql stable as
   $$ select null::uuid $$;
 
--- Simulate a pre-0036 self-rating written by a trusted path (no JWT).
+-- Simulate a pre-0036 self-rating: those rows predate the trigger, so plant
+-- one the same way (trigger off), then prove it stays excluded from the
+-- aggregate while remaining queryable.
+alter table public.setup_ratings disable trigger setup_ratings_prevent_self;
 insert into public.setup_ratings (user_id, setup_id, pace, predictability)
 values ('c0a00001-0000-4000-8000-000000000001', 'c0a00003-0000-4000-8000-000000000003', 5, 5);
+alter table public.setup_ratings enable trigger setup_ratings_prevent_self;
 
 do $$
 declare

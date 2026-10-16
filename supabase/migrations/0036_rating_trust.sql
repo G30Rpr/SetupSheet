@@ -1,10 +1,12 @@
 -- Rating trust layer (Phase 1). Three rules, all enforced in the database:
 --
 --   1. Authors can never rate their own setups. The tightened RLS policies
---      cover the PostgREST path; the trigger covers every other path
---      (SECURITY DEFINER functions, SQL editor, future code). Trusted
---      automation with no auth.uid() (migrations, service role) can still
---      write rows -- otherwise backfills and the dev seed would break.
+--      cover the PostgREST path; the trigger enforces the same rule as a
+--      row-level invariant on every other path (SECURITY DEFINER functions,
+--      SQL editor, service role, future code): a rating row's user_id can
+--      never equal the setup's author. No auth-context escape hatch -- the
+--      test harness simulates pre-0036 rows by disabling the trigger, the
+--      same way those rows actually got there (they predate it).
 --   2. Existing self-ratings are excluded from displayed aggregates WITHOUT
 --      being deleted. History stays queryable by moderators; it simply stops
 --      counting toward the community score. A setup whose only ratings are
@@ -29,9 +31,10 @@ declare
   v_author uuid;
 begin
   select user_id into v_author from public.setups where id = new.setup_id;
-  -- auth.uid() is null on trusted paths (migrations, SQL editor, service
-  -- role). Client paths always have it set.
-  if v_author is not null and v_author = auth.uid() then
+  -- Row-level invariant: the rating's own user_id is the self, regardless of
+  -- who or what is executing (JWT, service role, SQL editor). Pre-0036 rows
+  -- already in the table are unaffected -- this only guards writes.
+  if v_author is not null and v_author = new.user_id then
     raise exception 'You cannot rate your own setup.' using errcode = '42501';
   end if;
   return new;
