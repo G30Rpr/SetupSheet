@@ -15,6 +15,56 @@ export interface SetupValueDiffGroup {
 }
 
 /**
+ * The key setup fields the comparison tool lines up (P2: "only parsed
+ * differing values (wing, ride height, ARB, diff, brake bias, ABS, TC,
+ * pressures)"). Matched on the stable field keys, not labels; `frontDiffuser`
+ * deliberately misses the diff family (it's aero), `brakeMigration`/
+ * `brakePower`/ducts miss the brake-bias family.
+ */
+export const COMPARISON_FIELD_FAMILIES = [
+  "wing",
+  "ride height",
+  "ARB",
+  "diff",
+  "brake bias",
+  "ABS",
+  "TC",
+  "pressures",
+] as const;
+
+export function isComparisonKey(key: string): boolean {
+  return (
+    /wing|aero|splitter/i.test(key) || // wing family (frontAero, rearWing, ...)
+    /rideheight/i.test(key) ||
+    /arb/i.test(key) || // frontArb/rearArb (camelCase; no schema key collides)
+    /^diff/i.test(key) || // diffPower/diffCoast/... — not "frontDiffuser"
+    /brakebias/i.test(key) ||
+    /^abs/i.test(key) ||
+    /tractioncontrol|^tc|onboardtc/i.test(key) ||
+    /pressure/i.test(key)
+  );
+}
+
+/**
+ * The compare tool's view of two value sets: only the key fields above, and
+ * only the rows that actually differ (a one-sided row still differs — the
+ * missing side renders as "—"). Equal rows and non-key knobs are noise in a
+ * "what's different" table and are dropped.
+ */
+export function buildComparisonDiff(
+  game: Game,
+  valuesA: SetupValues | null | undefined,
+  valuesB: SetupValues | null | undefined
+): SetupValueDiffGroup[] {
+  return diffSetupValues(game, valuesA, valuesB)
+    .map((group) => ({
+      title: group.title,
+      rows: group.rows.filter((row) => row.differs && isComparisonKey(row.key)),
+    }))
+    .filter((group) => group.rows.length > 0);
+}
+
+/**
  * Pairs up two setups' structured values field-by-field using the shared
  * schema for `game`, so the comparison tool and version-history panel can
  * both render "what's different" without duplicating this logic. A row is

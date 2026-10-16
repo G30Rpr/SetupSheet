@@ -1,11 +1,12 @@
 import Link from "next/link";
 
-import { getRelatedSetups } from "@/lib/supabase/setups";
-import type { Game } from "@/lib/types";
+import { getRelatedSetups, type RelatedSetupSelf } from "@/lib/supabase/setups";
 
 /** Streams below-the-fold discovery links without delaying the setup card's first paint. */
-export async function RelatedSetups({ setupId, game }: { setupId: string; game: Game }) {
-  const relatedSetups = await getRelatedSetups(setupId, game);
+export async function RelatedSetups({ self }: { self: RelatedSetupSelf }) {
+  // Related = same car + track, different rig or style (P2). Empty on
+  // purpose when the combo has no real alternatives — the section hides.
+  const relatedSetups = await getRelatedSetups(self);
   if (relatedSetups.length === 0) return null;
 
   return (
@@ -13,12 +14,14 @@ export async function RelatedSetups({ setupId, game }: { setupId: string; game: 
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
           <h2 id="related-setups-heading" className="text-xl font-semibold tracking-tight">
-            More {game} setups
+            Same car + track
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">Keep exploring community tuning notes.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Different rigs and styles for this combo.
+          </p>
         </div>
         <Link
-          href={`/setups?game=${encodeURIComponent(game)}`}
+          href={`/setups?game=${encodeURIComponent(self.game)}&car=${encodeURIComponent(self.car)}&track=${encodeURIComponent(self.track)}`}
           className="inline-flex min-h-11 shrink-0 items-center text-sm font-medium text-foreground underline-offset-4 hover:underline"
         >
           View all
@@ -31,9 +34,11 @@ export async function RelatedSetups({ setupId, game }: { setupId: string; game: 
               href={`/setups/${encodeURIComponent(related.id)}`}
               className="block min-h-11 rounded-lg border border-border/80 bg-card px-3.5 py-3 hover:bg-accent/50"
             >
-              <span className="block truncate font-medium">{related.car}</span>
+              <span className="block truncate font-medium">{related.rigProfile}</span>
               <span className="block truncate text-sm text-muted-foreground">
-                {related.track} · {related.condition}
+                {related.tags.length > 0
+                  ? `${related.condition} · ${related.tags.join(" · ")}`
+                  : related.condition}
               </span>
             </Link>
           </li>

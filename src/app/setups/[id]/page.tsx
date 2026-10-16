@@ -10,6 +10,7 @@ import { RelatedSetups } from "@/components/related-setups";
 import { SetupCard } from "@/components/setup-card";
 import { getSetupById, getSetupSeoData } from "@/lib/supabase/setups";
 import { getPublicFieldTestSummary } from "@/lib/supabase/field-tests";
+import { evidenceLabel } from "@/lib/ratings";
 import { absoluteUrl, fullPageTitle, truncateMetaDescription } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { isUuid } from "@/lib/utils";
@@ -206,6 +207,12 @@ export default async function SetupDetailPage({
         <p className="mt-1 text-sm text-muted-foreground">
           {setup.game} · {setup.condition} setup
         </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">Who this is for:</span>{" "}
+          {setup.rigProfile} · {setup.condition}
+          {setup.tags.length > 0 ? ` · ${setup.tags.join(", ")}` : ""} ·{" "}
+          {evidenceLabel(setup.ratingCount)}
+        </p>
       </div>
 
       <OpenInGarageLink setupId={setup.id} game={setup.game} />
@@ -214,11 +221,21 @@ export default async function SetupDetailPage({
         linkTitle={false}
         installGuideOpen
         fieldTestCount={fieldTestSummary.reportCount}
+        variant="detail"
       />
       <PublicFieldTestReports summary={fieldTestSummary} />
 
       <Suspense fallback={null}>
-        <RelatedSetups setupId={setup.id} game={setup.game} />
+        <RelatedSetups
+          self={{
+            id: setup.id,
+            game: setup.game,
+            car: setup.car,
+            track: setup.track,
+            rigProfile: setup.rigProfile,
+            tags: setup.tags,
+          }}
+        />
       </Suspense>
     </div>
   );

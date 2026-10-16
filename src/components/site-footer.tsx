@@ -2,8 +2,23 @@ import Link from "next/link";
 
 import { LogoMark } from "@/components/icons/logo-mark";
 import { navLinks } from "@/lib/nav-links";
+import {
+  getContributorCount,
+  LEADERBOARD_MIN_CONTRIBUTORS,
+} from "@/lib/supabase/leaderboard";
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  // Leaderboard is footer-only (P3) and hidden until enough people have
+  // shared (P1). Any failure reads as 0, so the link fails closed and the
+  // footer — which renders on every page — can never break one.
+  let contributorCount = 0;
+  try {
+    contributorCount = await getContributorCount();
+  } catch {
+    contributorCount = 0;
+  }
+  const showLeaderboard = contributorCount >= LEADERBOARD_MIN_CONTRIBUTORS;
+
   return (
     <footer className="border-t border-border/80 bg-background">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6 md:flex-row md:items-center md:justify-between">
@@ -15,7 +30,7 @@ export function SiteFooter() {
             Setup<span className="text-racing-coral">Sheet</span>
           </span>
           <span className="ml-2 text-sm text-muted-foreground">
-            Free setups, by the community.
+            Free setups, matched to your rig.
           </span>
         </div>
 
@@ -25,6 +40,11 @@ export function SiteFooter() {
               {link.label}
             </Link>
           ))}
+          {showLeaderboard && (
+            <Link href="/leaderboard" className="hover:text-foreground ">
+              Leaderboard
+            </Link>
+          )}
           <Link href="/privacy" className="hover:text-foreground ">
             Privacy
           </Link>

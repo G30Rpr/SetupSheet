@@ -223,3 +223,25 @@ export async function getMostWantedRequests(limit = 5): Promise<MostWantedEntry[
     oldestRequestAt: row.oldest_request_at,
   }));
 }
+
+/**
+ * One request by id for the upload flow (banner + prefill). Public row,
+ * same hydration as the board so the requester's display name matches
+ * everywhere. Null when missing or unreadable.
+ */
+export async function getRequestById(id: string): Promise<SetupRequest | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("setup_requests")
+    .select(SETUP_REQUEST_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    logger.warn("getRequestById: failed to load request", error);
+    return null;
+  }
+  if (!data) return null;
+  const [request] = await hydrateSetupRequestRows(supabase, [data]);
+  return request ?? null;
+}

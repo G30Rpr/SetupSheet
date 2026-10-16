@@ -11,6 +11,21 @@ import {
 import { isValidSetupValues } from "@/lib/setup-values";
 
 /**
+ * The upload form shows these as the author-note prompts (P2: "what it
+ * likes, what it hates, what it changed from a baseline"). The server can't
+ * verify the content covers all three, but the required note and this copy
+ * are shared so form and action say the same thing.
+ */
+export const AUTHOR_NOTE_PROMPTS = [
+  "What does it like?",
+  "What does it hate?",
+  "What did you change from a baseline?",
+] as const;
+
+export const AUTHOR_NOTE_REQUIRED_ERROR =
+  "Add an author note: what the setup likes, what it hates, and what you changed from a baseline.";
+
+/**
  * The database's own check constraints are the real backstop against a
  * bad game/condition/tag/rig value, but letting that be the ONLY layer
  * means a direct call to these actions gets back a raw Postgres error
@@ -21,8 +36,15 @@ import { isValidSetupValues } from "@/lib/setup-values";
  * This function intentionally accepts unknown at runtime. Server Actions
  * are public request boundaries: TypeScript interfaces do not validate a
  * forged payload sent directly to the action endpoint.
+ *
+ * `requireAuthorNote` is on for uploads (P2: the note is required there);
+ * edits leave it off so legacy "File only" rows can still be corrected
+ * without being forced to grow a note first.
  */
-export function validateSetupFields(input: unknown): string | null {
+export function validateSetupFields(
+  input: unknown,
+  options?: { requireAuthorNote?: boolean }
+): string | null {
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
     return "Invalid setup fields.";
   }
@@ -90,6 +112,9 @@ export function validateSetupFields(input: unknown): string | null {
   }
   if (description.length > MAX_DESCRIPTION_LENGTH) {
     return `Description is too long — max ${MAX_DESCRIPTION_LENGTH} characters.`;
+  }
+  if (options?.requireAuthorNote && !description.trim()) {
+    return AUTHOR_NOTE_REQUIRED_ERROR;
   }
   if (fields.setupValues !== undefined && !isValidSetupValues(fields.setupValues)) {
     return "Setup values are invalid or too large.";

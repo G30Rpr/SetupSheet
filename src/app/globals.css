@@ -159,6 +159,21 @@
   --color-racing-amber: var(--racing-amber);
   --color-racing-coral: var(--racing-coral);
   --color-racing-cyan: var(--racing-cyan);
+
+  /*
+   * Semantic role aliases — the palette contract in code. Each role maps to
+   * exactly one hue so meaning can't drift:
+   *   coral  = the only action color (wordmark, Download, focus)
+   *   amber  = Pace bars only
+   *   green  = Predictability bars only
+   *   cyan   = rig/hardware accents only
+   * These alias the racing-* tokens above (same values, AA-tuned); use the
+   * role names in components, not the raw hues.
+   */
+  --color-action: var(--racing-coral);
+  --color-pace: var(--racing-amber);
+  --color-predictability: var(--racing-green);
+  --color-rig: var(--racing-cyan);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);

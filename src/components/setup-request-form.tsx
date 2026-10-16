@@ -22,10 +22,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { createSetupRequest } from "@/lib/actions/setup-requests";
 import { MAX_CAR_LENGTH, MAX_DESCRIPTION_LENGTH, MAX_TRACK_LENGTH, games } from "@/lib/data";
 
-export function SetupRequestForm() {
+/**
+ * Combo handed over from an empty browse result (or the homepage finder):
+ * the form fields open prefilled so "Ask for this combo" lands on a ready
+ * request, not a blank form. condition/rig have no columns on
+ * setup_requests yet, so they ride along in the notes text.
+ */
+export interface RequestPrefill {
+  game?: string;
+  car?: string;
+  track?: string;
+  condition?: string;
+  rig?: string;
+}
+
+export function SetupRequestForm({ prefill }: { prefill?: RequestPrefill }) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
-  const [game, setGame] = useState("");
+  // Only prefill game with a known title — query params are untrusted.
+  const initialGame =
+    prefill?.game && (games as string[]).includes(prefill.game) ? prefill.game : "";
+  const [game, setGame] = useState(initialGame);
+  const initialCar = (prefill?.car ?? "").slice(0, MAX_CAR_LENGTH);
+  const initialTrack = (prefill?.track ?? "").slice(0, MAX_TRACK_LENGTH);
+  const initialNotes = [
+    prefill?.condition ? `Condition: ${prefill.condition}` : "",
+    prefill?.rig ? `Rig: ${prefill.rig}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -99,12 +124,12 @@ export function SetupRequestForm() {
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="request-car">Car</Label>
-            <Input id="request-car" name="car" placeholder="e.g. Porsche 992 GT3 Cup" maxLength={MAX_CAR_LENGTH} required />
+            <Input id="request-car" name="car" placeholder="e.g. Porsche 992 GT3 Cup" maxLength={MAX_CAR_LENGTH} defaultValue={initialCar} required />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="request-track">Track</Label>
-            <Input id="request-track" name="track" placeholder="e.g. Spa-Francorchamps" maxLength={MAX_TRACK_LENGTH} required />
+            <Input id="request-track" name="track" placeholder="e.g. Spa-Francorchamps" maxLength={MAX_TRACK_LENGTH} defaultValue={initialTrack} required />
           </div>
         </div>
 
@@ -115,6 +140,7 @@ export function SetupRequestForm() {
             name="notes"
             placeholder="Any specifics — dry/wet, quali vs race, rig type..."
             maxLength={MAX_DESCRIPTION_LENGTH}
+            defaultValue={initialNotes}
             rows={2}
           />
         </div>

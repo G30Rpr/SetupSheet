@@ -18,6 +18,7 @@ import {
   FileDown,
   Flag,
   Gamepad2,
+  Gauge,
   History,
   MessageSquare,
   Pencil,
@@ -40,6 +41,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SetupCardFooter } from "@/components/setup-card-footer";
+import { ScoreMeters } from "@/components/rating-bar";
+import { readLastRig } from "@/lib/last-rig";
 import { TagBadge } from "@/components/tag-badge";
 import {
   deleteSetup,
@@ -108,6 +111,7 @@ export function SetupCard({
   installGuideOpen = false,
   fieldTestCount = 0,
   onToggleCompare,
+  variant = "card",
 }: {
   setup: Setup;
   /** False on the setup's own detail page, where linking to itself would be a no-op. */
@@ -126,8 +130,16 @@ export function SetupCard({
   fieldTestCount?: number;
   /** Presence of this prop is what turns on the compare-mode checkbox -- omit it entirely on the detail/profile call sites. */
   onToggleCompare?: () => void;
+  /**
+   * "card" (default) is the slim browse/profile face: identity, lap time,
+   * chips, rig, scores, Download. "detail" is the full setup page rendering:
+   * everything else lives there and only there (install guide, version
+   * history, comments, rating/upvote/save actions).
+   */
+  variant?: "card" | "detail";
 }) {
   const router = useRouter();
+  const isDetail = variant === "detail";
   const Title = titleLevel === 3 ? "h3" : "h2";
   const [showValues, setShowValues] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
@@ -216,9 +228,13 @@ export function SetupCard({
     };
     setMyRating(next);
 
+    // Ratings carry the rig they were cast from (P2 item 3) — the viewer's
+    // saved rig when they have one, else null ("rig not shared").
+    const raterRig = readLastRig();
+
     startTransition(async () => {
       try {
-        const result = await rateSetup(setup.id, next.pace, next.predictability);
+        const result = await rateSetup(setup.id, next.pace, next.predictability, raterRig);
         if (result.error) {
           setMyRating(setup.myRating);
           toast.error(result.error);
@@ -417,21 +433,23 @@ export function SetupCard({
           </div>
         </div>
 
-        {/* Author byline */}
-        <Link
-          href={`/profile/${setup.authorId}`}
-          className="flex min-h-11 w-fit items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground"
-        >
+        {/* Author byline — detail only; browse cards show the setup, not the social layer */}
+        {isDetail && (
+          <Link
+            href={`/profile/${setup.authorId}`}
+            className="flex min-h-11 w-fit items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
             <Avatar className="size-6 shrink-0">
-            {/* alt="": the byline link renders the author name as text right beside
+              {/* alt="": the byline link renders the author name as text right beside
               this avatar, so a name here announces it twice, once per card. */}
-            <AvatarImage src={setup.authorAvatarUrl ?? undefined} alt="" />
-            <AvatarFallback className="bg-secondary text-xs text-muted-foreground">
-              {getInitials(setup.author)}
-            </AvatarFallback>
-          </Avatar>
-          {setup.author}
-        </Link>
+              <AvatarImage src={setup.authorAvatarUrl ?? undefined} alt="" />
+              <AvatarFallback className="bg-secondary text-xs text-muted-foreground">
+                {getInitials(setup.author)}
+              </AvatarFallback>
+            </Avatar>
+            {setup.author}
+          </Link>
+        )}
 
         {/* Car + Track */}
         <div>
@@ -447,29 +465,56 @@ export function SetupCard({
           <p className="text-sm text-muted-foreground">{setup.track}</p>
         </div>
 
-        {/* Lap time */}
-        <div className="flex items-center gap-2 rounded-md bg-secondary/60 px-3 py-2.5">
-          <Timer className="size-5 shrink-0 text-muted-foreground" />
-          <span className="font-mono text-2xl font-bold tabular-nums text-foreground">
-            {setup.lapTime}
-          </span>
-          <span className="text-xs text-muted-foreground">lap time</span>
-          {setup.fileUrl && (
-            <Badge
-              variant="green"
-              className="ml-auto shrink-0"
-              title="A setup file is attached — use Download Setup below."
-            >
-              <FileCheck2 className="size-3" />
-              File included
-            </Badge>
-          )}
-        </div>
+        {/* Lap time — mono/tabular everywhere; every lap on the site is
+            author-reported, so it carries the label that says so. */}
+        {(setup.lapTime || setup.fileUrl) && (
+          <div className="flex items-center gap-2 rounded-md bg-secondary/60 px-3 py-2.5">
+            <Timer className="size-5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+            {setup.lapTime && (
+              <>
+                <span className="font-mono text-2xl font-bold tabular-nums text-foreground">
+                  {setup.lapTime}
+                </span>
+                <span
+                  className="text-xs text-muted-foreground"
+                  title="Author-reported lap time — not a timing-system result."
+                >
+                  self-reported
+                </span>
+              </>
+            )}
+            {setup.fileUrl && (
+              <Badge
+                variant="green"
+                className="ml-auto shrink-0"
+                title="A setup file is attached — use Download Setup below."
+              >
+                <FileCheck2 className="size-3" />
+                File included
+              </Badge>
+            )}
+            {setup.fileUrl && !setup.description?.trim() && (
+              <Badge
+                variant="outline"
+                className="shrink-0"
+                title="No author note — just the setup file."
+              >
+                File only
+              </Badge>
+            )}
+          </div>
+        )}
 
-        {/* Description snippet */}
-        <p className="line-clamp-2 text-sm text-muted-foreground">
-          {setup.description}
-        </p>
+        {/* Author note — detail only; note-less legacy rows say so in words */}
+        {isDetail && (
+          <p className="line-clamp-2 text-sm text-muted-foreground">
+            {setup.description?.trim() ? (
+              setup.description
+            ) : (
+              <>The uploader shared the file without a note.</>
+            )}
+          </p>
+        )}
 
         {/* Tags */}
         <div className="flex flex-wrap gap-1.5">
@@ -478,8 +523,23 @@ export function SetupCard({
           ))}
         </div>
 
+        {/* Slim card: rig + community scores, in that order (P3) */}
+        {!isDetail && (
+          <>
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Gauge className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+              {setup.rigProfile}
+            </div>
+            <ScoreMeters
+              pace={setup.pace}
+              predictability={setup.predictability}
+              ratingCount={setup.ratingCount}
+            />
+          </>
+        )}
+
         {/* Hotlap Video Proof */}
-        {safeVideoUrl && (
+        {isDetail && safeVideoUrl && (
           <div>
             <Button
               type="button"
@@ -548,7 +608,7 @@ export function SetupCard({
         )}
 
         {/* Setup values (expandable) */}
-        {v && (
+        {isDetail && v && (
           <div>
             <Button
               type="button"
@@ -569,7 +629,7 @@ export function SetupCard({
         )}
 
         {/* Export formats for setups with values */}
-        {setup.setupValues && Object.keys(setup.setupValues).length > 0 && (
+        {isDetail && setup.setupValues && Object.keys(setup.setupValues).length > 0 && (
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <span className="font-mono text-xs uppercase tracking-wide text-muted-foreground">
               Export format:
@@ -616,17 +676,17 @@ export function SetupCard({
                 </span>
               </span>
               <span className="shrink-0 text-xs font-normal text-primary-foreground/80">
+                {/* Zero download counts are not advertised — no "0 downloads",
+                    no "Be the first" bait. The count appears once it's real. */}
                 {downloads > 0 ? (
                   <>
                     <span className="font-mono tabular-nums">{downloads}</span>{" "}
                     {downloads === 1 ? "download" : "downloads"}
                   </>
-                ) : (
-                  "Be the first"
-                )}
+                ) : null}
               </span>
             </Button>
-            {setup.setupValues && (
+            {isDetail && setup.setupValues && (
               <Button
                 type="button"
                 variant="outline"
@@ -642,85 +702,93 @@ export function SetupCard({
           </div>
         )}
 
-        {/* How to install (expandable) */}
-        <div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setShowInstallGuide((s) => !s)}
-            aria-expanded={showInstallGuide}
-            className="w-full justify-between text-left"
-          >
-            <span className="flex items-center gap-1.5">
-              <BookOpen className="size-3.5" />
-              How to install this setup
-            </span>
-            <ChevronDown
-              className={cn("size-3.5 motion-safe:motion-transform", showInstallGuide && "rotate-180")}
-            />
-          </Button>
+        {/* How to install (expandable) — detail page only */}
+        {isDetail && (
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowInstallGuide((s) => !s)}
+              aria-expanded={showInstallGuide}
+              className="w-full justify-between text-left"
+            >
+              <span className="flex items-center gap-1.5">
+                <BookOpen className="size-3.5" />
+                How to install this setup
+              </span>
+              <ChevronDown
+                className={cn("size-3.5 motion-safe:motion-transform", showInstallGuide && "rotate-180")}
+              />
+            </Button>
 
-          {showInstallGuide && <SetupCardInstallGuide setup={setup} />}
-        </div>
+            {showInstallGuide && <SetupCardInstallGuide setup={setup} />}
+          </div>
+        )}
 
-        {/* Version history (expandable) */}
-        <div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setShowHistory((s) => !s)}
-            aria-expanded={showHistory}
-            className="w-full justify-between text-left"
-          >
-            <span className="flex items-center gap-1.5">
-              <History className="size-3.5" />
-              Version history
-            </span>
-            <ChevronDown
-              className={cn("size-3.5 motion-safe:motion-transform", showHistory && "rotate-180")}
-            />
-          </Button>
+        {/* Version history (expandable) — detail page only */}
+        {isDetail && (
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowHistory((s) => !s)}
+              aria-expanded={showHistory}
+              className="w-full justify-between text-left"
+            >
+              <span className="flex items-center gap-1.5">
+                <History className="size-3.5" />
+                Version history
+              </span>
+              <ChevronDown
+                className={cn("size-3.5 motion-safe:motion-transform", showHistory && "rotate-180")}
+              />
+            </Button>
 
-          {showHistory && <SetupCardHistory setup={setup} />}
-        </div>
+            {showHistory && <SetupCardHistory setup={setup} />}
+          </div>
+        )}
 
-        {/* Comments (expandable) */}
-        <div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setShowComments((s) => !s)}
-            aria-expanded={showComments}
-            className="w-full justify-between text-left"
-          >
-            <span className="flex items-center gap-1.5">
-              <MessageSquare className="size-3.5" />
-              Comments
-            </span>
-            <ChevronDown
-              className={cn("size-3.5 motion-safe:motion-transform", showComments && "rotate-180")}
-            />
-          </Button>
+        {/* Comments (expandable) — detail page only */}
+        {isDetail && (
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowComments((s) => !s)}
+              aria-expanded={showComments}
+              className="w-full justify-between text-left"
+            >
+              <span className="flex items-center gap-1.5">
+                <MessageSquare className="size-3.5" />
+                Comments
+              </span>
+              <ChevronDown
+                className={cn("size-3.5 motion-safe:motion-transform", showComments && "rotate-180")}
+              />
+            </Button>
 
-          {showComments && <SetupCardComments setup={setup} />}
-        </div>
+            {showComments && <SetupCardComments setup={setup} />}
+          </div>
+        )}
       </div>
 
-      <SetupCardFooter
-        setup={setup}
-        upvotes={upvotes}
-        hasUpvoted={hasUpvoted}
-        hasFavorited={hasFavorited}
-        myRating={myRating}
-        isFavoritePending={isFavoritePending}
-        isPending={isPending}
-        onFavorite={handleFavoriteClick}
-        onUpvote={handleUpvoteClick}
-        onRate={handleRate}
-      />
+      {isDetail && (
+        <SetupCardFooter
+          setup={setup}
+          upvotes={upvotes}
+          hasUpvoted={hasUpvoted}
+          hasFavorited={hasFavorited}
+          myRating={myRating}
+          isFavoritePending={isFavoritePending}
+          isPending={isPending}
+          onFavorite={handleFavoriteClick}
+          onUpvote={handleUpvoteClick}
+          onRate={handleRate}
+        />
+      )}
     </Card>
   );
 }

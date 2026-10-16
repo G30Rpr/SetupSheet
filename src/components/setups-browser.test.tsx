@@ -130,3 +130,102 @@ describe("SetupsBrowser remote paging", () => {
     expect(loadMoreSetups.mock.calls[1][1]).toMatchObject({ search: "porsche" });
   });
 });
+
+describe("SetupsBrowser empty-combo handoff", () => {
+  it("offers Request + Engineer instead of a dead end when filters match nothing", () => {
+    render(
+      <SetupsBrowser
+        setups={INDEX}
+        totalCount={500}
+        initialFilters={{
+          search: "",
+          game: "iRacing",
+          car: "Phantom GT",
+          track: "Spa-Francorchamps",
+          condition: "Dry",
+          rig: "Gamepad",
+        }}
+      />
+    );
+
+    expect(screen.getByText("No setup for this combo yet.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Nobody has shared a Gamepad setup for Phantom GT at Spa-Francorchamps in the Dry."
+      )
+    ).toBeInTheDocument();
+
+    const ask = screen.getByRole("link", { name: "Ask for this combo" });
+    expect(ask.getAttribute("href")).toContain("/requests?");
+    expect(ask.getAttribute("href")).toContain("car=Phantom+GT");
+    expect(ask.getAttribute("href")).toContain("rig=Gamepad");
+    expect(
+      screen.getByRole("link", { name: "Get a first change to test" })
+    ).toHaveAttribute("href", "/engineer");
+    // Never a blank list alongside the handoff.
+    expect(screen.queryAllByTestId("card")).toHaveLength(0);
+  });
+
+  it("describes a search-only miss without inventing combo fields", () => {
+    render(
+      <SetupsBrowser
+        setups={INDEX}
+        totalCount={500}
+        initialFilters={{ ...EMPTY_FILTERS, search: "spaceship" }}
+      />
+    );
+
+    expect(
+      screen.getByText("Nobody has shared a setup matching “spaceship” yet.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ask for this combo" })).toHaveAttribute(
+      "href",
+      "/requests"
+    );
+  });
+});
+
+describe("SetupsBrowser hidden rigs", () => {
+  const MIXED = [
+    makeSetup("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "Matched", "2026-08-30T10:00:00.000Z"),
+    { ...makeSetup("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "Gamepad One", "2026-08-29T10:00:00.000Z"), rigProfile: "Gamepad" as const },
+    { ...makeSetup("cccccccc-cccc-4ccc-8ccc-cccccccccccc", "Gamepad Two", "2026-08-28T10:00:00.000Z"), rigProfile: "Gamepad" as const },
+  ];
+
+  it("names the hidden rig categories and lets them be shown", () => {
+    render(
+      <SetupsBrowser
+        setups={MIXED}
+        totalCount={500}
+        initialFilters={{ ...EMPTY_FILTERS, rig: "Wheel + 3 Pedals" }}
+      />
+    );
+
+    // Rig filter active: only the matching card is listed...
+    expect(screen.getAllByTestId("card")).toHaveLength(1);
+    // ...and the hidden category is named in a quiet line.
+    expect(
+      screen.getByText(/Hiding Gamepad setups that don't match your rig\./)
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show them" }));
+    expect(screen.getAllByTestId("card")).toHaveLength(3);
+    expect(
+      screen.queryByText(/Hiding Gamepad setups/)
+    ).not.toBeInTheDocument();
+  });
+
+  it("says nothing when no other rigs are hidden", () => {
+    const allGamepad = MIXED.map((setup) => ({ ...setup, rigProfile: "Gamepad" as const }));
+    render(
+      <SetupsBrowser
+        setups={allGamepad}
+        totalCount={500}
+        initialFilters={{ ...EMPTY_FILTERS, rig: "Gamepad" }}
+      />
+    );
+
+    expect(screen.getAllByTestId("card")).toHaveLength(3);
+    expect(screen.queryByText(/Hiding/)).not.toBeInTheDocument();
+  });
+});
