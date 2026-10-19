@@ -99,6 +99,53 @@ describe("filterAndSortSetups — sorting", () => {
   });
 });
 
+describe("filterAndSortSetups — bestMatch (default)", () => {
+  it("ranks setups matching the preferred rig first", () => {
+    const setups = [
+      makeSetup({ id: "1", rigProfile: "Gamepad", ratingCount: 5, predictability: 4 }),
+      makeSetup({ id: "2", rigProfile: "Direct Drive + Load Cell", ratingCount: 1, predictability: 5 }),
+      makeSetup({ id: "3", rigProfile: "Gamepad", ratingCount: 2, predictability: 3 }),
+    ];
+    expect(
+      filterAndSortSetups(setups, noFilters, "bestMatch", "Direct Drive + Load Cell").map((s) => s.id)
+    ).toEqual(["2", "1", "3"]);
+  });
+
+  it("a single 5.0 never outranks a well-evidenced 3.8 (more ratings first)", () => {
+    const setups = [
+      makeSetup({ id: "lone", ratingCount: 1, pace: 5, predictability: 5 }),
+      makeSetup({ id: "many", ratingCount: 20, pace: 3.8, predictability: 3.8 }),
+    ];
+    expect(filterAndSortSetups(setups, noFilters, "bestMatch").map((s) => s.id)).toEqual([
+      "many",
+      "lone",
+    ]);
+    // Same guarantee inside one rig class (both share the default fixture
+    // rig, so the preferred rig matches them equally): evidence still wins.
+    expect(
+      filterAndSortSetups(setups, noFilters, "bestMatch", "Direct Drive + Load Cell").map((s) => s.id)
+    ).toEqual(["many", "lone"]);
+  });
+
+  it("breaks evidence ties by Predictability", () => {
+    const setups = [
+      makeSetup({ id: "1", ratingCount: 4, predictability: 3.2 }),
+      makeSetup({ id: "2", ratingCount: 4, predictability: 4.6 }),
+    ];
+    expect(filterAndSortSetups(setups, noFilters, "bestMatch").map((s) => s.id)).toEqual(["2", "1"]);
+  });
+
+  it("an explicit rig filter wins over the saved rig", () => {
+    const setups = [
+      makeSetup({ id: "1", rigProfile: "Gamepad", ratingCount: 5 }),
+      makeSetup({ id: "2", rigProfile: "Wheel + 3 Pedals", ratingCount: 1 }),
+    ];
+    expect(
+      filterAndSortSetups(setups, { ...noFilters, rig: "Wheel + 3 Pedals" }, "bestMatch", "Gamepad")
+    ).toHaveLength(1);
+  });
+});
+
 describe("getSearchSuggestions", () => {
   it("returns nothing for an empty or whitespace-only query", () => {
     const setups = [makeSetup({ id: "1", car: "BMW M4 GT3" })];

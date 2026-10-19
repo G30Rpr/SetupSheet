@@ -186,7 +186,10 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
           ) : candidates.length === 0 ? (
             <p className="text-xs text-muted-foreground">
               You don&apos;t have a matching {request.car} @ {request.track} setup yet —{" "}
-              <Link href="/upload" className="font-medium text-foreground underline-offset-4 hover:underline">
+              <Link
+                href={`/upload?request=${encodeURIComponent(request.id)}`}
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
                 upload one
               </Link>
               .

@@ -17,7 +17,9 @@ export function OpenInGarageLink({ setupId, game }: { setupId: string; game: Gam
           Start a private Garage session. Setup values are copied only if you opt in.
         </p>
       </div>
-      <Button asChild className="shrink-0">
+      {/* Secondary CTA: Download is the page's primary action (in the card).
+          Open in Garage never competes with it in color. */}
+      <Button asChild variant="outline" className="shrink-0">
         <Link href={`/garage?from=${encodeURIComponent(setupId)}`}>
           Open in Garage
           <ArrowRight aria-hidden="true" />

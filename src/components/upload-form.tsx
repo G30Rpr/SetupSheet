@@ -32,12 +32,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SetupValuesFields, type SetupValues } from "@/components/setup-values-fields";
-import { StarRating } from "@/components/star-rating";
 import { Textarea } from "@/components/ui/textarea";
 import { createSetup, discardUploadedFiles, updateSetup } from "@/lib/actions/setups";
+import { fulfillSetupRequest } from "@/lib/actions/setup-requests";
 import { uploadFileDirectly } from "@/lib/upload-client";
 import { logger } from "@/lib/logger";
 import { parseAccSetupFile } from "@/lib/acc-setup-parser";
+import {
+  AUTHOR_NOTE_PROMPTS,
+  AUTHOR_NOTE_REQUIRED_ERROR,
+} from "@/lib/validate-setup-fields";
 import { validateVideoUrl } from "@/lib/video-url";
 import { normalizeSetupValues } from "@/lib/setup-values";
 import { resolveEffectiveSetupValues } from "@/lib/resolve-effective-setup-values";
@@ -71,10 +75,28 @@ function draftKey(userId: string) {
   return `setupsheet:upload-draft:${userId}`;
 }
 
-export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
+/** An open setup request this upload is answering (P2 item 4). */
+export interface UploadRequestContext {
+  id: string;
+  game: Game;
+  car: string;
+  track: string;
+  notes: string;
+  requesterUsername: string;
+}
+
+export function UploadForm({
+  existingSetup,
+  requestContext,
+}: {
+  existingSetup?: Setup;
+  requestContext?: UploadRequestContext;
+}) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const isEditing = Boolean(existingSetup);
+  const answering = Boolean(requestContext) && !isEditing;
+  const [fulfillOutcome, setFulfillOutcome] = useState<"fulfilled" | "unfulfilled" | null>(null);
   // A file takes priority over setupValues when both are present -- that
   // only happens for an ACC setup whose file was auto-parsed for tuning
   // values (see handleFileChange), where the file is still the source of
@@ -82,7 +104,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   const [entryMode, setEntryMode] = useState<EntryMode>(
     existingSetup?.fileName ? "file" : existingSetup?.setupValues ? "manual" : "file"
   );
-  const [game, setGame] = useState<Game | "">(existingSetup?.game ?? "");
+  const [game, setGame] = useState<Game | "">(existingSetup?.game ?? requestContext?.game ?? "");
   // Both are plain per-game data modules (not components, so next/dynamic
   // doesn't apply) -- loaded via dynamic import() below so their ~150+ lines
   // of car/track rosters ship in their own chunk instead of every /upload
@@ -107,8 +129,6 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
   );
   const [telemetryFile, setTelemetryFile] = useState<File | null>(null);
   const [keepExistingTelemetry, setKeepExistingTelemetry] = useState(Boolean(existingSetup?.telemetryFileName));
-  const [pace, setPace] = useState(3);
-  const [predictability, setPredictability] = useState(3);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "success">("idle");
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
@@ -172,8 +192,6 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
       if (Array.isArray(draft.tags)) setTags(draft.tags);
       const restoredSetupValues = normalizeSetupValues(draft.setupValues);
       if (restoredSetupValues) setSetupValues(restoredSetupValues);
-      if (typeof draft.pace === "number") setPace(draft.pace);
-      if (typeof draft.predictability === "number") setPredictability(draft.predictability);
       if (draft.entryMode === "file" || draft.entryMode === "manual") setEntryMode(draft.entryMode);
 
       toast("Restored your unsaved draft", {
@@ -197,11 +215,11 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     const id = setTimeout(() => {
       localStorage.setItem(
         draftKey(user.id),
-        JSON.stringify({ game, condition, lapTime, rig, description, tags, setupValues, pace, predictability, entryMode })
+        JSON.stringify({ game, condition, lapTime, rig, description, tags, setupValues, entryMode })
       );
     }, 500);
     return () => clearTimeout(id);
-  }, [isEditing, user, game, condition, lapTime, rig, description, tags, setupValues, pace, predictability, entryMode]);
+  }, [isEditing, user, game, condition, lapTime, rig, description, tags, setupValues, entryMode]);
 
   function toggleTag(tag: SetupTag) {
     setTags((prev) =>
@@ -331,6 +349,14 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     e.preventDefault();
     setError(null);
 
+    // Uploads require the author note (P2). Legacy rows edited without one
+    // keep their "File only" label.
+    if (!isEditing && !description.trim()) {
+      setError(AUTHOR_NOTE_REQUIRED_ERROR);
+      toast.error(AUTHOR_NOTE_REQUIRED_ERROR);
+      return;
+    }
+
     const formData = new FormData(e.currentTarget);
     const car = String(formData.get("car") ?? "");
     const track = String(formData.get("track") ?? "");
@@ -415,8 +441,6 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           description,
           tags,
           rigProfile: rig,
-          pace,
-          predictability,
           setupValues: effectiveSetupValues,
           filePath: fileFields.filePath,
           fileName: fileFields.fileName,
@@ -430,6 +454,14 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           toast.error(result.error);
           if (uploadedPaths.length > 0) void discardUploadedFiles(uploadedPaths);
         } else {
+          // P2 item 4: an upload answering an open request marks it
+          // fulfilled with this uploader credited. The setup is already
+          // published either way — if the combo drifted from the request
+          // (the RPC only accepts matching game/car/track), say so softly.
+          if (requestContext && result.setupId) {
+            const fulfillResult = await fulfillSetupRequest(requestContext.id, result.setupId);
+            setFulfillOutcome(fulfillResult.error ? "unfulfilled" : "fulfilled");
+          }
           if (user) localStorage.removeItem(draftKey(user.id));
           setStatus("success");
         }
@@ -468,8 +500,6 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
     setUseManualTrackInput(false);
     setSetupValues({});
     setTags([]);
-    setPace(3);
-    setPredictability(3);
     setError(null);
     setStatus("idle");
   }
@@ -512,6 +542,18 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
             Thanks for sharing with the community. Your setup will appear on
             the Browse Setups page shortly.
           </p>
+          {answering && requestContext && (
+            <p
+              className="mt-1 max-w-sm text-sm text-muted-foreground"
+              role={fulfillOutcome === "unfulfilled" ? "status" : undefined}
+            >
+              {fulfillOutcome === "fulfilled"
+                ? `${requestContext.requesterUsername}'s request is marked fulfilled — you're credited on it.`
+                : fulfillOutcome === "unfulfilled"
+                  ? `We published your setup, but couldn't mark ${requestContext.requesterUsername}'s request — it may already be fulfilled.`
+                  : `Marking ${requestContext.requesterUsername}'s request fulfilled…`}
+            </p>
+          )}
         </div>
         <Button onClick={resetForm} variant="outline">
           Upload another setup
@@ -522,6 +564,21 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      {answering && requestContext && (
+        <Card className="gap-1.5 border-racing-coral/40 px-5 py-4">
+          <p className="text-sm font-medium">
+            You&apos;re answering {requestContext.requesterUsername}&apos;s request
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {requestContext.game} · {requestContext.car} @ {requestContext.track}
+            {requestContext.notes ? ` — “${requestContext.notes}”` : ""}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Publish a setup for this combo and we&apos;ll mark their request
+            fulfilled, with you credited.
+          </p>
+        </Card>
+      )}
       <Card className="px-5 py-6 sm:px-8 sm:py-8">
         <div className="flex flex-col gap-6">
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -647,7 +704,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                 groups={game ? carLists[game] : undefined}
                 useManual={useManualCarInput}
                 onToggleManual={setUseManualCarInput}
-                defaultValue={existingSetup?.car ?? detectedCar ?? undefined}
+                defaultValue={existingSetup?.car ?? requestContext?.car ?? detectedCar ?? undefined}
                 selectPlaceholder="Select a car"
                 inputPlaceholder="e.g. Porsche 992 GT3 Cup"
                 maxLength={MAX_CAR_LENGTH}
@@ -661,7 +718,7 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
                 groups={game ? trackLists[game] : undefined}
                 useManual={useManualTrackInput}
                 onToggleManual={setUseManualTrackInput}
-                defaultValue={existingSetup?.track}
+                defaultValue={existingSetup?.track ?? requestContext?.track ?? undefined}
                 selectPlaceholder="Select a track"
                 inputPlaceholder="e.g. Spa-Francorchamps"
                 maxLength={MAX_TRACK_LENGTH}
@@ -711,20 +768,11 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           />
 
           {!isEditing && (
-            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label>Pace</Label>
-                <StarRating value={pace} onChange={setPace} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Predictability</Label>
-                <StarRating value={predictability} onChange={setPredictability} />
-              </div>
-              <p className="text-xs text-muted-foreground sm:col-span-2">
-                Your own starting rating — the community (including you) can
-                update it any time from the setup card afterward.
-              </p>
-            </section>
+            <p className="text-xs text-muted-foreground">
+              Your setup starts Unrated. Other drivers score Pace and
+              Predictability after they&apos;ve run it — authors can&apos;t
+              rate their own setups.
+            </p>
           )}
 
           <section className="flex flex-col gap-3">
@@ -746,15 +794,23 @@ export function UploadForm({ existingSetup }: { existingSetup?: Setup }) {
           </section>
 
           <section className="flex flex-col gap-1.5">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">
+              Author note {isEditing ? "" : "(required)"}
+            </Label>
+            <p id="author-note-hint" className="text-xs text-muted-foreground">
+              {AUTHOR_NOTE_PROMPTS.join(" ")} Say it in your own words — a
+              sentence each is plenty.
+            </p>
             <Textarea
               id="description"
               name="description"
-              placeholder="What makes this setup fast or safe? Any tips for using it?"
+              placeholder="What it likes. What it hates. What I changed from a baseline."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={MAX_DESCRIPTION_LENGTH}
               rows={4}
+              required={!isEditing}
+              aria-describedby="author-note-hint"
             />
           </section>
         </div>

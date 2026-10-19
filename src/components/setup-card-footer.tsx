@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bookmark, Calendar, ChevronDown, Gauge, Star, TrendingUp } from "lucide-react";
 
-import { RatingBar } from "@/components/rating-bar";
+import { ScoreMeters } from "@/components/rating-bar";
 import { Button } from "@/components/ui/button";
+import { SCORE_DEFINITIONS_SENTENCE, formatScore } from "@/lib/ratings";
+import { readLastRig } from "@/lib/last-rig";
+import { splitBySimilarRig, type ScoreTotals } from "@/lib/rating-splits";
 import { StarRating } from "@/components/star-rating";
 import type { Setup } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -14,6 +17,32 @@ function formatDate(dateStr: string) {
     month: "short",
     day: "numeric",
   });
+}
+
+function SplitScore({ sum, n }: { sum: number; n: number }) {
+  return (
+    <span className="whitespace-nowrap font-mono text-xs tabular-nums text-foreground">
+      {n > 0 ? `${formatScore(sum / n)} (${n})` : <span className="text-muted-foreground">Unrated</span>}
+    </span>
+  );
+}
+
+function SplitRow({
+  label,
+  title,
+  totals,
+}: {
+  label: string;
+  title: string;
+  totals: ScoreTotals;
+}) {
+  return (
+    <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3" title={title}>
+      <span className="truncate text-xs text-muted-foreground">{label}</span>
+      <SplitScore sum={totals.paceSum} n={totals.paceN} />
+      <SplitScore sum={totals.predSum} n={totals.predN} />
+    </div>
+  );
 }
 
 export function SetupCardFooter({
@@ -41,6 +70,27 @@ export function SetupCardFooter({
 }) {
   const [showRateWidget, setShowRateWidget] = useState(false);
 
+  // "On a similar rig" is anchored to the viewer's saved rig when they have
+  // one (the site is "matched to your rig"), else to the rig the setup is
+  // built for. Server HTML always renders the setup-rig anchor so hydration
+  // matches; the saved-rig swap happens after mount.
+  const [anchor, setAnchor] = useState<{ rig: string; isSavedRig: boolean }>({
+    rig: setup.rigProfile,
+    isSavedRig: false,
+  });
+  useEffect(() => {
+    const saved = readLastRig();
+    if (saved && saved !== setup.rigProfile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage hydration after mount
+      setAnchor({ rig: saved, isSavedRig: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only hydration of the viewer's saved rig
+  }, []);
+
+  const splits = setup.ratingSplits ?? [];
+  const showSplit = splits.length > 0;
+  const { similar, others } = splitBySimilarRig(splits, anchor.rig);
+
   return (
     <div className="flex flex-col gap-3 border-t border-border/80 bg-black/15 px-5 py-3">
       {/* Rig profile + upload date */}
@@ -58,31 +108,40 @@ export function SetupCardFooter({
       {/* Pace & Predictability (community average) + upvotes */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          {setup.ratingCount === 0 ? (
-            // No fabricated 0% bars for an unrated setup -- two empty bars read
-            // as "rated badly" rather than "nobody has rated this yet".
-            <p className="text-xs text-muted-foreground">
-              Not yet rated — be the first to say how it drives.
-            </p>
-          ) : (
-            <>
-              <div className="flex w-full items-center gap-2">
-                <span className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
-                  Pace
-                </span>
-                <RatingBar value={setup.pace} className="max-w-[150px]" />
+          {/* Unrated setups render "Unrated" — no fabricated bars, no
+              "be the first" bait. Rated ones show score + count per meter. */}
+          <ScoreMeters
+            pace={setup.pace}
+            predictability={setup.predictability}
+            ratingCount={setup.ratingCount}
+          />
+          {/* One sentence total defining the two scores (P3 detail touch) */}
+          <p className="text-xs text-muted-foreground">{SCORE_DEFINITIONS_SENTENCE}</p>
+
+          {/* "On a similar rig" vs "Everyone else" (P2 item 3). Aggregates
+              only; a side with no ratings reads Unrated, never a zero. */}
+          {showSplit && (
+            <div className="mt-1 flex flex-col gap-1 border-t border-border/60 pt-2">
+              <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3 text-xs">
+                <span />
+                <span className="text-racing-amber">Pace</span>
+                <span className="text-racing-green">Predictability</span>
               </div>
-              <div className="flex w-full items-center gap-2">
-                <span className="w-24 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
-                  Predictability
-                </span>
-                <RatingBar value={setup.predictability} className="max-w-[150px]" />
-              </div>
-              <p className="ml-24 pl-2 text-xs text-muted-foreground/70">
-                {setup.ratingCount} {setup.ratingCount === 1 ? "rating" : "ratings"} · average out of
-                5
-              </p>
-            </>
+              <SplitRow
+                label="On a similar rig"
+                title={
+                  anchor.isSavedRig
+                    ? `Ratings from drivers on ${anchor.rig} — your saved rig.`
+                    : `Ratings from drivers on ${anchor.rig} — the rig this setup is for.`
+                }
+                totals={similar}
+              />
+              <SplitRow
+                label="Everyone else"
+                title="Every other rating, including ratings that didn't share a rig."
+                totals={others}
+              />
+            </div>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -125,41 +184,44 @@ export function SetupCardFooter({
         </div>
       </div>
 
-      {/* Rate this setup (expandable) */}
-      <div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setShowRateWidget((visible) => !visible)}
-          aria-expanded={showRateWidget}
-          className="w-full justify-between text-left"
-        >
-          <span className="flex items-center gap-1.5">
-            <Star className="size-3.5" />
-            {myRating ? "Update your rating" : "Rate this setup"}
-          </span>
-          <ChevronDown
-            className={cn("size-3.5 motion-safe:motion-transform", showRateWidget && "rotate-180")}
-          />
-        </Button>
+      {/* Rate this setup (expandable). Authors never see it: self-rating is
+          blocked at the database level (0036_rating_trust.sql). */}
+      {!setup.isOwner && (
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowRateWidget((visible) => !visible)}
+            aria-expanded={showRateWidget}
+            className="w-full justify-between text-left"
+          >
+            <span className="flex items-center gap-1.5">
+              <Star className="size-3.5" />
+              {myRating ? "Update your rating" : "Rate this setup"}
+            </span>
+            <ChevronDown
+              className={cn("size-3.5 motion-safe:motion-transform", showRateWidget && "rotate-180")}
+            />
+          </Button>
 
-        {showRateWidget && (
-          <div className="mt-2 flex flex-col gap-2 rounded-md border border-border/60 px-3 py-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground">Pace</span>
-              <StarRating value={myRating?.pace ?? 0} onChange={(value) => onRate("pace", value)} />
+          {showRateWidget && (
+            <div className="mt-2 flex flex-col gap-2 rounded-md border border-border/60 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">Pace</span>
+                <StarRating value={myRating?.pace ?? 0} onChange={(value) => onRate("pace", value)} />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">Predictability</span>
+                <StarRating
+                  value={myRating?.predictability ?? 0}
+                  onChange={(value) => onRate("predictability", value)}
+                />
+              </div>
             </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground">Predictability</span>
-              <StarRating
-                value={myRating?.predictability ?? 0}
-                onChange={(value) => onRate("predictability", value)}
-              />
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

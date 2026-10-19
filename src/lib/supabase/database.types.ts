@@ -130,6 +130,7 @@ export type Database = {
           setup_id: string;
           pace: number;
           predictability: number;
+          rater_rig: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -138,6 +139,7 @@ export type Database = {
           setup_id: string;
           pace: number;
           predictability: number;
+          rater_rig?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -146,6 +148,7 @@ export type Database = {
           setup_id?: string;
           pace?: number;
           predictability?: number;
+          rater_rig?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -643,6 +646,17 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
       };
+      get_setup_rating_splits: {
+        Args: { p_setup_ids: string[] };
+        Returns: {
+          setup_id: string;
+          rater_rig: string | null;
+          pace_sum: number;
+          pace_n: number;
+          pred_sum: number;
+          pred_n: number;
+        }[];
+      };
       increment_downloads: {
         Args: { setup_id: string };
         Returns: undefined;
@@ -667,8 +681,10 @@ export type Database = {
           p_video_url: string | null;
           p_telemetry_file_path: string | null;
           p_telemetry_file_name: string | null;
-          p_pace: number;
-          p_predictability: number;
+          /** @deprecated Accepted for compatibility; ignored (0036_rating_trust.sql). */
+          p_pace?: number;
+          /** @deprecated Accepted for compatibility; ignored (0036_rating_trust.sql). */
+          p_predictability?: number;
         };
         Returns: string;
       };

@@ -74,6 +74,22 @@ export interface Setup {
   telemetryFileUrl?: string | null;
   /** Derived: true if either video proof or telemetry proof is attached. */
   isVerifiedLap?: boolean;
+  /**
+   * Per-rig rating aggregates (sums + counts, author self-ratings excluded),
+   * loaded with the row batch. Powers the detail page's "On a similar rig" /
+   * "Everyone else" split and Best match's similar-rig tiebreak. Never
+   * per-rater rows — see get_setup_rating_splits in 0037_rater_rig.sql.
+   */
+  ratingSplits?: RatingSplit[];
+}
+
+/** One rig bucket of rating aggregates for a setup (rigProfile null = raters who didn't share a rig). */
+export interface RatingSplit {
+  rigProfile: string | null;
+  paceSum: number;
+  paceN: number;
+  predSum: number;
+  predN: number;
 }
 
 export interface SetupComment {

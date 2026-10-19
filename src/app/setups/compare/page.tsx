@@ -9,10 +9,32 @@ import { SetupValuesDiff } from "@/components/setup-values-diff";
 import { getSetupsByIds } from "@/lib/supabase/setups";
 import { fullPageTitle } from "@/lib/seo";
 import { SITE_NAME } from "@/lib/site";
+import type { Setup } from "@/lib/types";
 
 const title = "Compare Setups";
 const socialTitle = fullPageTitle(title);
 const description = "Compare two setups' tuning values side by side.";
+
+/**
+ * "Unparseable → say so" (P2): when a side has no structured values we can
+ * line up, say precisely why instead of implying the setups match. The
+ * .svm format is the known-unparsed case; anything else without values
+ * simply never had them attached.
+ */
+function unparseableNote(setup: Setup): string | null {
+  const values = setup.setupValues ?? {};
+  if (Object.keys(values).length > 0) return null;
+  const isSvm = (setup.fileName ?? "").toLowerCase().endsWith(".svm");
+  return isSvm
+    ? `${setup.car}: we can't read .svm setup files yet, so no values from this one can be lined up.`
+    : `${setup.car}: no structured values attached to this setup.`;
+}
+
+function comparisonEmptyMessage(a: Setup, b: Setup): string {
+  const notes = [unparseableNote(a), unparseableNote(b)].filter(Boolean);
+  if (notes.length > 0) return notes.join(" ");
+  return "These two setups have the same key values — nothing differs in the fields above.";
+}
 
 export const metadata: Metadata = {
   title,
@@ -89,13 +111,34 @@ export default async function ComparePage({
             ))}
           </div>
 
-          <Card className="px-4 py-4 sm:px-5">
+          <Card className="flex flex-col gap-3 px-4 py-4 sm:px-5">
+            <div>
+              <h2 className="text-base font-semibold">What&apos;s different</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Only values that differ, limited to the key setup fields: wing,
+                ride height, ARB, diff, brake bias, ABS, TC, pressures. Values
+                come from each setup&apos;s structured data (parsed from the
+                uploaded file or entered by the author).
+              </p>
+            </div>
+
+            {[setupA, setupB].map((setup) => {
+              const note = unparseableNote(setup);
+              return note ? (
+                <p key={setup.id} className="text-xs text-muted-foreground">
+                  {note}
+                </p>
+              ) : null;
+            })}
+
             <SetupValuesDiff
               game={setupA.game}
               valuesA={setupA.setupValues}
               valuesB={setupB.setupValues}
               labelA={setupA.car}
               labelB={setupB.car}
+              comparison
+              emptyMessage={comparisonEmptyMessage(setupA, setupB)}
             />
           </Card>
         </div>

@@ -9,6 +9,7 @@ import {
 } from "@/lib/cache-tags";
 
 import { logger } from "@/lib/logger";
+import { pickRelatedSetups } from "@/lib/related-setups";
 import {
   unwrapCachedCount,
   unwrapCachedList,
@@ -34,7 +35,7 @@ import type { Tables } from "@/lib/supabase/database.types";
 import { createPublicClient } from "@/lib/supabase/public";
 import { sanitizeDisplayName } from "@/lib/user-display";
 import { normalizeVideoUrl } from "@/lib/video-url";
-import type { Condition, Game, RigProfile, Setup, SetupTag } from "@/lib/types";
+import type { Condition, Game, RatingSplit, RigProfile, Setup, SetupTag } from "@/lib/types";
 import { SETUP_CARD_PAGE_SIZE } from "@/lib/ui-constants";
 import { isUuid } from "@/lib/utils";
 
@@ -151,6 +152,71 @@ const getCachedFeaturedRows = unstable_cache(
   ["setups-featured"],
   { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
 );
+
+const getCachedStartingPointRows = unstable_cache(
+  async (limit: number): Promise<SetupRow[]> => {
+    const supabase = createPublicClient();
+    const result = await supabase
+      .from("setups")
+      .select(SETUP_COLUMNS)
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(Math.min(Math.max(limit, 1), 48));
+
+    return unwrapCachedList(result, "getCachedStartingPointRows: failed to load setups");
+  },
+  ["setups-starting-points"],
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
+);
+
+/**
+ * Homepage "Starting points": a bounded pool of the most recently updated
+ * real setups, trimmed client-side to at most three that match the visitor's
+ * saved rig (localStorage) — or three recent ones when no rig is saved.
+ * The pool cap (48) is far past the point where three cards need more data;
+ * it exists so a saved rig can still find older matches as the table grows.
+ */
+export async function getStartingPointCandidates(
+  limit = 48
+): Promise<{ setups: Setup[]; failed: boolean }> {
+  const supabase = await createClient();
+  try {
+    const rows = await getCachedStartingPointRows(limit);
+    return { setups: await hydrateSetupRows(supabase, rows), failed: false };
+  } catch {
+    return { setups: [], failed: true };
+  }
+}
+
+/** Lightweight (game, car, track) tuples of published setups — powers the homepage finder's dependent suggestions. */
+export interface FinderCombo {
+  game: string;
+  car: string;
+  track: string;
+}
+
+const getCachedFinderCombos = unstable_cache(
+  async (): Promise<FinderCombo[]> => {
+    const supabase = createPublicClient();
+    const result = await supabase
+      .from("setups")
+      .select("game, car, track")
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    return unwrapCachedList(result, "getCachedFinderCombos: failed to load combos");
+  },
+  ["setups-finder-combos"],
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] }
+);
+
+export async function getFinderCombos(): Promise<{ combos: FinderCombo[]; failed: boolean }> {
+  try {
+    return { combos: await getCachedFinderCombos(), failed: false };
+  } catch {
+    return { combos: [], failed: true };
+  }
+}
 
 const getCachedSetupCount = unstable_cache(
   async (): Promise<number> => {
@@ -311,18 +377,31 @@ interface RelatedSetupRow {
   car: string;
   track: string;
   condition: string;
+  rig_profile: string;
+  tags: string[] | null;
 }
 
 const getCachedRelatedRows = unstable_cache(
-  async (setupId: string, game: string, limit: number): Promise<RelatedSetupRow[]> => {
+  async (
+    setupId: string,
+    game: string,
+    car: string,
+    track: string,
+    fetchCount: number
+  ): Promise<RelatedSetupRow[]> => {
     const supabase = createPublicClient();
+    // Same combo only (game + car + track). Rig/style filtering happens in
+    // pickRelatedSetups — that logic is deterministic and unit-tested, and
+    // this query stays a plain row fetch.
     const result = await supabase
       .from("setups")
-      .select("id, game, car, track, condition")
+      .select("id, game, car, track, condition, rig_profile, tags")
       .eq("game", game)
+      .eq("car", car)
+      .eq("track", track)
       .neq("id", setupId)
       .order("created_at", { ascending: false })
-      .limit(Math.min(Math.max(limit, 1), 12));
+      .limit(Math.min(Math.max(fetchCount, 1), 24));
     return unwrapCachedList(result, "getCachedRelatedRows: failed to load setups");
   },
   ["setups-related"],
@@ -465,7 +544,7 @@ async function hydrateSetupRows(
   const typedRows = rows;
   if (typedRows.length === 0) return [];
 
-  const [viewer, authors] = await Promise.all([
+  const [viewer, authors, splits] = await Promise.all([
     getViewer(
       supabase,
       typedRows.map((row) => row.id)
@@ -474,9 +553,55 @@ async function hydrateSetupRows(
       supabase,
       typedRows.map((row) => row.user_id)
     ),
+    getRatingSplitBuckets(
+      supabase,
+      typedRows.map((row) => row.id)
+    ),
   ]);
 
-  return typedRows.map((row) => mapRow(row, viewer, authors, supabase));
+  return typedRows.map((row) => {
+    const setup = mapRow(row, viewer, authors, supabase);
+    setup.ratingSplits = splits.get(row.id) ?? [];
+    return setup;
+  });
+}
+
+/**
+ * Per-rig rating aggregates (0037_rater_rig.sql). Enrichment only: a failed
+ * read yields no splits and the UI simply skips the "similar rig" split, so
+ * browsing never breaks over it. Sums/counts only — never per-rater rows.
+ */
+async function getRatingSplitBuckets(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  setupIds: string[]
+): Promise<Map<string, RatingSplit[]>> {
+  const bySetup = new Map<string, RatingSplit[]>();
+  if (setupIds.length === 0) return bySetup;
+
+  const { data, error } = await supabase.rpc("get_setup_rating_splits", {
+    p_setup_ids: setupIds,
+  });
+  if (error || !data) {
+    logger.warn("getRatingSplitBuckets: splits unavailable", error);
+    return bySetup;
+  }
+
+  for (const row of data) {
+    const bucket: RatingSplit = {
+      rigProfile: row.rater_rig,
+      paceSum: Number(row.pace_sum),
+      paceN: Number(row.pace_n),
+      predSum: Number(row.pred_sum),
+      predN: Number(row.pred_n),
+    };
+    const list = bySetup.get(row.setup_id);
+    if (list) {
+      list.push(bucket);
+    } else {
+      bySetup.set(row.setup_id, [bucket]);
+    }
+  }
+  return bySetup;
 }
 
 /**
@@ -798,18 +923,42 @@ export interface RelatedSetup {
   car: string;
   track: string;
   condition: Condition;
+  rigProfile: string;
+  tags: string[];
 }
 
-/** Small, public-only related-links query used to strengthen setup discovery without mounting more SetupCards. */
-export const getRelatedSetups = cache(async (setupId: string, game: Game, limit = 6): Promise<RelatedSetup[]> => {
-  const rows = await getCachedRelatedRows(setupId, game, limit);
-  return rows.map((row) => ({
+/** The setup being viewed, reduced to the fields relatedness is judged on. */
+export interface RelatedSetupSelf {
+  id: string;
+  game: Game;
+  car: string;
+  track: string;
+  rigProfile: string;
+  tags: string[];
+}
+
+/**
+ * Related setups (P2): same car + track, different rig or style. Ranking is
+ * pickRelatedSetups (pure, unit-tested); this stays a plain public-row fetch.
+ */
+export const getRelatedSetups = cache(async (self: RelatedSetupSelf, limit = 6): Promise<RelatedSetup[]> => {
+  const rows = await getCachedRelatedRows(
+    self.id,
+    self.game,
+    self.car,
+    self.track,
+    Math.min(Math.max(limit * 2, 2), 24)
+  );
+  const candidates: RelatedSetup[] = rows.map((row) => ({
     id: row.id,
     game: row.game as Game,
     car: row.car,
     track: row.track,
     condition: row.condition as Condition,
+    rigProfile: row.rig_profile,
+    tags: row.tags ?? [],
   }));
+  return pickRelatedSetups(candidates, self, limit);
 });
 
 /**

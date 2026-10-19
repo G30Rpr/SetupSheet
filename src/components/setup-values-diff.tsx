@@ -1,4 +1,4 @@
-import { diffSetupValues } from "@/lib/diff-setup-values";
+import { buildComparisonDiff, diffSetupValues } from "@/lib/diff-setup-values";
 import { cn } from "@/lib/utils";
 import type { Game, SetupValues } from "@/lib/types";
 
@@ -7,6 +7,10 @@ import type { Game, SetupValues } from "@/lib/types";
  * B), marking rows where the two sides disagree. Shared by the
  * setup comparison tool and the version-history panel -- both are "here
  * are two sets of the same game's tuning fields, show me what changed".
+ *
+ * `comparison` switches to the P2 compare contract: only key-family rows
+ * that differ (buildComparisonDiff), with `emptyMessage` replacing the
+ * generic line so the caller can say precisely what couldn't be read.
  */
 export function SetupValuesDiff({
   game,
@@ -14,17 +18,27 @@ export function SetupValuesDiff({
   valuesB,
   labelA,
   labelB,
+  comparison = false,
+  emptyMessage,
 }: {
   game: Game;
   valuesA: SetupValues | null | undefined;
   valuesB: SetupValues | null | undefined;
   labelA: string;
   labelB: string;
+  comparison?: boolean;
+  emptyMessage?: string;
 }) {
-  const groups = diffSetupValues(game, valuesA, valuesB);
+  const groups = comparison
+    ? buildComparisonDiff(game, valuesA, valuesB)
+    : diffSetupValues(game, valuesA, valuesB);
 
   if (groups.length === 0) {
-    return <p className="text-xs text-muted-foreground">No structured values to compare.</p>;
+    return (
+      <p className="text-xs text-muted-foreground">
+        {emptyMessage ?? "No structured values to compare."}
+      </p>
+    );
   }
 
   return (

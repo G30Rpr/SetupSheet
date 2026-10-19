@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 
 import { tagsForContentMutation, tagsForCounterMutation } from "@/lib/cache-tags";
 import { getActionError } from "@/lib/actions/action-errors";
+import { rigProfiles } from "@/lib/data";
 import { logger } from "@/lib/logger";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -33,8 +34,6 @@ export interface CreateSetupInput {
   description: string;
   tags: string[];
   rigProfile: string;
-  pace: number;
-  predictability: number;
   setupValues?: SetupValues | null;
   filePath?: string | null;
   fileName?: string | null;
@@ -273,7 +272,7 @@ export async function discardUploadedFiles(paths: unknown): Promise<{ error: nul
  */
 export async function createSetup(
   input: CreateSetupInput
-): Promise<{ error: string | null }> {
+): Promise<{ error: string | null; setupId?: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
 
@@ -281,7 +280,9 @@ export async function createSetup(
     return { error: "You need to be logged in with Discord to upload a setup." };
   }
 
-  const validationError = validateSetupFields(input);
+  // Uploads require the author note (P2); edits stay lenient so legacy
+  // "File only" rows remain editable without one.
+  const validationError = validateSetupFields(input, { requireAuthorNote: true });
   if (validationError) {
     return { error: validationError };
   }
@@ -307,10 +308,6 @@ export async function createSetup(
   );
   if (telemetryError) return { error: telemetryError };
 
-  if (!validateRating(input.pace) || !validateRating(input.predictability)) {
-    return { error: "Pace and Predictability must be whole numbers from 1 to 5." };
-  }
-
   const { data: setupId, error } = await supabase.rpc("create_setup_with_rating", {
     p_game: input.game,
     p_car: input.car.trim(),
@@ -326,8 +323,8 @@ export async function createSetup(
     p_video_url: normalizeVideoUrl(input.videoUrl),
     p_telemetry_file_path: input.telemetryFilePath ?? null,
     p_telemetry_file_name: input.telemetryFileName ?? null,
-    p_pace: input.pace,
-    p_predictability: input.predictability,
+    // No uploader rating: a published setup starts Unrated until someone
+    // else runs it (0036_rating_trust.sql).
   });
 
   if (error || !setupId) {
@@ -338,7 +335,7 @@ export async function createSetup(
   revalidateSetupContent();
   revalidatePath("/setups");
   revalidatePath("/");
-  return { error: null };
+  return { error: null, setupId };
 }
 
 export async function updateSetup(
@@ -592,7 +589,8 @@ export async function toggleUpvote(
 export async function rateSetup(
   setupId: string,
   pace: number,
-  predictability: number
+  predictability: number,
+  raterRig?: string | null
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
@@ -608,10 +606,37 @@ export async function rateSetup(
     return { error: "Pace and Predictability must be whole numbers from 1 to 5." };
   }
 
+  // The rater's rig is optional ("rig not shared" is a valid choice) but
+  // when present it must be one of the real rig profiles — same vocabulary
+  // as everything else, enforced again by the DB check in 0037.
+  const normalizedRig =
+    typeof raterRig === "string" && rigProfiles.includes(raterRig as (typeof rigProfiles)[number])
+      ? raterRig
+      : null;
+
+  // Friendlier message for the database-level self-rating block
+  // (0036_rating_trust.sql). The RLS policy + trigger are the enforcement;
+  // this is just a clearer error than a raw constraint failure.
+  const { data: setup } = await supabase
+    .from("setups")
+    .select("user_id")
+    .eq("id", setupId)
+    .maybeSingle();
+  if (setup && setup.user_id === user.id) {
+    return { error: "You can't rate your own setup." };
+  }
+
   const { error } = await supabase
     .from("setup_ratings")
     .upsert(
-      { user_id: user.id, setup_id: setupId, pace, predictability, updated_at: new Date().toISOString() },
+      {
+        user_id: user.id,
+        setup_id: setupId,
+        pace,
+        predictability,
+        rater_rig: normalizedRig,
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: "user_id,setup_id" }
     );
 

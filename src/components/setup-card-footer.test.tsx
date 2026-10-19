@@ -60,21 +60,33 @@ describe("SetupCardFooter rating presentation", () => {
 
     // Two empty bars read as "rated badly"; the copy has to carry the state.
     expect(screen.queryAllByRole("progressbar")).toHaveLength(0);
-    expect(screen.getByText(/not yet rated/i)).toBeInTheDocument();
+    expect(screen.getByText("Unrated")).toBeInTheDocument();
+    // No "be the first" bait either.
+    expect(screen.queryByText(/be the first/i)).not.toBeInTheDocument();
   });
 
-  it("shows star values on the 5-star scale instead of bare percentages", () => {
+  it("shows 0-5 scores with their rating counts instead of percentages or stars", () => {
     renderFooter({ ratingCount: 3, pace: 4.25, predictability: 3.5 }, 2);
 
     const bars = screen.getAllByRole("progressbar");
     expect(bars).toHaveLength(2);
     expect(bars[0]).toHaveAttribute("aria-label", "4.3 out of 5");
     expect(bars[0]).toHaveAttribute("aria-valuemax", "5");
-    // The readout is the star value, not "85%".
+    // The readout is the score on the 0-5 scale, not "85%".
     expect(screen.getByText("4.3")).toBeInTheDocument();
     expect(screen.getByText("3.5")).toBeInTheDocument();
     expect(screen.queryByText("85%")).not.toBeInTheDocument();
-    expect(screen.getByText(/3 ratings · average out of 5/i)).toBeInTheDocument();
+    // Count sits beside each meter.
+    expect(screen.getAllByText("3 ratings")).toHaveLength(2);
+    // Pace = amber bar, Predictability = green bar.
+    expect(bars[0].firstElementChild).toHaveClass("bg-pace");
+    expect(bars[1].firstElementChild).toHaveClass("bg-predictability");
+  });
+
+  it("labels a single rating in the singular", () => {
+    renderFooter({ ratingCount: 1, pace: 5, predictability: 5 }, 0);
+
+    expect(screen.getAllByText("1 rating")).toHaveLength(2);
   });
 });
 
@@ -92,5 +104,51 @@ describe("SetupCardFooter upvote counter", () => {
     const button = screen.getByRole("button", { name: /upvote this setup — 0 so far/i });
     expect(button).toHaveTextContent("Upvote");
     expect(button).not.toHaveTextContent("0");
+  });
+});
+
+describe("SetupCardFooter similar-rig split", () => {
+  it("shows On a similar rig vs Everyone else with counts, Unrated on empty sides", () => {
+    renderFooter(
+      {
+        ratingCount: 3,
+        pace: 4.0,
+        predictability: 3.7,
+        ratingSplits: [
+          { rigProfile: "Wheel + 3 Pedals", paceSum: 12, paceN: 3, predSum: 11, predN: 3 },
+          { rigProfile: "Gamepad", paceSum: 4, paceN: 1, predSum: 2, predN: 1 },
+          { rigProfile: null, paceSum: 5, paceN: 1, predSum: 4, predN: 1 },
+        ],
+      },
+      0
+    );
+
+    expect(screen.getByText("On a similar rig")).toBeInTheDocument();
+    expect(screen.getByText("Everyone else")).toBeInTheDocument();
+    // Anchor defaults to the setup's own rig (server HTML): 12/3 and 11/3.
+    expect(screen.getByText("4.0 (3)")).toBeInTheDocument();
+    expect(screen.getByText("3.7 (3)")).toBeInTheDocument();
+    // Everyone else merges the Gamepad bucket and the unshared-rig rating.
+    expect(screen.getByText("4.5 (2)")).toBeInTheDocument();
+    expect(screen.getByText("3.0 (2)")).toBeInTheDocument();
+  });
+
+  it("says Unrated on a side with no ratings, and hides the split entirely without rating data", () => {
+    renderFooter(
+      {
+        ratingCount: 1,
+        pace: 4.0,
+        predictability: 4.0,
+        ratingSplits: [{ rigProfile: "Gamepad", paceSum: 4, paceN: 1, predSum: 4, predN: 1 }],
+      },
+      0
+    );
+    // Similar (Wheel + 3 Pedals) has nothing — both cells read Unrated.
+    expect(screen.getAllByText("Unrated").length).toBeGreaterThanOrEqual(2);
+    cleanup();
+
+    renderFooter({ ratingCount: 0, pace: 0, predictability: 0, ratingSplits: [] }, 0);
+    expect(screen.queryByText("On a similar rig")).not.toBeInTheDocument();
+    expect(screen.queryByText("Everyone else")).not.toBeInTheDocument();
   });
 });

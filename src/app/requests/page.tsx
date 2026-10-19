@@ -25,7 +25,19 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: socialTitle, description },
 };
 
-export default async function RequestsPage() {
+export default async function RequestsPage({
+  searchParams,
+}: {
+  // Prefill from an empty browse result's "Ask for this combo" link.
+  searchParams: Promise<{
+    game?: string;
+    car?: string;
+    track?: string;
+    condition?: string;
+    rig?: string;
+  }>;
+}) {
+  const params = await searchParams;
   const [mostWanted, requestPage] = await Promise.all([
     getMostWantedRequests(5),
     getSetupRequestsPage(),
@@ -74,7 +86,15 @@ export default async function RequestsPage() {
       )}
 
       <div className="mb-8">
-        <SetupRequestForm />
+        <SetupRequestForm
+          prefill={{
+            game: params.game,
+            car: params.car,
+            track: params.track,
+            condition: params.condition,
+            rig: params.rig,
+          }}
+        />
       </div>
 
       <section aria-labelledby="request-list-heading">

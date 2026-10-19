@@ -19,15 +19,25 @@ import {
 import { SetupCard } from "@/components/setup-card";
 import { loadMoreSetups } from "@/lib/actions/setup-browse";
 import { conditions, games, getCarsForGame, getTracksForGame, rigProfiles } from "@/lib/data";
-import { ALL, filterAndSortSetups, getSearchSuggestions, type SortOption } from "@/lib/filter-setups";
+import {
+  ALL,
+  filterAndSortSetups,
+  getSearchSuggestions,
+  type SetupFilters,
+  type SortOption,
+} from "@/lib/filter-setups";
 import type { BrowseFilters } from "@/lib/browse-filters";
 import { isTypingTarget } from "@/lib/is-typing-target";
+import { readLastRig } from "@/lib/last-rig";
 import { SETUP_CARD_PAGE_SIZE } from "@/lib/ui-constants";
 import type { SetupCursor } from "@/lib/supabase/setups";
 import { cn } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
 export const sortOptions: { value: SortOption; label: string }[] = [
+  // Default: rig match first, then rating count, then Predictability --
+  // evidence before hype (see filterAndSortSetups' "bestMatch" case).
+  { value: "bestMatch", label: "Best match" },
   { value: "newest", label: "Newest first" },
   // Value stays "trending" so existing bookmarked/shared ?sort= URLs keep
   // working, but it sorts by raw upvote count -- calling that "Trending"
@@ -113,8 +123,17 @@ export function SetupsBrowser({
 
   const [sort, setSort] = useState<SortOption>(() => {
     const fromUrl = searchParams.get("sort");
-    return (SORT_VALUES as string[]).includes(fromUrl ?? "") ? (fromUrl as SortOption) : "newest";
+    return (SORT_VALUES as string[]).includes(fromUrl ?? "") ? (fromUrl as SortOption) : "bestMatch";
   });
+  // The rig saved on this device (setupsheet:last-rig) seeds "Best match"
+  // when no rig filter is selected. Read after mount: localStorage isn't
+  // available during SSR.
+  const [savedRig, setSavedRig] = useState<string | null>(null);
+  useEffect(() => {
+    // Hydrating from localStorage on mount, not deriving from props/state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSavedRig(readLastRig());
+  }, []);
   const [compareMode, setCompareMode] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [page, setPage] = useState(() => {
@@ -160,7 +179,7 @@ export function SetupsBrowser({
       if (track !== ALL) params.set("track", track);
       if (condition !== ALL) params.set("condition", condition);
       if (rig !== ALL) params.set("rig", rig);
-      if (sort !== "newest") params.set("sort", sort);
+      if (sort !== "bestMatch") params.set("sort", sort);
       if (page > 1) params.set("page", String(page));
 
       const query = params.toString();
@@ -248,9 +267,31 @@ export function SetupsBrowser({
   // lower-powered phones as the browse index grows.
   const deferredSearch = useDeferredValue(search);
   const filtered = useMemo(
-    () => filterAndSortSetups(loadedSetups, { search: deferredSearch, game, car, track, condition, rig }, sort),
-    [loadedSetups, deferredSearch, game, car, track, condition, rig, sort]
+    () =>
+      filterAndSortSetups(
+        loadedSetups,
+        { search: deferredSearch, game, car, track, condition, rig },
+        sort,
+        savedRig
+      ),
+    [loadedSetups, deferredSearch, game, car, track, condition, rig, sort, savedRig]
   );
+
+  // Rig categories with setups that match everything EXCEPT the rig filter --
+  // named in the quiet "hiding" line so the missing rows are never a mystery.
+  const hiddenRigNames = useMemo(() => {
+    if (rig === ALL) return [];
+    const withoutRigFilter = filterAndSortSetups(
+      loadedSetups,
+      { search: deferredSearch, game, car, track, condition, rig: ALL },
+      "newest"
+    );
+    const names = new Set<string>();
+    for (const setup of withoutRigFilter) {
+      if (setup.rigProfile !== rig) names.add(setup.rigProfile);
+    }
+    return Array.from(names);
+  }, [loadedSetups, deferredSearch, game, car, track, condition, rig]);
 
   const visibleSetups = filtered.slice(0, page * SETUP_CARD_PAGE_SIZE);
   const hasMore = filtered.length > visibleSetups.length;
@@ -503,6 +544,20 @@ export function SetupsBrowser({
         </div>
       </div>
 
+      {rig !== ALL && hiddenRigNames.length > 0 && (
+        <p className="text-sm text-muted-foreground">
+          Hiding {joinRigNames(hiddenRigNames)} setups that don&apos;t match
+          your rig.{" "}
+          <button
+            type="button"
+            onClick={() => setRig(ALL)}
+            className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
+          >
+            Show them
+          </button>
+        </p>
+      )}
+
       {compareMode && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/40 px-4 py-2.5 text-sm">
           <span className="text-muted-foreground">
@@ -567,14 +622,24 @@ export function SetupsBrowser({
           }
         />
       ) : (
+        // Filters matched nothing in a non-empty library: hand the combo to
+        // the requests board / Engineer instead of dead-ending on a blank
+        // list (P3). The request link carries the combo as query params.
         <EmptyState
           icon={SearchX}
-          title="No setups match your filters"
-          description="Try clearing a filter or check back soon — new setups are added every day."
+          title="No setup for this combo yet."
+          description={describeEmptyCombo({ search, game, car, track, condition, rig })}
           action={
-            <Button variant="outline" size="sm" onClick={resetFilters}>
-              Clear filters
-            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button asChild size="sm">
+                <Link href={requestHrefForCombo({ game, car, track, condition, rig })}>
+                  Ask for this combo
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/engineer">Get a first change to test</Link>
+              </Button>
+            </div>
           }
         />
       )}
@@ -596,6 +661,38 @@ export function SetupsBrowser({
       )}
     </div>
   );
+}
+
+/** "A", "A and B", or "A, B, and C" — for naming hidden rig categories. */
+function joinRigNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
+}
+
+/** The empty-combo sentence: "Nobody has shared a [rig] setup for [car] at [track] in the [condition]." */
+function describeEmptyCombo(filters: SetupFilters): string {
+  const { search, car, track, condition, rig } = filters;
+  if (search.trim()) {
+    return `Nobody has shared a setup matching “${search.trim()}” yet.`;
+  }
+  const rigClause = rig !== ALL ? `${rig} ` : "";
+  const carClause = car !== ALL ? ` for ${car}` : "";
+  const trackClause = track !== ALL ? ` at ${track}` : "";
+  const conditionClause = condition !== ALL ? ` in the ${condition}` : "";
+  return `Nobody has shared a ${rigClause}setup${carClause}${trackClause}${conditionClause}.`;
+}
+
+/** /requests with the empty combo prefilled via query params. */
+function requestHrefForCombo(filters: Omit<SetupFilters, "search">): string {
+  const params = new URLSearchParams();
+  if (filters.game !== ALL) params.set("game", filters.game);
+  if (filters.car !== ALL) params.set("car", filters.car);
+  if (filters.track !== ALL) params.set("track", filters.track);
+  if (filters.condition !== ALL) params.set("condition", filters.condition);
+  if (filters.rig !== ALL) params.set("rig", filters.rig);
+  const query = params.toString();
+  return query ? `/requests?${query}` : "/requests";
 }
 
 function FilterSelect({
