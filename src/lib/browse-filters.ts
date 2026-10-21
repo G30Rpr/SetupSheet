@@ -1,4 +1,4 @@
-import { conditions, games, rigProfiles } from "@/lib/data";
+import { conditions, games, rigProfiles, setupTags } from "@/lib/data";
 
 export const ALL_BROWSE_FILTER = "all";
 export const MAX_BROWSE_SEARCH_LENGTH = 80;
@@ -10,6 +10,7 @@ export interface BrowseFilters {
   track: string;
   condition: string;
   rig: string;
+  tag: string;
 }
 
 export const EMPTY_BROWSE_FILTERS: BrowseFilters = {
@@ -19,6 +20,7 @@ export const EMPTY_BROWSE_FILTERS: BrowseFilters = {
   track: ALL_BROWSE_FILTER,
   condition: ALL_BROWSE_FILTER,
   rig: ALL_BROWSE_FILTER,
+  tag: ALL_BROWSE_FILTER,
 };
 
 function isAllowedOrAll(value: string, allowed: readonly string[]) {
@@ -29,7 +31,7 @@ function isAllowedOrAll(value: string, allowed: readonly string[]) {
 export function normalizeBrowseFilters(input: unknown): BrowseFilters | null {
   if (typeof input !== "object" || input === null || Array.isArray(input)) return null;
   const fields = input as Record<string, unknown>;
-  const values = [fields.search, fields.game, fields.car, fields.track, fields.condition, fields.rig];
+  const values = [fields.search, fields.game, fields.car, fields.track, fields.condition, fields.rig, fields.tag];
   if (!values.every((value) => typeof value === "string")) return null;
 
   const search = (fields.search as string).trim();
@@ -38,6 +40,7 @@ export function normalizeBrowseFilters(input: unknown): BrowseFilters | null {
   const track = fields.track as string;
   const condition = fields.condition as string;
   const rig = fields.rig as string;
+  const tag = fields.tag as string;
 
   if (
     search.length > MAX_BROWSE_SEARCH_LENGTH ||
@@ -45,12 +48,13 @@ export function normalizeBrowseFilters(input: unknown): BrowseFilters | null {
     track.length > 80 ||
     !isAllowedOrAll(game, games) ||
     !isAllowedOrAll(condition, conditions) ||
-    !isAllowedOrAll(rig, rigProfiles)
+    !isAllowedOrAll(rig, rigProfiles) ||
+    !isAllowedOrAll(tag, setupTags)
   ) {
     return null;
   }
 
-  return { search, game, car, track, condition, rig };
+  return { search, game, car, track, condition, rig, tag };
 }
 
 /**

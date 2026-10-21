@@ -16,6 +16,7 @@ describe("browse filter normalization", () => {
         track: "Spa",
         condition: "Dry",
         rig: ALL_BROWSE_FILTER,
+        tag: ALL_BROWSE_FILTER,
       })
     ).toEqual({
       search: "spa porsche",
@@ -24,6 +25,7 @@ describe("browse filter normalization", () => {
       track: "Spa",
       condition: "Dry",
       rig: ALL_BROWSE_FILTER,
+      tag: ALL_BROWSE_FILTER,
     });
   });
 
@@ -37,6 +39,7 @@ describe("browse filter normalization", () => {
         track: ALL_BROWSE_FILTER,
         condition: ALL_BROWSE_FILTER,
         rig: ALL_BROWSE_FILTER,
+        tag: ALL_BROWSE_FILTER,
       })
     ).toBeNull();
     expect(
@@ -47,6 +50,7 @@ describe("browse filter normalization", () => {
         track: ALL_BROWSE_FILTER,
         condition: ALL_BROWSE_FILTER,
         rig: ALL_BROWSE_FILTER,
+        tag: ALL_BROWSE_FILTER,
       })
     ).toBeNull();
   });

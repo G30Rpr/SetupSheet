@@ -13,6 +13,8 @@ export interface SetupFilters {
   track: string;
   condition: string;
   rig: string;
+  /** SetupTag name or ALL. Deterministic tag filter (also backs the Engineer loop's deep links). */
+  tag: string;
 }
 
 /** Whether the setup was built on the same steering and brake hardware as `axes`. */
@@ -82,6 +84,7 @@ export function filterAndSortSetups(
     if (filters.track !== ALL && s.track !== filters.track) return false;
     if (filters.condition !== ALL && s.condition !== filters.condition) return false;
     if (filters.rig !== ALL && s.rigProfile !== filters.rig) return false;
+    if (filters.tag !== ALL && !s.tags.includes(filters.tag as Setup["tags"][number])) return false;
     if (query) {
       const haystack = [s.game, s.car, s.track, s.author, s.description, ...s.tags].join(" ");
       if (!matchesQuery(haystack, query)) return false;

@@ -8,7 +8,7 @@ import {
 } from "@/lib/filter-setups";
 import { makeSetup } from "@/lib/test-helpers/make-setup";
 
-const noFilters = { search: "", game: ALL, car: ALL, track: ALL, condition: ALL, rig: ALL };
+const noFilters = { search: "", game: ALL, car: ALL, track: ALL, condition: ALL, rig: ALL, tag: ALL };
 
 describe("filterAndSortSetups — facet filters", () => {
   it("filters by game/car/track/condition/rig", () => {
@@ -22,6 +22,17 @@ describe("filterAndSortSetups — facet filters", () => {
     expect(filterAndSortSetups(setups, { ...noFilters, track: "X" }, "newest").map((s) => s.id)).toEqual(["1"]);
     expect(filterAndSortSetups(setups, { ...noFilters, condition: "Wet" }, "newest").map((s) => s.id)).toEqual(["2"]);
     expect(filterAndSortSetups(setups, { ...noFilters, rig: "Gamepad" }, "newest").map((s) => s.id)).toEqual(["1"]);
+  });
+
+  it("filters by tag deterministically (exact tag, not fuzzy search)", () => {
+    const setups = [
+      makeSetup({ id: "1", tags: ["Safe", "Race"] }),
+      makeSetup({ id: "2", tags: ["Aggressive"] }),
+      makeSetup({ id: "3", tags: [] }),
+    ];
+    expect(filterAndSortSetups(setups, { ...noFilters, tag: "Safe" }, "newest").map((s) => s.id)).toEqual(["1"]);
+    expect(filterAndSortSetups(setups, { ...noFilters, tag: "Aggressive" }, "newest").map((s) => s.id)).toEqual(["2"]);
+    expect(filterAndSortSetups(setups, { ...noFilters, tag: ALL }, "newest").map((s) => s.id)).toEqual(["1", "2", "3"]);
   });
 
   it("returns everything when all filters are ALL and search is empty", () => {

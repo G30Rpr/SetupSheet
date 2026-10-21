@@ -39,6 +39,7 @@ export default async function SetupsPage({
     track?: string;
     condition?: string;
     rig?: string;
+    tag?: string;
   }>;
 }) {
   const params = await searchParams;
@@ -50,6 +51,7 @@ export default async function SetupsPage({
       track: params.track ?? ALL_BROWSE_FILTER,
       condition: params.condition ?? ALL_BROWSE_FILTER,
       rig: params.rig ?? ALL_BROWSE_FILTER,
+      tag: params.tag ?? ALL_BROWSE_FILTER,
     }) ?? EMPTY_BROWSE_FILTERS;
 
   // Keep the global count separate from the filtered setup page. The browser
