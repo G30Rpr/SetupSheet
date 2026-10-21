@@ -78,8 +78,33 @@ describe("setupsForSymptom", () => {
   });
 
   it("tyre-pressure symptoms rank by evidence across all setups", () => {
-    const matches = setupsForSymptom(setups, "hot-tyre-pressure-high", false, 2);
+    const matches = setupsForSymptom(setups, "hot-tyre-pressure-high", false, { limit: 2 });
     expect(matches.map((s) => s.id)).toEqual(["unrelated", "safe-calm"]);
+  });
+
+  it("scopes matches to the diagnosed game", () => {
+    const mixed = [
+      ...setups,
+      makeSetup({
+        id: "other-game-safe",
+        game: "Le Mans Ultimate",
+        tags: ["Safe"],
+        condition: "Dry",
+        ratingCount: 10,
+        predictability: 5,
+      }),
+    ];
+    const accOnly = setupsForSymptom(mixed, "front-locking", false, {
+      game: "Assetto Corsa Competizione",
+    });
+    expect(accOnly.map((s) => s.id)).toEqual(["safe-calm", "safe-faster"]);
+    const lmuOnly = setupsForSymptom(mixed, "front-locking", false, { game: "Le Mans Ultimate" });
+    expect(lmuOnly.map((s) => s.id)).toEqual(["other-game-safe"]);
+  });
+
+  it("returns nothing honest when the game has no match -- never crosses games", () => {
+    const matches = setupsForSymptom(setups, "front-locking", false, { game: "Le Mans Ultimate" });
+    expect(matches).toEqual([]);
   });
 
   it("returns nothing honest when nothing matches -- never invents entries", () => {

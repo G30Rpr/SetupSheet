@@ -137,14 +137,28 @@ export function mappingForSymptom(
  * capped at `limit`. Pure and unit-tested -- the Engineer page passes the
  * browse index and renders the result.
  */
+/** Options for {@link setupsForSymptom}. */
+export type SymptomMatchOptions = {
+  /** Restrict matches to one game (the Engineer game names match Setup.game). */
+  game?: string;
+  limit?: number;
+};
+
+/**
+ * Community setups matching a symptom's mapping, best first. Pass `game` to
+ * scope to the diagnosed game -- an LMU read never surfaces ACC cars and
+ * vice versa. Never invents rows: an empty result is honest.
+ */
 export function setupsForSymptom(
   setups: Setup[],
   symptomId: EngineerSymptomId,
   wet: boolean,
-  limit = SYMPTOM_MATCH_LIMIT
+  options: SymptomMatchOptions = {}
 ): Setup[] {
+  const { game, limit = SYMPTOM_MATCH_LIMIT } = options;
   const mapping = mappingForSymptom(symptomId, wet);
   const matched = setups.filter((setup) => {
+    if (game !== undefined && setup.game !== game) return false;
     if (mapping.conditions.length > 0 && !mapping.conditions.includes(setup.condition)) {
       return false;
     }

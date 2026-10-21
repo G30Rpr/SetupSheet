@@ -135,8 +135,8 @@ export function EngineerClient({
   const wet = condition === "wet";
   const symptomMapping = mappingForSymptom(symptomId, wet);
   const symptomMatches = useMemo(
-    () => setupsForSymptom(setups, symptomId, wet),
-    [setups, symptomId, wet]
+    () => setupsForSymptom(setups, symptomId, wet, { game }),
+    [setups, symptomId, wet, game]
   );
   const browseLink = browseLinkForSymptom(symptomId, wet);
   const calibrationMessage = !calibrationMatchesSelection || calibrationState.status === "loading"
@@ -380,7 +380,7 @@ export function EngineerClient({
                 {browseLink && (
                   <p className="mt-4 text-sm">
                     <Link
-                      href={`/setups?tag=${encodeURIComponent(browseLink.tag)}&sort=${browseLink.sort}`}
+                      href={`/setups?tag=${encodeURIComponent(browseLink.tag)}&sort=${browseLink.sort}&game=${encodeURIComponent(game)}`}
                       className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
                     >
                       See all {browseLink.tag.toLowerCase()} setups on Browse
@@ -396,7 +396,7 @@ export function EngineerClient({
                     <>
                       {" "}
                       <Link
-                        href={`/setups?tag=${encodeURIComponent(browseLink.tag)}&sort=${browseLink.sort}`}
+                        href={`/setups?tag=${encodeURIComponent(browseLink.tag)}&sort=${browseLink.sort}&game=${encodeURIComponent(game)}`}
                         className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
                       >
                         Browse {browseLink.tag.toLowerCase()} setups
