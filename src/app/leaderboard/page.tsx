@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Trophy, TrendingUp, Upload } from "lucide-react";
+import { Trophy, Gauge, TrendingUp, Upload } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,15 @@ import { ContributorBadge } from "@/components/contributor-badge";
 import { EmptyState } from "@/components/empty-state";
 import { JsonLd } from "@/components/json-ld";
 import { fullPageTitle } from "@/lib/seo";
+import { isLeaderboardReady, leaderboardMode } from "@/lib/leaderboard";
 import { getLeaderboard } from "@/lib/supabase/leaderboard";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { getInitials } from "@/lib/utils";
 
 const title = "Leaderboard";
 const socialTitle = fullPageTitle(title);
-const description = "The community's top setup contributors, ranked by total upvotes.";
+const description =
+  "The community's top setup contributors, ranked by the laps other drivers log from their setups and by field-tested setups.";
 
 export const metadata: Metadata = {
   title,
@@ -27,6 +29,10 @@ export const metadata: Metadata = {
 
 export default async function LeaderboardPage() {
   const entries = await getLeaderboard(50);
+  // Impact-first rankings only when impact data exists; a board of zeros
+  // dressed as wins is worse than saying the counts aren't in yet.
+  const mode = leaderboardMode(entries);
+  const ready = isLeaderboardReady(entries.length);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -53,16 +59,17 @@ export default async function LeaderboardPage() {
           Top Contributors
         </h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
-          Ranked by total upvotes earned across every setup they&apos;ve shared.
-          Upload your own setups to climb the board.
+          {mode === "impact"
+            ? "Ranked by the laps other drivers have logged from their setups in Garage, then by field-tested setups."
+            : "Ranked by upvotes for now — impact numbers (laps other drivers log from your setups, field-tested setups) appear once drivers start putting community setups through their paces."}
         </p>
       </div>
 
-      {entries.length === 0 ? (
+      {!ready ? (
         <EmptyState
           icon={Trophy}
-          title="No contributors yet"
-          description="Be the first to upload a setup and claim the top spot."
+          title="No contributor rankings yet"
+          description="Rankings need a few drivers sharing setups first. Browsing and downloading work as usual."
           action={
             <Button asChild size="sm">
               <Link href="/upload">
@@ -107,10 +114,28 @@ export default async function LeaderboardPage() {
 
                     <ContributorBadge totalUpvotes={entry.totalUpvotes} />
 
-                    <span className="flex shrink-0 items-center gap-1 font-mono text-lg font-semibold tabular-nums text-foreground">
-                      <TrendingUp className="size-4" />
-                      {entry.totalUpvotes}
-                    </span>
+                    {mode === "impact" ? (
+                      <div className="flex shrink-0 flex-col items-end text-right">
+                        <span className="flex items-center gap-1 font-mono text-lg font-semibold tabular-nums text-foreground">
+                          <Gauge className="size-4" aria-hidden="true" />
+                          {entry.lapsDrivenByOthers}
+                          <span className="text-xs font-normal text-muted-foreground">
+                            laps by others
+                          </span>
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          <span className="font-mono tabular-nums">
+                            {entry.fieldTestedSetupCount}
+                          </span>{" "}
+                          {entry.fieldTestedSetupCount === 1 ? "field-tested setup" : "field-tested setups"}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="flex shrink-0 items-center gap-1 font-mono text-lg font-semibold tabular-nums text-foreground">
+                        <TrendingUp className="size-4" />
+                        {entry.totalUpvotes}
+                      </span>
+                    )}
                   </Link>
                 </li>
               );

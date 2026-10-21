@@ -13,15 +13,28 @@ export interface LeaderboardEntry {
   avatarUrl: string | null;
   setupCount: number;
   totalUpvotes: number;
+  /** Laps other drivers logged in Garage sessions started from their setups (0041 count-only projection). */
+  lapsDrivenByOthers: number;
+  /** How many of their setups have at least one Garage-derived field-test report. */
+  fieldTestedSetupCount: number;
 }
 
 const getCachedLeaderboardRows = unstable_cache(
   async (limit: number) => {
     const supabase = createPublicClient();
+    // Impact-first ordering (0041): laps other drivers drove from your
+    // setups, then field-tested setups; upvotes then setup count break
+    // ties. When no impact exists yet this is exactly the old upvotes
+    // order -- the page says so rather than pretending zeros are wins.
     const result = await supabase
       .from("leaderboard")
-      .select("user_id, username, avatar_url, setup_count, total_upvotes")
+      .select(
+        "user_id, username, avatar_url, setup_count, total_upvotes, laps_driven_by_others, field_tested_setup_count"
+      )
+      .order("laps_driven_by_others", { ascending: false })
+      .order("field_tested_setup_count", { ascending: false })
       .order("total_upvotes", { ascending: false })
+      .order("setup_count", { ascending: false })
       .limit(Math.min(Math.max(limit, 1), 100));
 
     return unwrapCachedList(result, "getCachedLeaderboardRows: failed to load leaderboard");
@@ -68,10 +81,11 @@ export async function getContributorCount(): Promise<number> {
 export const LEADERBOARD_MIN_CONTRIBUTORS = 10;
 
 /**
- * Top contributors ranked by total upvotes across all their setups, via the
- * public.leaderboard view (see migrations/0006_leaderboard_view.sql).
- * Public rows are briefly cached across requests; content and counter
- * mutations invalidate this ranking (upvotes decide its order).
+ * Top contributors, impact-first: laps other drivers logged in Garage from
+ * their setups, then field-tested setups (0041), upvotes last as tiebreak,
+ * via the public.leaderboard view (0006 + 0023 + 0041). Public rows are
+ * briefly cached across requests; content and counter mutations invalidate
+ * this ranking.
  */
 export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
   const rows = await getCachedLeaderboardRows(limit);
@@ -82,5 +96,7 @@ export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
     avatarUrl: normalizeHttpsUrl(row.avatar_url),
     setupCount: row.setup_count,
     totalUpvotes: row.total_upvotes,
+    lapsDrivenByOthers: row.laps_driven_by_others ?? 0,
+    fieldTestedSetupCount: row.field_tested_setup_count ?? 0,
   }));
 }
