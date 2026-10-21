@@ -31,6 +31,7 @@ import {
 import { useAuth } from "@/components/auth-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { RigMatchChip } from "@/components/rig-match-chip";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -112,6 +113,7 @@ export function SetupCard({
   fieldTestCount = 0,
   onToggleCompare,
   variant = "card",
+  rigMatch = false,
 }: {
   setup: Setup;
   /** False on the setup's own detail page, where linking to itself would be a no-op. */
@@ -130,6 +132,11 @@ export function SetupCard({
   fieldTestCount?: number;
   /** Presence of this prop is what turns on the compare-mode checkbox -- omit it entirely on the detail/profile call sites. */
   onToggleCompare?: () => void;
+  /**
+   * Whether the setup's rig axes exactly match the viewer's rig (saved
+   * profile or device memory). Hardware context only -- never a rating.
+   */
+  rigMatch?: boolean;
   /**
    * "card" (default) is the slim browse/profile face: identity, lap time,
    * chips, rig, scores, Download. "detail" is the full setup page rendering:
@@ -430,6 +437,7 @@ export function SetupCard({
               </Badge>
             )}
             <Badge variant="secondary">{setup.condition}</Badge>
+            {rigMatch && <RigMatchChip />}
           </div>
         </div>
 

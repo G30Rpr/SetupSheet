@@ -8,6 +8,7 @@ import {
   getSetups,
 } from "@/lib/supabase/setups";
 import { getPublicFieldTestCounts } from "@/lib/supabase/field-tests";
+import { getViewerRig } from "@/lib/supabase/saved-rig";
 import {
   ALL_BROWSE_FILTER,
   EMPTY_BROWSE_FILTERS,
@@ -54,9 +55,10 @@ export default async function SetupsPage({
   // Keep the global count separate from the filtered setup page. The browser
   // can change filters without a server navigation, so it needs a global
   // upper bound to know whether an older-page request may still be useful.
-  const [{ setups, failed: loadFailed }, totalCount] = await Promise.all([
+  const [{ setups, failed: loadFailed }, totalCount, viewerRig] = await Promise.all([
     getSetups(filters),
     getSetupCount(),
+    getViewerRig(),
   ]);
   // getSetups() caps at SETUPS_BROWSE_LIMIT -- search and filtering run
   // client-side over whatever it fetched, so once the community actually
@@ -115,6 +117,8 @@ export default async function SetupsPage({
         fieldTestCounts={fieldTestCounts}
         initialFilters={filters}
         loadFailed={loadFailed}
+        savedRigAxes={viewerRig.axes}
+        canSaveRig={viewerRig.signedIn}
       />
     </div>
   );

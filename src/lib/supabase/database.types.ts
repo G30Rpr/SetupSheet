@@ -488,6 +488,30 @@ export type Database = {
         Update: { user_id?: string; setup_id?: string; created_at?: string };
         Relationships: Relationships;
       };
+      saved_rig_profiles: {
+        Row: {
+          user_id: string;
+          input_device: string;
+          brake_type: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          input_device: string;
+          brake_type?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          input_device?: string;
+          brake_type?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: Relationships;
+      };
       setup_comments: {
         Row: {
           id: string;

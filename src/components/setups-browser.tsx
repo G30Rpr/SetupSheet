@@ -23,21 +23,32 @@ import {
   ALL,
   filterAndSortSetups,
   getSearchSuggestions,
+  setupMatchesRigAxes,
   type SetupFilters,
   type SortOption,
 } from "@/lib/filter-setups";
 import type { BrowseFilters } from "@/lib/browse-filters";
 import { isTypingTarget } from "@/lib/is-typing-target";
-import { readLastRig } from "@/lib/last-rig";
+import { readLastRig, readMyRigAxes, writeLastRigAxes } from "@/lib/last-rig";
+import {
+  RIG_BRAKE_LABELS,
+  RIG_BRAKE_TYPES,
+  RIG_INPUT_DEVICES,
+  RIG_INPUT_LABELS,
+  type RigAxes,
+} from "@/lib/rig-axes";
+import { saveRigProfile } from "@/lib/actions/saved-rig";
 import { SETUP_CARD_PAGE_SIZE } from "@/lib/ui-constants";
 import type { SetupCursor } from "@/lib/supabase/setups";
 import { cn } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
 export const sortOptions: { value: SortOption; label: string }[] = [
-  // Default: rig match first, then rating count, then Predictability --
-  // evidence before hype (see filterAndSortSetups' "bestMatch" case).
-  { value: "bestMatch", label: "Best match" },
+  // Default. Exact two-axis hardware matches ("Matches your rig") lead, then
+  // the legacy rig-category match, then rating count, then Predictability --
+  // evidence before hype (see filterAndSortSetups' "bestMatch" case). The
+  // value stays "bestMatch" so existing ?sort= links keep working.
+  { value: "bestMatch", label: "Best for my rig" },
   { value: "newest", label: "Newest first" },
   // Value stays "trending" so existing bookmarked/shared ?sort= URLs keep
   // working, but it sorts by raw upvote count -- calling that "Trending"
@@ -65,6 +76,8 @@ export function SetupsBrowser({
   initialFilters,
   loadFailed = false,
   fieldTestCounts = {},
+  savedRigAxes = null,
+  canSaveRig = false,
 }: {
   setups: Setup[];
   totalCount: number | null;
@@ -73,6 +86,10 @@ export function SetupsBrowser({
   /** True when the server's browse read failed -- the grid is empty because the
    *  database was unreachable, not because nothing matched. */
   loadFailed?: boolean;
+  /** The account-saved rig axes (saved_rig_profiles, 0040); null when signed out or none saved. */
+  savedRigAxes?: RigAxes | null;
+  /** Whether the viewer is signed in -- gates the account-level "Save" action. */
+  canSaveRig?: boolean;
 }) {
   const searchParams = useSearchParams();
   const [additionalSetups, setAdditionalSetups] = useState<Setup[]>([]);
@@ -134,6 +151,37 @@ export function SetupsBrowser({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSavedRig(readLastRig());
   }, []);
+  // "Your rig" as two axes (0039/0040): the account-saved profile when
+  // signed in, else the device memory. Drives "Best for my rig" ordering and
+  // the "Matches your rig" chip -- hardware context only, never a rating.
+  const [myRig, setMyRig] = useState<RigAxes | null>(null);
+  const [rigSaveState, setRigSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [rigSaveError, setRigSaveError] = useState<string | null>(null);
+  useEffect(() => {
+    // Hydrating from the account row (server prop) or localStorage on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMyRig(savedRigAxes ?? readMyRigAxes());
+  }, [savedRigAxes]);
+
+  const updateMyRig = (axes: RigAxes | null) => {
+    setMyRig(axes);
+    writeLastRigAxes(axes);
+    setRigSaveState("idle");
+    setRigSaveError(null);
+  };
+
+  const handleSaveRig = async () => {
+    if (!myRig?.inputDevice) return;
+    setRigSaveState("saving");
+    setRigSaveError(null);
+    const result = await saveRigProfile(myRig.inputDevice, myRig.brakeType);
+    if (result.ok) {
+      setRigSaveState("saved");
+    } else {
+      setRigSaveState("error");
+      setRigSaveError(result.error);
+    }
+  };
   const [compareMode, setCompareMode] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [page, setPage] = useState(() => {
@@ -272,9 +320,10 @@ export function SetupsBrowser({
         loadedSetups,
         { search: deferredSearch, game, car, track, condition, rig },
         sort,
-        savedRig
+        savedRig,
+        myRig
       ),
-    [loadedSetups, deferredSearch, game, car, track, condition, rig, sort, savedRig]
+    [loadedSetups, deferredSearch, game, car, track, condition, rig, sort, savedRig, myRig]
   );
 
   // Rig categories with setups that match everything EXCEPT the rig filter --
@@ -544,6 +593,108 @@ export function SetupsBrowser({
         </div>
       </div>
 
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3 rounded-lg border border-border/80 bg-secondary/40 px-4 py-3">
+        <div>
+          <span id="my-rig-label" className="text-xs font-medium text-muted-foreground">
+            Your rig
+          </span>
+          <div
+            className="mt-1.5 flex flex-wrap items-center gap-2"
+            role="group"
+            aria-labelledby="my-rig-label"
+          >
+            <Select
+              value={myRig?.inputDevice ?? ""}
+              onValueChange={(value) =>
+                updateMyRig({
+                  // Gamepads have no pedal hardware of interest: brake axis
+                  // goes null, matching rig_axes_for("Gamepad") in 0039.
+                  inputDevice: value as NonNullable<RigAxes["inputDevice"]>,
+                  brakeType: value === "gamepad" ? null : (myRig?.brakeType ?? null),
+                })
+              }
+            >
+              <SelectTrigger size="sm" className="w-[140px]" aria-label="How you steer">
+                <SelectValue placeholder="Steering" />
+              </SelectTrigger>
+              <SelectContent>
+                {RIG_INPUT_DEVICES.map((device) => (
+                  <SelectItem key={device} value={device}>
+                    {RIG_INPUT_LABELS[device]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={myRig?.brakeType ?? ""}
+              disabled={!myRig?.inputDevice || myRig.inputDevice === "gamepad"}
+              onValueChange={(value) =>
+                updateMyRig({
+                  inputDevice: myRig?.inputDevice ?? null,
+                  brakeType: value as NonNullable<RigAxes["brakeType"]>,
+                })
+              }
+            >
+              <SelectTrigger
+                size="sm"
+                className="w-[150px]"
+                aria-label="What stops the car"
+              >
+                <SelectValue
+                  placeholder={
+                    myRig?.inputDevice === "gamepad" ? "Not applicable" : "Brakes"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {RIG_BRAKE_TYPES.map((brake) => (
+                  <SelectItem key={brake} value={brake}>
+                    {RIG_BRAKE_LABELS[brake]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {myRig && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => updateMyRig(null)}
+                aria-label="Clear your rig"
+              >
+                <X aria-hidden="true" />
+                Clear
+              </Button>
+            )}
+          </div>
+        </div>
+        {canSaveRig && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSaveRig}
+            disabled={!myRig?.inputDevice || rigSaveState === "saving"}
+          >
+            {rigSaveState === "saved"
+              ? "Saved"
+              : rigSaveState === "saving"
+                ? "Saving…"
+                : "Save to account"}
+          </Button>
+        )}
+        <p className="max-w-[42ch] text-xs text-muted-foreground">
+          {myRig?.inputDevice
+            ? myRig.brakeType || myRig.inputDevice === "gamepad"
+              ? "Used for Best for my rig and match chips."
+              : "Pick what stops the car to get matches."
+            : "Set what you drive to sort Best for my rig and spot matches."}
+        </p>
+        {rigSaveError && (
+          <p role="alert" className="text-xs text-destructive">
+            {rigSaveError}
+          </p>
+        )}
+      </div>
+
       {rig !== ALL && hiddenRigNames.length > 0 && (
         <p className="text-sm text-muted-foreground">
           Hiding {joinRigNames(hiddenRigNames)} setups that don&apos;t match
@@ -587,6 +738,7 @@ export function SetupsBrowser({
                     fieldTestCount={fieldTestCounts[setup.id] ?? additionalFieldTestCounts[setup.id] ?? 0}
                     compareSelected={compareIds.includes(setup.id)}
                     onToggleCompare={compareMode ? () => toggleCompareSelect(setup.id) : undefined}
+                    rigMatch={myRig ? setupMatchesRigAxes(setup, myRig) : false}
                   />
                 </li>
               ))}
