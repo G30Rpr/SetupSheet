@@ -46,3 +46,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local audit screenshots (Lighthouse/390px acceptance artifacts)
+audit-mobile/
