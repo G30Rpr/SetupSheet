@@ -661,6 +661,32 @@ export async function rateSetup(
 }
 
 /**
+ * Best-effort record of a signed-in download for the 24h rating prompt
+ * (0041). Anonymous downloads deliberately record nothing -- browsing and
+ * downloading stay account-free; only the counter moves. Never blocks or
+ * fails the download itself.
+ */
+async function recordDownloadEvent(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  setupId: string
+): Promise<void> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase
+      .from("setup_download_events")
+      .insert({ setup_id: setupId, user_id: user.id });
+    if (error) {
+      logger.error("recordDownloadEvent: insert failed", error);
+    }
+  } catch (error) {
+    logger.error("recordDownloadEvent: threw", error);
+  }
+}
+
+/**
  * Bumps the download counter and returns a public URL for the attached
  * file. Deliberately doesn't require login -- setups are free downloads for
  * anyone, the same as browsing itself.
@@ -691,6 +717,7 @@ export async function downloadSetup(
   if (rpcError) {
     logger.error("downloadSetup: increment_downloads failed", rpcError);
   }
+  await recordDownloadEvent(supabase, setupId);
 
   const {
     data: { publicUrl },
@@ -721,6 +748,7 @@ export async function recordSetupExport(setupId: string): Promise<{ error: strin
     logger.error("recordSetupExport: increment_downloads failed", error);
     return { error: getActionError(error, "Couldn't record the download right now.") };
   }
+  await recordDownloadEvent(supabase, setupId);
 
   // Download/export counts are updated optimistically in the card; avoid
   // invalidating high-traffic pages for every anonymous export.
