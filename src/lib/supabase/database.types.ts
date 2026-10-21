@@ -512,6 +512,30 @@ export type Database = {
         };
         Relationships: Relationships;
       };
+      setup_download_events: {
+        Row: {
+          id: string;
+          setup_id: string;
+          user_id: string;
+          created_at: string;
+          prompt_dismissed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          setup_id: string;
+          user_id: string;
+          created_at?: string;
+          prompt_dismissed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          setup_id?: string;
+          user_id?: string;
+          created_at?: string;
+          prompt_dismissed_at?: string | null;
+        };
+        Relationships: Relationships;
+      };
       setup_comments: {
         Row: {
           id: string;
@@ -668,6 +692,15 @@ export type Database = {
           setup_count: number;
           total_upvotes: number;
           total_ratings: number;
+          laps_driven_by_others: number;
+          field_tested_setup_count: number;
+        };
+        Relationships: Relationships;
+      };
+      setup_impact_counts: {
+        Row: {
+          setup_id: string;
+          laps_driven_by_others: number;
         };
         Relationships: Relationships;
       };
