@@ -58,3 +58,20 @@ create table if not exists storage.objects (
 create or replace function storage.foldername(name text) returns text[]
 language sql immutable as $$ select string_to_array(name, '/') $$;
 alter table storage.objects enable row level security;
+
+-- Supabase's platform bootstrap also grants the API roles access that
+-- vanilla Postgres does not: usage on the auth schema (so RLS policies can
+-- call auth.uid()), execute on auth.uid(), and default privileges on new
+-- public tables/sequences/functions. Without these, every `authenticated`
+-- query whose RLS policy references auth.uid() dies with "permission denied
+-- for schema auth" -- and broad test catch-clauses treat that denial as if
+-- the policy itself had blocked the write, so tests pass for the wrong
+-- reason. Mirror the platform grants so policies actually evaluate here.
+grant usage on schema auth to anon, authenticated, service_role;
+grant execute on function auth.uid() to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant execute on functions to anon, authenticated, service_role;

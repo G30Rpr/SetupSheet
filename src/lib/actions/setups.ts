@@ -40,6 +40,8 @@ export interface CreateSetupInput {
   videoUrl?: string | null;
   telemetryFilePath?: string | null;
   telemetryFileName?: string | null;
+  /** Game patch the setup was built on (optional, author-reported). */
+  gameVersion?: string | null;
 }
 
 /**
@@ -77,6 +79,7 @@ export interface UpdateSetupInput {
   videoUrl?: string | null;
   telemetryFilePath?: string | null;
   telemetryFileName?: string | null;
+  gameVersion?: string | null;
 }
 
 function validateAttachment(
@@ -323,6 +326,9 @@ export async function createSetup(
     p_video_url: normalizeVideoUrl(input.videoUrl),
     p_telemetry_file_path: input.telemetryFilePath ?? null,
     p_telemetry_file_name: input.telemetryFileName ?? null,
+    p_game_version:
+      (typeof input.gameVersion === "string" ? input.gameVersion.trim() : "") ||
+      null,
     // No uploader rating: a published setup starts Unrated until someone
     // else runs it (0036_rating_trust.sql).
   });
@@ -407,6 +413,9 @@ export async function updateSetup(
     description: input.description,
     tags: input.tags,
     rig_profile: input.rigProfile,
+    game_version:
+      (typeof input.gameVersion === "string" ? input.gameVersion.trim() : "") ||
+      null,
   };
 
   if (input.setupValues !== undefined) {

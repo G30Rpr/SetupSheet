@@ -49,9 +49,12 @@ export type Database = {
           track: string;
           condition: string;
           lap_time: string | null;
+          game_version: string | null;
           description: string;
           tags: string[];
           rig_profile: string;
+          input_device: string | null;
+          brake_type: string | null;
           setup_values: Json | null;
           file_path: string | null;
           file_name: string | null;
@@ -74,9 +77,12 @@ export type Database = {
           track: string;
           condition: string;
           lap_time?: string | null;
+          game_version?: string | null;
           description?: string;
           tags?: string[];
           rig_profile: string;
+          input_device?: string | null;
+          brake_type?: string | null;
           setup_values?: Json | null;
           file_path?: string | null;
           file_name?: string | null;
@@ -99,9 +105,12 @@ export type Database = {
           track?: string;
           condition?: string;
           lap_time?: string | null;
+          game_version?: string | null;
           description?: string;
           tags?: string[];
           rig_profile?: string;
+          input_device?: string | null;
+          brake_type?: string | null;
           setup_values?: Json | null;
           file_path?: string | null;
           file_name?: string | null;
@@ -131,6 +140,8 @@ export type Database = {
           pace: number;
           predictability: number;
           rater_rig: string | null;
+          rater_input_device: string | null;
+          rater_brake_type: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -140,6 +151,8 @@ export type Database = {
           pace: number;
           predictability: number;
           rater_rig?: string | null;
+          rater_input_device?: string | null;
+          rater_brake_type?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -149,6 +162,8 @@ export type Database = {
           pace?: number;
           predictability?: number;
           rater_rig?: string | null;
+          rater_input_device?: string | null;
+          rater_brake_type?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -203,6 +218,7 @@ export type Database = {
           track: string;
           condition: string;
           lap_time: string | null;
+          game_version: string | null;
           description: string;
           tags: string[];
           rig_profile: string;
@@ -223,6 +239,7 @@ export type Database = {
           track: string;
           condition: string;
           lap_time?: string | null;
+          game_version?: string | null;
           description?: string;
           tags?: string[];
           rig_profile: string;
@@ -243,6 +260,7 @@ export type Database = {
           track?: string;
           condition?: string;
           lap_time?: string | null;
+          game_version?: string | null;
           description?: string;
           tags?: string[];
           rig_profile?: string;
@@ -554,6 +572,24 @@ export type Database = {
         };
         Relationships: Relationships;
       };
+      games_versions: {
+        Row: {
+          game: string;
+          current_version: string;
+          updated_at: string;
+        };
+        Insert: {
+          game: string;
+          current_version: string;
+          updated_at?: string;
+        };
+        Update: {
+          game?: string;
+          current_version?: string;
+          updated_at?: string;
+        };
+        Relationships: Relationships;
+      };
     };
     Views: {
       field_test_reports_public: {
@@ -620,9 +656,12 @@ export type Database = {
           track: string;
           condition: string;
           lap_time: string | null;
+          game_version: string | null;
           description: string;
           tags: string[];
           rig_profile: string;
+          input_device: string | null;
+          brake_type: string | null;
           setup_values: Json | null;
           file_path: string | null;
           file_name: string | null;
@@ -685,6 +724,8 @@ export type Database = {
           p_pace?: number;
           /** @deprecated Accepted for compatibility; ignored (0036_rating_trust.sql). */
           p_predictability?: number;
+          /** Game patch the setup was built on; null = not reported (0038_game_versions.sql). */
+          p_game_version?: string | null;
         };
         Returns: string;
       };

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { MAX_CAR_LENGTH, MAX_DESCRIPTION_LENGTH, MAX_TRACK_LENGTH } from "@/lib/data";
+import {
+  MAX_CAR_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_GAME_VERSION_LENGTH,
+  MAX_TRACK_LENGTH,
+} from "@/lib/data";
 import {
   AUTHOR_NOTE_REQUIRED_ERROR,
   validateSetupFields,
@@ -112,5 +117,30 @@ describe("validateSetupFields", () => {
 
   it("stays lenient without the flag so legacy File only rows remain editable", () => {
     expect(validateSetupFields({ ...validInput(), description: "" })).toBeNull();
+  });
+
+  it("accepts a game version at the max length and treats empty as unreported", () => {
+    expect(
+      validateSetupFields({
+        ...validInput(),
+        gameVersion: "v".repeat(MAX_GAME_VERSION_LENGTH),
+      })
+    ).toBeNull();
+    expect(validateSetupFields({ ...validInput(), gameVersion: "1.6" })).toBeNull();
+    expect(validateSetupFields({ ...validInput(), gameVersion: "  " })).toBeNull();
+    expect(validateSetupFields({ ...validInput(), gameVersion: null })).toBeNull();
+    expect(validateSetupFields(validInput())).toBeNull();
+  });
+
+  it("rejects a game version over the max length or of the wrong type", () => {
+    expect(
+      validateSetupFields({
+        ...validInput(),
+        gameVersion: "v".repeat(MAX_GAME_VERSION_LENGTH + 1),
+      })
+    ).toBe("Game version is too long — max 40 characters.");
+    expect(validateSetupFields({ ...validInput(), gameVersion: 1.6 })).toBe(
+      "Invalid setup fields."
+    );
   });
 });

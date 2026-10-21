@@ -11,7 +11,7 @@ type SetupVersionRow = Tables<"setup_versions">;
 // Keep the history projection explicit so a future private column cannot be
 // pulled into a public Server Action response by accident.
 const SETUP_VERSION_COLUMNS =
-  "id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, file_name, video_url, telemetry_file_name, created_at";
+  "id, game, car, track, condition, lap_time, game_version, description, tags, rig_profile, setup_values, file_name, video_url, telemetry_file_name, created_at";
 
 /**
  * Fetches a setup's edit history, newest first, capped at the most recent
@@ -47,6 +47,7 @@ export async function getSetupVersions(
     track: row.track,
     condition: row.condition as Condition,
     lapTime: row.lap_time ?? "",
+    gameVersion: row.game_version ?? null,
     description: row.description,
     tags: row.tags as SetupTag[],
     rigProfile: row.rig_profile as RigProfile,
