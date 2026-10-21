@@ -795,6 +795,7 @@ export function SetupCard({
           onFavorite={handleFavoriteClick}
           onUpvote={handleUpvoteClick}
           onRate={handleRate}
+          showRigSubScores={isDetail}
         />
       )}
     </Card>

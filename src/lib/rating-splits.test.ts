@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   EMPTY_TOTALS,
   mergeTotals,
+  rigTypeSubScores,
   similarRigPredictability,
   splitBySimilarRig,
 } from "@/lib/rating-splits";
@@ -40,6 +41,52 @@ describe("splitBySimilarRig", () => {
 
     expect(similar).toEqual(EMPTY_TOTALS);
     expect(others.paceN).toBe(4);
+  });
+});
+
+describe("rigTypeSubScores (2c)", () => {
+  it("withholds each score until that rig type reaches 3 ratings on it", () => {
+    const rows = rigTypeSubScores([
+      { rigProfile: "Gamepad", paceSum: 13.5, paceN: 3, predSum: 4, predN: 1 },
+    ]);
+    expect(rows).toEqual([
+      {
+        rigProfile: "Gamepad",
+        pace: 4.5,
+        paceN: 3,
+        predictability: null,
+        predN: 1,
+      },
+    ]);
+  });
+
+  it("omits rig types below the floor on both scores, and unshared-rig buckets entirely", () => {
+    const rows = rigTypeSubScores([
+      { rigProfile: "Gamepad", paceSum: 8, paceN: 2, predSum: 8, predN: 2 },
+      { rigProfile: null, paceSum: 20, paceN: 5, predSum: 20, predN: 5 },
+    ]);
+    expect(rows).toEqual([]);
+  });
+
+  it("orders by strongest evidence first, then name", () => {
+    const rows = rigTypeSubScores([
+      { rigProfile: "Wheel + 3 Pedals", paceSum: 12, paceN: 3, predSum: 12, predN: 3 },
+      { rigProfile: "Gamepad", paceSum: 21, paceN: 5, predSum: 21, predN: 5 },
+      { rigProfile: "Direct Drive + Load Cell", paceSum: 24, paceN: 4, predSum: 24, predN: 4 },
+    ]);
+    expect(rows.map((r) => r.rigProfile)).toEqual([
+      "Gamepad",
+      "Direct Drive + Load Cell",
+      "Wheel + 3 Pedals",
+    ]);
+  });
+
+  it("averages within the 0-5 score scale", () => {
+    const rows = rigTypeSubScores([
+      { rigProfile: "Gamepad", paceSum: 11.4, paceN: 3, predSum: 7.6, predN: 2 },
+    ]);
+    expect(rows[0].pace).toBeCloseTo(3.8, 5);
+    expect(rows[0].predictability).toBeNull();
   });
 });
 
