@@ -82,7 +82,7 @@ export default function SetupCardHistory({ setup }: { setup: Setup }) {
 
         return (
           <div key={version.id} className="flex flex-col gap-2 rounded-md border border-border/60 px-3 py-2.5">
-            <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground/70">
+            <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
               <History className="size-3" />
               Edited {formatTimestamp(version.createdAt)}
             </div>

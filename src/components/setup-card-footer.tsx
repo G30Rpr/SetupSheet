@@ -222,14 +222,9 @@ export function SetupCardFooter({
             onClick={onUpvote}
             disabled={isPending}
             aria-pressed={hasUpvoted}
-            aria-label={
-              hasUpvoted
-                ? `Remove your upvote — ${upvotes} so far`
-                : `Upvote this setup — ${upvotes} so far`
-            }
             title={hasUpvoted ? "Remove your upvote" : "Upvote this setup"}
           >
-            <TrendingUp className="size-4" />
+            <TrendingUp className="size-4" aria-hidden="true" />
             {/* A bare number next to an icon read as an unlabelled counter. */}
             {upvotes > 0 ? (
               <span className="text-xs font-medium">
@@ -239,6 +234,11 @@ export function SetupCardFooter({
             ) : (
               <span className="text-xs font-medium">Upvote</span>
             )}
+            {/* Accessible name = visible label + this suffix (WCAG label-in-
+                name); the count stays visible text, not a hidden label. */}
+            <span className="sr-only">
+              {hasUpvoted ? "\u00A0— remove your upvote" : "\u00A0— upvote this setup"}
+            </span>
           </Button>
         </div>
       </div>

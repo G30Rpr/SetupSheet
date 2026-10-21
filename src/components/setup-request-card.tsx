@@ -150,7 +150,7 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
 
       {request.notes && <p className="text-sm text-muted-foreground">{request.notes}</p>}
 
-      <p className="text-xs text-muted-foreground/70">
+      <p className="text-xs text-muted-foreground">
         Requested by {request.requesterUsername} · {formatDate(request.createdAt)}
       </p>
 

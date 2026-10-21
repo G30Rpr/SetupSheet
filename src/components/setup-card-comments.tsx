@@ -143,7 +143,7 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div className="flex items-center gap-1.5">
                   <span className="font-semibold text-foreground">{comment.username}</span>
-                  <span className="text-xs text-muted-foreground/70">
+                  <span className="text-xs text-muted-foreground">
                     {formatTimestamp(comment.createdAt)}
                   </span>
                 </div>

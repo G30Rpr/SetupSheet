@@ -43,14 +43,14 @@ export function SetupValuesDiff({
 
   return (
     <div className="flex flex-col gap-3 text-xs">
-      <div className="grid grid-cols-[1fr_1fr_1fr] gap-x-4 px-1 text-xs uppercase tracking-wide text-muted-foreground/70">
+      <div className="grid grid-cols-[1fr_1fr_1fr] gap-x-4 px-1 text-xs uppercase tracking-wide text-muted-foreground">
         <span />
         <span className="truncate">{labelA}</span>
         <span className="truncate">{labelB}</span>
       </div>
       {groups.map((group) => (
         <div key={group.title} className="flex flex-col gap-1">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground/70">{group.title}</p>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">{group.title}</p>
           <dl className="flex flex-col gap-0.5">
             {group.rows.map((row) => (
               <div

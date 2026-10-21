@@ -99,14 +99,15 @@ describe("SetupCardFooter upvote counter", () => {
   it("labels the count rather than printing a bare number", () => {
     renderFooter({}, 12);
 
-    const button = screen.getByRole("button", { name: /upvote this setup — 12 so far/i });
+    // WCAG label-in-name: the visible count is part of the accessible name.
+    const button = screen.getByRole("button", { name: /12 upvotes.*upvote this setup/i });
     expect(button).toHaveTextContent("12 upvotes");
   });
 
   it("shows the action name when nothing has been upvoted yet", () => {
     renderFooter({}, 0);
 
-    const button = screen.getByRole("button", { name: /upvote this setup — 0 so far/i });
+    const button = screen.getByRole("button", { name: /^upvote.*upvote this setup/i });
     expect(button).toHaveTextContent("Upvote");
     expect(button).not.toHaveTextContent("0");
   });
