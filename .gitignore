@@ -10,6 +10,10 @@
 !.yarn/releases
 !.yarn/versions
 
+# local SQL test harness (embedded Postgres + minimal psql stand-in for
+# scripts/test-db.sh on machines without psql; never shipped)
+/.pgtest
+
 # testing
 /coverage
 /test-results/
@@ -42,3 +46,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local audit screenshots (Lighthouse/390px acceptance artifacts)
+audit-mobile/

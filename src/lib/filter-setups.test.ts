@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { ALL, filterAndSortSetups, getSearchSuggestions } from "@/lib/filter-setups";
+import {
+  ALL,
+  filterAndSortSetups,
+  getSearchSuggestions,
+  setupMatchesRigAxes,
+} from "@/lib/filter-setups";
 import { makeSetup } from "@/lib/test-helpers/make-setup";
 
-const noFilters = { search: "", game: ALL, car: ALL, track: ALL, condition: ALL, rig: ALL };
+const noFilters = { search: "", game: ALL, car: ALL, track: ALL, condition: ALL, rig: ALL, tag: ALL };
 
 describe("filterAndSortSetups — facet filters", () => {
   it("filters by game/car/track/condition/rig", () => {
@@ -17,6 +22,17 @@ describe("filterAndSortSetups — facet filters", () => {
     expect(filterAndSortSetups(setups, { ...noFilters, track: "X" }, "newest").map((s) => s.id)).toEqual(["1"]);
     expect(filterAndSortSetups(setups, { ...noFilters, condition: "Wet" }, "newest").map((s) => s.id)).toEqual(["2"]);
     expect(filterAndSortSetups(setups, { ...noFilters, rig: "Gamepad" }, "newest").map((s) => s.id)).toEqual(["1"]);
+  });
+
+  it("filters by tag deterministically (exact tag, not fuzzy search)", () => {
+    const setups = [
+      makeSetup({ id: "1", tags: ["Safe", "Race"] }),
+      makeSetup({ id: "2", tags: ["Aggressive"] }),
+      makeSetup({ id: "3", tags: [] }),
+    ];
+    expect(filterAndSortSetups(setups, { ...noFilters, tag: "Safe" }, "newest").map((s) => s.id)).toEqual(["1"]);
+    expect(filterAndSortSetups(setups, { ...noFilters, tag: "Aggressive" }, "newest").map((s) => s.id)).toEqual(["2"]);
+    expect(filterAndSortSetups(setups, { ...noFilters, tag: ALL }, "newest").map((s) => s.id)).toEqual(["1", "2", "3"]);
   });
 
   it("returns everything when all filters are ALL and search is empty", () => {
@@ -143,6 +159,91 @@ describe("filterAndSortSetups — bestMatch (default)", () => {
     expect(
       filterAndSortSetups(setups, { ...noFilters, rig: "Wheel + 3 Pedals" }, "bestMatch", "Gamepad")
     ).toHaveLength(1);
+  });
+
+  it("ranks exact two-axis hardware matches ahead of the legacy category match", () => {
+    // My rig: wheel + load cell. "exact" shares both axes but a different
+    // legacy category; "category" shares the category but not the brake axis.
+    const setups = [
+      makeSetup({
+        id: "exact",
+        rigProfile: "Wheel + 3 Pedals",
+        inputDevice: "wheel",
+        brakeType: "load_cell",
+        ratingCount: 1,
+      }),
+      makeSetup({
+        id: "category",
+        rigProfile: "Direct Drive + Load Cell",
+        inputDevice: "direct_drive",
+        brakeType: "load_cell",
+        ratingCount: 20,
+      }),
+      makeSetup({
+        id: "other",
+        rigProfile: "Gamepad",
+        inputDevice: "gamepad",
+        brakeType: null,
+        ratingCount: 30,
+      }),
+    ];
+    expect(
+      filterAndSortSetups(
+        setups,
+        noFilters,
+        "bestMatch",
+        "Direct Drive + Load Cell",
+        {
+          inputDevice: "wheel",
+          brakeType: "load_cell",
+        }
+      ).map((s) => s.id)
+    ).toEqual(["exact", "category", "other"]);
+  });
+
+  it("keeps the evidence guarantee inside one match tier", () => {
+    const setups = [
+      makeSetup({
+        id: "lone",
+        inputDevice: "wheel",
+        brakeType: "standard",
+        ratingCount: 1,
+        pace: 5,
+        predictability: 5,
+      }),
+      makeSetup({
+        id: "many",
+        inputDevice: "wheel",
+        brakeType: "standard",
+        ratingCount: 20,
+        pace: 3.8,
+        predictability: 3.8,
+      }),
+    ];
+    expect(
+      filterAndSortSetups(setups, noFilters, "bestMatch", null, {
+        inputDevice: "wheel",
+        brakeType: "standard",
+      }).map((s) => s.id)
+    ).toEqual(["many", "lone"]);
+  });
+
+  it("falls back to the legacy category when no axes preference is available", () => {
+    const setups = [
+      makeSetup({ id: "1", rigProfile: "Gamepad", inputDevice: "gamepad", ratingCount: 9 }),
+      makeSetup({ id: "2", rigProfile: "Wheel + 3 Pedals", inputDevice: "wheel", brakeType: "standard", ratingCount: 1 }),
+    ];
+    expect(filterAndSortSetups(setups, noFilters, "bestMatch", "Wheel + 3 Pedals").map((s) => s.id)).toEqual([
+      "2",
+      "1",
+    ]);
+  });
+
+  it("setupMatchesRigAxes matches only exact pairs", () => {
+    const setup = makeSetup({ inputDevice: "wheel", brakeType: "handbrake" });
+    expect(setupMatchesRigAxes(setup, { inputDevice: "wheel", brakeType: "handbrake" })).toBe(true);
+    expect(setupMatchesRigAxes(setup, { inputDevice: "wheel", brakeType: "standard" })).toBe(false);
+    expect(setupMatchesRigAxes(setup, null)).toBe(false);
   });
 });
 

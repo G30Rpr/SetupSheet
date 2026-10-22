@@ -66,6 +66,7 @@ const EMPTY_FILTERS = {
   track: ALL,
   condition: ALL,
   rig: ALL,
+  tag: ALL,
 };
 
 function renderBrowser(setups = INDEX) {
@@ -144,6 +145,7 @@ describe("SetupsBrowser empty-combo handoff", () => {
           track: "Spa-Francorchamps",
           condition: "Dry",
           rig: "Gamepad",
+          tag: ALL,
         }}
       />
     );

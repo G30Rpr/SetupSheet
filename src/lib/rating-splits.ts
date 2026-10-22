@@ -58,3 +58,51 @@ export function similarRigPredictability(
   if (!bucket || bucket.predN === 0) return null;
   return bucket.predSum / bucket.predN;
 }
+
+/**
+ * Per-rig-type sub-scores (Phase 3 item 2c): a rig type's Pace and
+ * Predictability means, shown only once that score has this many ratings
+ * from that rig type. Below the floor the sample is too thin to read as
+ * established, so the score is withheld (null) rather than displayed as a
+ * shaky mean -- same honesty rule as "1-rating setups never look
+ * established".
+ */
+export const MIN_RIG_SUBSCORE_N = 3;
+
+export interface RigTypeScore {
+  /** Named rig type; buckets of raters who didn't share a rig (null) are not a rig type. */
+  rigProfile: string;
+  /** Mean Pace at n >= MIN_RIG_SUBSCORE_N, else null (withheld). */
+  pace: number | null;
+  paceN: number;
+  /** Mean Predictability at n >= MIN_RIG_SUBSCORE_N, else null (withheld). */
+  predictability: number | null;
+  predN: number;
+}
+
+/**
+ * The per-rig-type rows worth rendering: named rig types where at least one
+ * score clears MIN_RIG_SUBSCORE_N, strongest evidence first (then name) so
+ * the order is stable and never hype-sorted.
+ */
+export function rigTypeSubScores(splits: RatingSplit[]): RigTypeScore[] {
+  const rows: RigTypeScore[] = [];
+  for (const s of splits) {
+    if (!s.rigProfile) continue;
+    const pace = s.paceN >= MIN_RIG_SUBSCORE_N ? s.paceSum / s.paceN : null;
+    const predictability = s.predN >= MIN_RIG_SUBSCORE_N ? s.predSum / s.predN : null;
+    if (pace === null && predictability === null) continue;
+    rows.push({
+      rigProfile: s.rigProfile,
+      pace,
+      paceN: s.paceN,
+      predictability,
+      predN: s.predN,
+    });
+  }
+  return rows.sort(
+    (a, b) =>
+      Math.max(b.paceN, b.predN) - Math.max(a.paceN, a.predN) ||
+      a.rigProfile.localeCompare(b.rigProfile)
+  );
+}

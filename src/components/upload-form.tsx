@@ -49,6 +49,7 @@ import { isKnownOption, type SelectOptionGroup } from "@/lib/select-options";
 import {
   MAX_CAR_LENGTH,
   MAX_DESCRIPTION_LENGTH,
+  MAX_GAME_VERSION_LENGTH,
   MAX_LAP_TIME_LENGTH,
   MAX_TRACK_LENGTH,
   conditions,
@@ -121,6 +122,7 @@ export function UploadForm({
   const [tags, setTags] = useState<SetupTag[]>(existingSetup?.tags ?? []);
   const [condition, setCondition] = useState(existingSetup?.condition ?? "");
   const [lapTime, setLapTime] = useState(existingSetup?.lapTime ?? "");
+  const [gameVersion, setGameVersion] = useState(existingSetup?.gameVersion ?? "");
   const [rig, setRig] = useState(existingSetup?.rigProfile ?? "");
   const [description, setDescription] = useState(existingSetup?.description ?? "");
   const [videoUrl, setVideoUrl] = useState(existingSetup?.videoUrl ?? "");
@@ -419,6 +421,7 @@ export function UploadForm({
             videoUrl: videoUrl.trim() || null,
             telemetryFilePath: telemetryFields.telemetryFilePath,
             telemetryFileName: telemetryFields.telemetryFileName,
+            gameVersion: gameVersion.trim() || null,
           });
 
           if (result.error) {
@@ -447,6 +450,7 @@ export function UploadForm({
           videoUrl: videoUrl.trim() || null,
           telemetryFilePath: telemetryFields.telemetryFilePath,
           telemetryFileName: telemetryFields.telemetryFileName,
+          gameVersion: gameVersion.trim() || null,
         });
 
         if (result.error) {
@@ -735,6 +739,22 @@ export function UploadForm({
                 value={lapTime}
                 onChange={(e) => setLapTime(e.target.value)}
               />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="gameVersion">Game version (optional)</Label>
+              <Input
+                id="gameVersion"
+                name="gameVersion"
+                placeholder="e.g. 1.6"
+                maxLength={MAX_GAME_VERSION_LENGTH}
+                value={gameVersion}
+                onChange={(e) => setGameVersion(e.target.value)}
+                aria-describedby="gameVersion-hint"
+              />
+              <p id="gameVersion-hint" className="text-xs text-muted-foreground">
+                The patch you built it on. We&apos;ll flag it if the game updates.
+              </p>
             </div>
 
             <div className="flex flex-col gap-1.5">

@@ -40,6 +40,8 @@ export interface CreateSetupInput {
   videoUrl?: string | null;
   telemetryFilePath?: string | null;
   telemetryFileName?: string | null;
+  /** Game patch the setup was built on (optional, author-reported). */
+  gameVersion?: string | null;
 }
 
 /**
@@ -77,6 +79,7 @@ export interface UpdateSetupInput {
   videoUrl?: string | null;
   telemetryFilePath?: string | null;
   telemetryFileName?: string | null;
+  gameVersion?: string | null;
 }
 
 function validateAttachment(
@@ -323,6 +326,9 @@ export async function createSetup(
     p_video_url: normalizeVideoUrl(input.videoUrl),
     p_telemetry_file_path: input.telemetryFilePath ?? null,
     p_telemetry_file_name: input.telemetryFileName ?? null,
+    p_game_version:
+      (typeof input.gameVersion === "string" ? input.gameVersion.trim() : "") ||
+      null,
     // No uploader rating: a published setup starts Unrated until someone
     // else runs it (0036_rating_trust.sql).
   });
@@ -407,6 +413,9 @@ export async function updateSetup(
     description: input.description,
     tags: input.tags,
     rig_profile: input.rigProfile,
+    game_version:
+      (typeof input.gameVersion === "string" ? input.gameVersion.trim() : "") ||
+      null,
   };
 
   if (input.setupValues !== undefined) {
@@ -652,6 +661,32 @@ export async function rateSetup(
 }
 
 /**
+ * Best-effort record of a signed-in download for the 24h rating prompt
+ * (0041). Anonymous downloads deliberately record nothing -- browsing and
+ * downloading stay account-free; only the counter moves. Never blocks or
+ * fails the download itself.
+ */
+async function recordDownloadEvent(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  setupId: string
+): Promise<void> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase
+      .from("setup_download_events")
+      .insert({ setup_id: setupId, user_id: user.id });
+    if (error) {
+      logger.error("recordDownloadEvent: insert failed", error);
+    }
+  } catch (error) {
+    logger.error("recordDownloadEvent: threw", error);
+  }
+}
+
+/**
  * Bumps the download counter and returns a public URL for the attached
  * file. Deliberately doesn't require login -- setups are free downloads for
  * anyone, the same as browsing itself.
@@ -682,6 +717,7 @@ export async function downloadSetup(
   if (rpcError) {
     logger.error("downloadSetup: increment_downloads failed", rpcError);
   }
+  await recordDownloadEvent(supabase, setupId);
 
   const {
     data: { publicUrl },
@@ -712,6 +748,7 @@ export async function recordSetupExport(setupId: string): Promise<{ error: strin
     logger.error("recordSetupExport: increment_downloads failed", error);
     return { error: getActionError(error, "Couldn't record the download right now.") };
   }
+  await recordDownloadEvent(supabase, setupId);
 
   // Download/export counts are updated optimistically in the card; avoid
   // invalidating high-traffic pages for every anonymous export.

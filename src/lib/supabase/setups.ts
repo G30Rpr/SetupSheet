@@ -46,7 +46,7 @@ type SetupRow = Tables<"setups">;
 // migrations before the app when adding a new public field, then add it here
 // and to SetupRow/mapRow in the same change.
 const SETUP_COLUMNS =
-  "id, user_id, game, car, track, condition, lap_time, description, tags, rig_profile, setup_values, file_path, file_name, video_url, telemetry_file_path, telemetry_file_name, pace, predictability, rating_count, upvotes, downloads, created_at, updated_at";
+  "id, user_id, game, car, track, condition, lap_time, game_version, description, tags, rig_profile, input_device, brake_type, setup_values, file_path, file_name, video_url, telemetry_file_path, telemetry_file_name, pace, predictability, rating_count, upvotes, downloads, created_at, updated_at";
 
 /**
  * getSetups() feeds /setups' client-side fuzzy search and filtering, which
@@ -482,9 +482,12 @@ function mapRow(
     track: row.track,
     condition: row.condition as Condition,
     lapTime: row.lap_time ?? "",
+    gameVersion: row.game_version ?? null,
     description: row.description,
     tags: row.tags as SetupTag[],
     rigProfile: row.rig_profile as RigProfile,
+    inputDevice: (row.input_device ?? null) as Setup["inputDevice"],
+    brakeType: (row.brake_type ?? null) as Setup["brakeType"],
     author: author?.username ?? "Racer",
     authorId: row.user_id,
     authorAvatarUrl: author?.avatarUrl ?? null,

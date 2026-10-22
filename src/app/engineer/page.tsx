@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { EngineerClient } from "@/components/engineer/engineer-client";
+import { getSetups } from "@/lib/supabase/setups";
 import { fullPageTitle } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
@@ -22,6 +23,9 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: socialTitle, description },
 };
 
-export default function EngineerPage() {
-  return <EngineerClient />;
+export default async function EngineerPage() {
+  // The loop's setup candidates come from the same browse index the grid
+  // uses; a failed read simply hides the matches section (EngineerClient).
+  const { setups } = await getSetups();
+  return <EngineerClient setups={setups} />;
 }

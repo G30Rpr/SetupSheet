@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { ArrowDown, ArrowUp, CloudRain, Info, ShieldCheck, Sun, TriangleAlert } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { SetupCard } from "@/components/setup-card";
 import { loadEngineerCalibration } from "@/lib/actions/engineer-calibration";
+import {
+  browseLinkForSymptom,
+  mappingForSymptom,
+  setupsForSymptom,
+} from "@/lib/engineer-setup-map";
 import {
   applyPublicEngineerCalibration,
   type EngineerCalibrationFactor,
@@ -29,6 +36,7 @@ import {
   type EngineerSeverity,
   type EngineerSymptomId,
 } from "@/lib/engineer-types";
+import type { Setup } from "@/lib/types";
 
 const directionLabels: Record<EngineerDirection, string> = {
   increase: "Increase",
@@ -66,7 +74,17 @@ function DirectionIcon({ direction }: { direction: EngineerDirection }) {
   );
 }
 
-export function EngineerClient() {
+export function EngineerClient({
+  setups = [],
+}: {
+  /**
+   * The browse index for the Engineer loop (Phase 3): the symptom mapping
+   * (src/lib/engineer-setup-map.ts) picks community setups from these.
+   * Empty (or omitted, e.g. in tests) hides the matches section entirely --
+   * no error states, nothing invented.
+   */
+  setups?: Setup[];
+} = {}) {
   const [game, setGame] = useState<EngineerGame>(ENGINEER_GAMES[0]);
   const [symptomId, setSymptomId] = useState<EngineerSymptomId>(ENGINEER_SYMPTOMS[0].id);
   const [severity, setSeverity] = useState<EngineerSeverity>("moderate");
@@ -113,6 +131,14 @@ export function EngineerClient() {
   );
   const hasAppliedEvidence = result.recommendations.some((recommendation) => recommendation.publicEvidence);
   const selectedSymptom = ENGINEER_SYMPTOMS.find((symptom) => symptom.id === symptomId);
+  // Engineer loop: deterministic symptom -> setups matching (option A table).
+  const wet = condition === "wet";
+  const symptomMapping = mappingForSymptom(symptomId, wet);
+  const symptomMatches = useMemo(
+    () => setupsForSymptom(setups, symptomId, wet, { game }),
+    [setups, symptomId, wet, game]
+  );
+  const browseLink = browseLinkForSymptom(symptomId, wet);
   const calibrationMessage = !calibrationMatchesSelection || calibrationState.status === "loading"
     ? "Static recommendations are ready immediately; public evidence may adjust ranking when available."
     : calibrationState.status === "unavailable"
@@ -329,6 +355,69 @@ export function EngineerClient() {
             <p>These are conservative first-pass recommendations, not a replacement for your car&apos;s setup guide or a controlled test. {calibrationMessage}</p>
           </div>
         </section>
+
+        {/* Engineer loop: community setups matched to this diagnosis by the
+            editable mapping table -- deterministic tags/condition/ordering,
+            never invented rows. Hidden entirely when the browse index is
+            unavailable. */}
+        {setups.length > 0 && (
+          <section aria-labelledby="engineer-matches-heading" className="rounded-xl border border-border/80 bg-card p-5 shadow-card sm:p-7">
+            <h2 id="engineer-matches-heading" className="text-xl font-semibold">
+              Community setups worth a look
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              {symptomMapping.rationale}
+            </p>
+            {symptomMatches.length > 0 ? (
+              <>
+                <ul className="mt-4 grid list-none grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {symptomMatches.map((setup) => (
+                    <li key={setup.id} className="min-w-0">
+                      <SetupCard setup={setup} titleLevel={3} />
+                    </li>
+                  ))}
+                </ul>
+                {browseLink && (
+                  <p className="mt-4 text-sm">
+                    <Link
+                      href={`/setups?tag=${encodeURIComponent(browseLink.tag)}&sort=${browseLink.sort}&game=${encodeURIComponent(game)}`}
+                      className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
+                    >
+                      See all {browseLink.tag.toLowerCase()} setups on Browse
+                    </Link>
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="mt-4 rounded-lg border border-dashed border-border p-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  No community setups match this diagnosis yet.
+                  {browseLink ? (
+                    <>
+                      {" "}
+                      <Link
+                        href={`/setups?tag=${encodeURIComponent(browseLink.tag)}&sort=${browseLink.sort}&game=${encodeURIComponent(game)}`}
+                        className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
+                      >
+                        Browse {browseLink.tag.toLowerCase()} setups
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      {" "}
+                      <Link
+                        href="/setups"
+                        className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
+                      >
+                        Browse everything
+                      </Link>
+                    </>
+                  )}
+                </p>
+              </div>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );

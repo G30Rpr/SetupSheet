@@ -8,6 +8,8 @@ import { ComboFinder } from "@/components/combo-finder";
 import { StartingPoints } from "@/components/starting-points";
 import { getFinderCombos, getStartingPointCandidates } from "@/lib/supabase/setups";
 import { getPublicFieldTestCounts } from "@/lib/supabase/field-tests";
+import { getPendingRatingPrompts } from "@/lib/supabase/rating-prompts";
+import { RatingPrompt } from "@/components/rating-prompt";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { SITE_URL } from "@/lib/site";
@@ -30,6 +32,8 @@ export default async function Home() {
   const user = await getCurrentUser(supabase);
   const fieldTestCounts = await getPublicFieldTestCounts(candidates.map((setup) => setup.id));
   const fieldTestCountRecord = Object.fromEntries(fieldTestCounts);
+  // 24h post-download prompts (signed-in only; never for your own setups).
+  const ratingPrompts = user ? await getPendingRatingPrompts() : [];
 
   return (
     <div className="flex flex-col">
@@ -75,6 +79,25 @@ export default async function Home() {
 
       {/* Starting points — omitted entirely when nothing real qualifies */}
       <StartingPoints candidates={candidates} fieldTestCounts={fieldTestCountRecord} />
+
+      {/* 24h post-download prompts — only when this signed-in visitor has
+          downloads awaiting a take; omitted entirely otherwise. */}
+      {ratingPrompts.length > 0 && (
+        <section aria-labelledby="rating-prompts-heading" className="mx-auto max-w-6xl px-4 pb-4 sm:px-6">
+          <h2 id="rating-prompts-heading" className="text-lg font-semibold">
+            How did they feel?
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            You downloaded these — once you&apos;ve driven them, a quick take
+            helps the next driver judge the evidence.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {ratingPrompts.map((prompt) => (
+              <RatingPrompt key={prompt.setupId} prompt={prompt} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Bottom CTA */}
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">

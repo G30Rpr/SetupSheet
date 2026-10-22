@@ -23,6 +23,7 @@ const EMPTY_FILTERS = {
   track: ALL,
   condition: ALL,
   rig: ALL,
+  tag: ALL,
 };
 
 afterEach(() => {

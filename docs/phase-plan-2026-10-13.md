@@ -256,6 +256,18 @@ no public error states; tabular numbers.
 
 ### Phase 3 — P2 remainder + P1 leftovers (planned, not scheduled)
 
+**Decisions (2026-10-19, Phase 3 kickoff):** LMU `.svm` parser and
+normalized sheet rendering are **deferred** until the user provides 2–3
+sample `.svm`/`.json` files (never guess formats); patch compatibility
+starts with **uploader-entered `game_version`** (stale badge on detail when
+the operator-maintained `games_versions` row differs); the **Engineer loop
+is approved to build** (still a static knowledge base, never called AI).
+Rig axes: input ∈ {gamepad, wheel, direct_drive} × brake ∈ {standard,
+load_cell, handbrake}, mapped injectively from the 4 legacy categories.
+Phase 3 order: patch compatibility → two-axis rig migration → contribution
+flow (parser-independent parts) → Engineer loop. P1 leftovers below stay
+unscheduled unless asked.
+
 - Normalized sheet rendering: sections/params/units/min-max, range bars
   with community-median markers once n allows; full diff with `changed only`
   toggle. No fabricated ranges — omit the bar when min/max unknown.

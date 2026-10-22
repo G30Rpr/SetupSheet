@@ -18,26 +18,37 @@ import {
 } from "@/components/ui/select";
 import { SetupCard } from "@/components/setup-card";
 import { loadMoreSetups } from "@/lib/actions/setup-browse";
-import { conditions, games, getCarsForGame, getTracksForGame, rigProfiles } from "@/lib/data";
+import { conditions, games, getCarsForGame, getTracksForGame, rigProfiles, setupTags } from "@/lib/data";
 import {
   ALL,
   filterAndSortSetups,
   getSearchSuggestions,
+  setupMatchesRigAxes,
   type SetupFilters,
   type SortOption,
 } from "@/lib/filter-setups";
 import type { BrowseFilters } from "@/lib/browse-filters";
 import { isTypingTarget } from "@/lib/is-typing-target";
-import { readLastRig } from "@/lib/last-rig";
+import { readLastRig, readMyRigAxes, writeLastRigAxes } from "@/lib/last-rig";
+import {
+  RIG_BRAKE_LABELS,
+  RIG_BRAKE_TYPES,
+  RIG_INPUT_DEVICES,
+  RIG_INPUT_LABELS,
+  type RigAxes,
+} from "@/lib/rig-axes";
+import { saveRigProfile } from "@/lib/actions/saved-rig";
 import { SETUP_CARD_PAGE_SIZE } from "@/lib/ui-constants";
 import type { SetupCursor } from "@/lib/supabase/setups";
 import { cn } from "@/lib/utils";
 import type { Setup } from "@/lib/types";
 
 export const sortOptions: { value: SortOption; label: string }[] = [
-  // Default: rig match first, then rating count, then Predictability --
-  // evidence before hype (see filterAndSortSetups' "bestMatch" case).
-  { value: "bestMatch", label: "Best match" },
+  // Default. Exact two-axis hardware matches ("Matches your rig") lead, then
+  // the legacy rig-category match, then rating count, then Predictability --
+  // evidence before hype (see filterAndSortSetups' "bestMatch" case). The
+  // value stays "bestMatch" so existing ?sort= links keep working.
+  { value: "bestMatch", label: "Best for my rig" },
   { value: "newest", label: "Newest first" },
   // Value stays "trending" so existing bookmarked/shared ?sort= URLs keep
   // working, but it sorts by raw upvote count -- calling that "Trending"
@@ -65,6 +76,8 @@ export function SetupsBrowser({
   initialFilters,
   loadFailed = false,
   fieldTestCounts = {},
+  savedRigAxes = null,
+  canSaveRig = false,
 }: {
   setups: Setup[];
   totalCount: number | null;
@@ -73,6 +86,10 @@ export function SetupsBrowser({
   /** True when the server's browse read failed -- the grid is empty because the
    *  database was unreachable, not because nothing matched. */
   loadFailed?: boolean;
+  /** The account-saved rig axes (saved_rig_profiles, 0040); null when signed out or none saved. */
+  savedRigAxes?: RigAxes | null;
+  /** Whether the viewer is signed in -- gates the account-level "Save" action. */
+  canSaveRig?: boolean;
 }) {
   const searchParams = useSearchParams();
   const [additionalSetups, setAdditionalSetups] = useState<Setup[]>([]);
@@ -99,6 +116,7 @@ export function SetupsBrowser({
   const [track, setTrack] = useState<string>(initialFilters.track);
   const [condition, setCondition] = useState<string>(initialFilters.condition);
   const [rig, setRig] = useState<string>(initialFilters.rig);
+  const [tag, setTag] = useState<string>(initialFilters.tag);
   // Both the appended pages and the keyset cursor describe one specific query.
   // Filters are applied client-side over the server-rendered index, so the
   // moment any filter changes, rows appended under the previous filters are a
@@ -108,7 +126,7 @@ export function SetupsBrowser({
   // honest. (Adjusting state during render rather than in an effect, so the
   // first paint after the change already reflects it -- same pattern as
   // NotificationBell.)
-  const filterSignature = JSON.stringify([search, game, car, track, condition, rig]);
+  const filterSignature = JSON.stringify([search, game, car, track, condition, rig, tag]);
   const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
   const [prevSetups, setPrevSetups] = useState(setups);
   if (prevFilterSignature !== filterSignature || prevSetups !== setups) {
@@ -134,6 +152,37 @@ export function SetupsBrowser({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSavedRig(readLastRig());
   }, []);
+  // "Your rig" as two axes (0039/0040): the account-saved profile when
+  // signed in, else the device memory. Drives "Best for my rig" ordering and
+  // the "Matches your rig" chip -- hardware context only, never a rating.
+  const [myRig, setMyRig] = useState<RigAxes | null>(null);
+  const [rigSaveState, setRigSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [rigSaveError, setRigSaveError] = useState<string | null>(null);
+  useEffect(() => {
+    // Hydrating from the account row (server prop) or localStorage on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMyRig(savedRigAxes ?? readMyRigAxes());
+  }, [savedRigAxes]);
+
+  const updateMyRig = (axes: RigAxes | null) => {
+    setMyRig(axes);
+    writeLastRigAxes(axes);
+    setRigSaveState("idle");
+    setRigSaveError(null);
+  };
+
+  const handleSaveRig = async () => {
+    if (!myRig?.inputDevice) return;
+    setRigSaveState("saving");
+    setRigSaveError(null);
+    const result = await saveRigProfile(myRig.inputDevice, myRig.brakeType);
+    if (result.ok) {
+      setRigSaveState("saved");
+    } else {
+      setRigSaveState("error");
+      setRigSaveError(result.error);
+    }
+  };
   const [compareMode, setCompareMode] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [page, setPage] = useState(() => {
@@ -179,6 +228,7 @@ export function SetupsBrowser({
       if (track !== ALL) params.set("track", track);
       if (condition !== ALL) params.set("condition", condition);
       if (rig !== ALL) params.set("rig", rig);
+      if (tag !== ALL) params.set("tag", tag);
       if (sort !== "bestMatch") params.set("sort", sort);
       if (page > 1) params.set("page", String(page));
 
@@ -194,12 +244,12 @@ export function SetupsBrowser({
 
       localStorage.setItem(
         LAST_FILTERS_KEY,
-        JSON.stringify({ search, game, car, track, condition, rig, sort })
+        JSON.stringify({ search, game, car, track, condition, rig, tag, sort })
       );
     }, 300);
 
     return () => clearTimeout(id);
-  }, [search, game, car, track, condition, rig, sort, page]);
+  }, [search, game, car, track, condition, rig, tag, sort, page]);
 
   // Jump back to page 1 whenever a filter/search/sort actually changes --
   // skipped on mount so restoring ?page=N from a shared/bookmarked URL
@@ -211,7 +261,7 @@ export function SetupsBrowser({
       return;
     }
     setPage(1);
-  }, [search, game, car, track, condition, rig, sort]);
+  }, [search, game, car, track, condition, rig, tag, sort]);
 
   // Restores the last-used filters from a previous visit -- but only on a
   // bare /setups nav with no query string at all, so an explicit URL (a
@@ -236,6 +286,7 @@ export function SetupsBrowser({
       if (parsed.track) setTrack(parsed.track);
       if (parsed.condition) setCondition(parsed.condition);
       if (parsed.rig) setRig(parsed.rig);
+      if (parsed.tag) setTag(parsed.tag);
       if (parsed.sort && (SORT_VALUES as string[]).includes(parsed.sort)) {
         setSort(parsed.sort as SortOption);
       }
@@ -270,11 +321,12 @@ export function SetupsBrowser({
     () =>
       filterAndSortSetups(
         loadedSetups,
-        { search: deferredSearch, game, car, track, condition, rig },
+        { search: deferredSearch, game, car, track, condition, rig, tag },
         sort,
-        savedRig
+        savedRig,
+        myRig
       ),
-    [loadedSetups, deferredSearch, game, car, track, condition, rig, sort, savedRig]
+    [loadedSetups, deferredSearch, game, car, track, condition, rig, tag, sort, savedRig, myRig]
   );
 
   // Rig categories with setups that match everything EXCEPT the rig filter --
@@ -283,7 +335,7 @@ export function SetupsBrowser({
     if (rig === ALL) return [];
     const withoutRigFilter = filterAndSortSetups(
       loadedSetups,
-      { search: deferredSearch, game, car, track, condition, rig: ALL },
+      { search: deferredSearch, game, car, track, condition, rig: ALL, tag },
       "newest"
     );
     const names = new Set<string>();
@@ -291,13 +343,19 @@ export function SetupsBrowser({
       if (setup.rigProfile !== rig) names.add(setup.rigProfile);
     }
     return Array.from(names);
-  }, [loadedSetups, deferredSearch, game, car, track, condition, rig]);
+  }, [loadedSetups, deferredSearch, game, car, track, condition, rig, tag]);
 
   const visibleSetups = filtered.slice(0, page * SETUP_CARD_PAGE_SIZE);
   const hasMore = filtered.length > visibleSetups.length;
 
   const hasActiveFilters =
-    search !== "" || game !== ALL || car !== ALL || track !== ALL || condition !== ALL || rig !== ALL;
+    search !== "" ||
+    game !== ALL ||
+    car !== ALL ||
+    track !== ALL ||
+    condition !== ALL ||
+    rig !== ALL ||
+    tag !== ALL;
 
   function resetFilters() {
     setSearch("");
@@ -306,6 +364,7 @@ export function SetupsBrowser({
     setTrack(ALL);
     setCondition(ALL);
     setRig(ALL);
+    setTag(ALL);
   }
 
   function handleGameChange(value: string) {
@@ -328,6 +387,7 @@ export function SetupsBrowser({
           track,
           condition,
           rig,
+          tag,
         });
         if (result.error) {
           setRemoteError(result.error);
@@ -454,7 +514,7 @@ export function SetupsBrowser({
           Filter setups
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <FilterSelect
             label="Game"
             value={game}
@@ -489,6 +549,13 @@ export function SetupsBrowser({
             onChange={setRig}
             options={rigProfiles}
             placeholder="All rigs"
+          />
+          <FilterSelect
+            label="Tag"
+            value={tag}
+            onChange={setTag}
+            options={setupTags}
+            placeholder="All tags"
           />
         </div>
 
@@ -544,6 +611,108 @@ export function SetupsBrowser({
         </div>
       </div>
 
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3 rounded-lg border border-border/80 bg-secondary/40 px-4 py-3">
+        <div>
+          <span id="my-rig-label" className="text-xs font-medium text-muted-foreground">
+            Your rig
+          </span>
+          <div
+            className="mt-1.5 flex flex-wrap items-center gap-2"
+            role="group"
+            aria-labelledby="my-rig-label"
+          >
+            <Select
+              value={myRig?.inputDevice ?? ""}
+              onValueChange={(value) =>
+                updateMyRig({
+                  // Gamepads have no pedal hardware of interest: brake axis
+                  // goes null, matching rig_axes_for("Gamepad") in 0039.
+                  inputDevice: value as NonNullable<RigAxes["inputDevice"]>,
+                  brakeType: value === "gamepad" ? null : (myRig?.brakeType ?? null),
+                })
+              }
+            >
+              <SelectTrigger size="sm" className="w-[140px]" aria-label="How you steer">
+                <SelectValue placeholder="Steering" />
+              </SelectTrigger>
+              <SelectContent>
+                {RIG_INPUT_DEVICES.map((device) => (
+                  <SelectItem key={device} value={device}>
+                    {RIG_INPUT_LABELS[device]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={myRig?.brakeType ?? ""}
+              disabled={!myRig?.inputDevice || myRig.inputDevice === "gamepad"}
+              onValueChange={(value) =>
+                updateMyRig({
+                  inputDevice: myRig?.inputDevice ?? null,
+                  brakeType: value as NonNullable<RigAxes["brakeType"]>,
+                })
+              }
+            >
+              <SelectTrigger
+                size="sm"
+                className="w-[150px]"
+                aria-label="What stops the car"
+              >
+                <SelectValue
+                  placeholder={
+                    myRig?.inputDevice === "gamepad" ? "Not applicable" : "Brakes"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {RIG_BRAKE_TYPES.map((brake) => (
+                  <SelectItem key={brake} value={brake}>
+                    {RIG_BRAKE_LABELS[brake]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {myRig && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => updateMyRig(null)}
+                aria-label="Clear your rig"
+              >
+                <X aria-hidden="true" />
+                Clear
+              </Button>
+            )}
+          </div>
+        </div>
+        {canSaveRig && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSaveRig}
+            disabled={!myRig?.inputDevice || rigSaveState === "saving"}
+          >
+            {rigSaveState === "saved"
+              ? "Saved"
+              : rigSaveState === "saving"
+                ? "Saving…"
+                : "Save to account"}
+          </Button>
+        )}
+        <p className="max-w-[42ch] text-xs text-muted-foreground">
+          {myRig?.inputDevice
+            ? myRig.brakeType || myRig.inputDevice === "gamepad"
+              ? "Used for Best for my rig and match chips."
+              : "Pick what stops the car to get matches."
+            : "Set what you drive to sort Best for my rig and spot matches."}
+        </p>
+        {rigSaveError && (
+          <p role="alert" className="text-xs text-destructive">
+            {rigSaveError}
+          </p>
+        )}
+      </div>
+
       {rig !== ALL && hiddenRigNames.length > 0 && (
         <p className="text-sm text-muted-foreground">
           Hiding {joinRigNames(hiddenRigNames)} setups that don&apos;t match
@@ -587,6 +756,7 @@ export function SetupsBrowser({
                     fieldTestCount={fieldTestCounts[setup.id] ?? additionalFieldTestCounts[setup.id] ?? 0}
                     compareSelected={compareIds.includes(setup.id)}
                     onToggleCompare={compareMode ? () => toggleCompareSelect(setup.id) : undefined}
+                    rigMatch={myRig ? setupMatchesRigAxes(setup, myRig) : false}
                   />
                 </li>
               ))}
@@ -628,11 +798,11 @@ export function SetupsBrowser({
         <EmptyState
           icon={SearchX}
           title="No setup for this combo yet."
-          description={describeEmptyCombo({ search, game, car, track, condition, rig })}
+          description={describeEmptyCombo({ search, game, car, track, condition, rig, tag })}
           action={
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button asChild size="sm">
-                <Link href={requestHrefForCombo({ game, car, track, condition, rig })}>
+                <Link href={requestHrefForCombo({ game, car, track, condition, rig, tag })}>
                   Ask for this combo
                 </Link>
               </Button>
@@ -672,18 +842,19 @@ function joinRigNames(names: string[]): string {
 
 /** The empty-combo sentence: "Nobody has shared a [rig] setup for [car] at [track] in the [condition]." */
 function describeEmptyCombo(filters: SetupFilters): string {
-  const { search, car, track, condition, rig } = filters;
+  const { search, car, track, condition, rig, tag } = filters;
   if (search.trim()) {
     return `Nobody has shared a setup matching “${search.trim()}” yet.`;
   }
   const rigClause = rig !== ALL ? `${rig} ` : "";
+  const tagClause = tag !== ALL ? ` tagged ${tag}` : "";
   const carClause = car !== ALL ? ` for ${car}` : "";
   const trackClause = track !== ALL ? ` at ${track}` : "";
   const conditionClause = condition !== ALL ? ` in the ${condition}` : "";
-  return `Nobody has shared a ${rigClause}setup${carClause}${trackClause}${conditionClause}.`;
+  return `Nobody has shared a ${rigClause}setup${tagClause}${carClause}${trackClause}${conditionClause}.`;
 }
 
-/** /requests with the empty combo prefilled via query params. */
+/** /requests with the empty combo prefilled via query params (tags stay out -- a request is a car/track ask). */
 function requestHrefForCombo(filters: Omit<SetupFilters, "search">): string {
   const params = new URLSearchParams();
   if (filters.game !== ALL) params.set("game", filters.game);

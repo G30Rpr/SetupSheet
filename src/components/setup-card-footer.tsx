@@ -7,7 +7,12 @@ import { ScoreMeters } from "@/components/rating-bar";
 import { Button } from "@/components/ui/button";
 import { SCORE_DEFINITIONS_SENTENCE, formatScore } from "@/lib/ratings";
 import { readLastRig } from "@/lib/last-rig";
-import { splitBySimilarRig, type ScoreTotals } from "@/lib/rating-splits";
+import {
+  MIN_RIG_SUBSCORE_N,
+  rigTypeSubScores,
+  splitBySimilarRig,
+  type ScoreTotals,
+} from "@/lib/rating-splits";
 import { StarRating } from "@/components/star-rating";
 import type { Setup } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -45,6 +50,29 @@ function SplitRow({
   );
 }
 
+/**
+ * One per-rig-type sub-score cell (2c). Scores below the n-floor are
+ * withheld entirely (a dash, explained on hover) -- never a shaky mean and
+ * never a (1)/(2) count that could read as established evidence.
+ */
+function SubScoreCell({ value, n }: { value: number | null; n: number }) {
+  if (value === null) {
+    return (
+      <span
+        className="whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground"
+        title={`Fewer than ${MIN_RIG_SUBSCORE_N} ratings from this rig type — not shown.`}
+      >
+        —
+      </span>
+    );
+  }
+  return (
+    <span className="whitespace-nowrap font-mono text-xs tabular-nums text-foreground">
+      {formatScore(value)} ({n})
+    </span>
+  );
+}
+
 export function SetupCardFooter({
   setup,
   upvotes,
@@ -56,6 +84,7 @@ export function SetupCardFooter({
   onFavorite,
   onUpvote,
   onRate,
+  showRigSubScores = false,
 }: {
   setup: Setup;
   upvotes: number;
@@ -67,6 +96,12 @@ export function SetupCardFooter({
   onFavorite: () => void;
   onUpvote: () => void;
   onRate: (field: "pace" | "predictability", value: number) => void;
+  /**
+   * Renders the per-rig-type sub-score breakdown (2c) under the split rows.
+   * Detail only -- browse cards stay slim. Rows appear per rig type at
+   * n >= MIN_RIG_SUBSCORE_N (rigTypeSubScores decides).
+   */
+  showRigSubScores?: boolean;
 }) {
   const [showRateWidget, setShowRateWidget] = useState(false);
 
@@ -90,6 +125,7 @@ export function SetupCardFooter({
   const splits = setup.ratingSplits ?? [];
   const showSplit = splits.length > 0;
   const { similar, others } = splitBySimilarRig(splits, anchor.rig);
+  const subScores = showRigSubScores ? rigTypeSubScores(splits) : [];
 
   return (
     <div className="flex flex-col gap-3 border-t border-border/80 bg-black/15 px-5 py-3">
@@ -141,6 +177,29 @@ export function SetupCardFooter({
                 title="Every other rating, including ratings that didn't share a rig."
                 totals={others}
               />
+              {/* Per-rig-type sub-scores (2c), strongest evidence first.
+                  A rig type appears only once it has 3+ ratings on a score;
+                  the dash cell withholds thinner samples entirely. */}
+              {subScores.length > 0 && (
+                <>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    By rig type (3+ ratings)
+                  </p>
+                  {subScores.map((row) => (
+                    <div
+                      key={row.rigProfile}
+                      className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3"
+                      title={`Ratings from drivers on ${row.rigProfile}.`}
+                    >
+                      <span className="truncate text-xs text-muted-foreground">
+                        {row.rigProfile}
+                      </span>
+                      <SubScoreCell value={row.pace} n={row.paceN} />
+                      <SubScoreCell value={row.predictability} n={row.predN} />
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           )}
         </div>
@@ -163,14 +222,9 @@ export function SetupCardFooter({
             onClick={onUpvote}
             disabled={isPending}
             aria-pressed={hasUpvoted}
-            aria-label={
-              hasUpvoted
-                ? `Remove your upvote — ${upvotes} so far`
-                : `Upvote this setup — ${upvotes} so far`
-            }
             title={hasUpvoted ? "Remove your upvote" : "Upvote this setup"}
           >
-            <TrendingUp className="size-4" />
+            <TrendingUp className="size-4" aria-hidden="true" />
             {/* A bare number next to an icon read as an unlabelled counter. */}
             {upvotes > 0 ? (
               <span className="text-xs font-medium">
@@ -180,6 +234,11 @@ export function SetupCardFooter({
             ) : (
               <span className="text-xs font-medium">Upvote</span>
             )}
+            {/* Accessible name = visible label + this suffix (WCAG label-in-
+                name); the count stays visible text, not a hidden label. */}
+            <span className="sr-only">
+              {hasUpvoted ? "\u00A0— remove your upvote" : "\u00A0— upvote this setup"}
+            </span>
           </Button>
         </div>
       </div>

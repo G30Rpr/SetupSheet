@@ -14,6 +14,7 @@ const validFilters = {
   track: ALL_BROWSE_FILTER,
   condition: ALL_BROWSE_FILTER,
   rig: ALL_BROWSE_FILTER,
+  tag: ALL_BROWSE_FILTER,
 };
 
 describe("loadMoreSetups", () => {

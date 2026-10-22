@@ -27,6 +27,11 @@ export type RigProfile =
  */
 export type SetupValues = Record<string, string>;
 
+/** Rig axis 1 (0039): how the car is steered. */
+export type RigInputDevice = "gamepad" | "wheel" | "direct_drive";
+/** Rig axis 2 (0039): what stops the car; null for gamepads. */
+export type RigBrakeType = "standard" | "load_cell" | "handbrake";
+
 export interface Rating {
   pace: number;
   predictability: number;
@@ -39,9 +44,14 @@ export interface Setup {
   track: string;
   condition: Condition;
   lapTime: string;
+  /** Game patch the setup was built on, author-reported; null/absent = not reported. */
+  gameVersion?: string | null;
   description: string;
   tags: SetupTag[];
   rigProfile: RigProfile;
+  /** Rig axes derived from rigProfile (0039); absent on older fixtures. */
+  inputDevice?: RigInputDevice | null;
+  brakeType?: RigBrakeType | null;
   author: string;
   authorId: string;
   authorAvatarUrl: string | null;
@@ -119,6 +129,7 @@ export interface SetupVersion {
   track: string;
   condition: Condition;
   lapTime: string;
+  gameVersion?: string | null;
   description: string;
   tags: SetupTag[];
   rigProfile: RigProfile;

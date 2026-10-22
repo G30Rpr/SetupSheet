@@ -9,6 +9,10 @@ import { PublicFieldTestReports } from "@/components/public-field-test-reports";
 import { RelatedSetups } from "@/components/related-setups";
 import { SetupCard } from "@/components/setup-card";
 import { getSetupById, getSetupSeoData } from "@/lib/supabase/setups";
+import { getGameCurrentVersion } from "@/lib/supabase/games-versions";
+import { hasPendingRatingPrompt } from "@/lib/supabase/rating-prompts";
+import { GameVersionBadge } from "@/components/game-version-badge";
+import { RatingPrompt } from "@/components/rating-prompt";
 import { getPublicFieldTestSummary } from "@/lib/supabase/field-tests";
 import { evidenceLabel } from "@/lib/ratings";
 import { absoluteUrl, fullPageTitle, truncateMetaDescription } from "@/lib/seo";
@@ -127,7 +131,11 @@ export default async function SetupDetailPage({
 
   if (!setup) notFound();
 
-  const fieldTestSummary = await getPublicFieldTestSummary(setup.id, 5);
+  const [fieldTestSummary, currentGameVersion, pendingPrompt] = await Promise.all([
+    getPublicFieldTestSummary(setup.id, 5),
+    getGameCurrentVersion(setup.game),
+    hasPendingRatingPrompt(setup.id),
+  ]);
   const canonicalPath = `/setups/${encodeURIComponent(setup.id)}`;
   const setupUrl = absoluteUrl(canonicalPath);
   const authorUrl = absoluteUrl(`/profile/${encodeURIComponent(setup.authorId)}`);
@@ -213,9 +221,26 @@ export default async function SetupDetailPage({
           {setup.tags.length > 0 ? ` · ${setup.tags.join(", ")}` : ""} ·{" "}
           {evidenceLabel(setup.ratingCount)}
         </p>
+        <GameVersionBadge
+          gameVersion={setup.gameVersion}
+          currentVersion={currentGameVersion}
+        />
       </div>
 
       <OpenInGarageLink setupId={setup.id} game={setup.game} />
+      {pendingPrompt && (
+        <div className="mb-4">
+          <RatingPrompt
+            prompt={{
+              setupId: setup.id,
+              game: setup.game,
+              car: setup.car,
+              track: setup.track,
+              downloadedAt: "",
+            }}
+          />
+        </div>
+      )}
       <SetupCard
         setup={setup}
         linkTitle={false}

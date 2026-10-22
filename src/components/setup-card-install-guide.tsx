@@ -53,7 +53,7 @@ export default function SetupCardInstallGuide({ setup }: { setup: Setup }) {
 
       {guide.folderPath && (
         <div className="flex flex-col gap-1.5 rounded border border-border/60 bg-secondary/40 px-2.5 py-2">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground/70">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">
             Destination folder
           </span>
           <div className="flex items-start gap-2">
@@ -77,7 +77,7 @@ export default function SetupCardInstallGuide({ setup }: { setup: Setup }) {
             </Button>
           </div>
           {guide.folderNote && (
-            <p className="text-xs text-muted-foreground/80">{guide.folderNote}</p>
+            <p className="text-xs text-muted-foreground">{guide.folderNote}</p>
           )}
         </div>
       )}
@@ -92,14 +92,14 @@ export default function SetupCardInstallGuide({ setup }: { setup: Setup }) {
       )}
 
       {canBundle && guide.supportsFileImport && (
-        <p className="text-xs text-muted-foreground/80">
+        <p className="text-xs text-muted-foreground">
           The bundle contains the setup file, your values as text, and these
           instructions — so you don&apos;t need to come back to this page mid-install.
         </p>
       )}
 
       {!guide.supportsFileImport && (
-        <p className="flex items-start gap-1.5 text-xs text-muted-foreground/80">
+        <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
           <Download className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
           <span>
             This title can&apos;t import a file, so use the{" "}

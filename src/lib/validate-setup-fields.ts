@@ -1,6 +1,7 @@
 import {
   MAX_CAR_LENGTH,
   MAX_DESCRIPTION_LENGTH,
+  MAX_GAME_VERSION_LENGTH,
   MAX_LAP_TIME_LENGTH,
   MAX_TRACK_LENGTH,
   conditions,
@@ -64,6 +65,13 @@ export function validateSetupFields(
   if (fields.lapTime !== undefined && typeof fields.lapTime !== "string") {
     return "Invalid setup fields.";
   }
+  if (
+    fields.gameVersion !== undefined &&
+    fields.gameVersion !== null &&
+    typeof fields.gameVersion !== "string"
+  ) {
+    return "Invalid setup fields.";
+  }
   if (!Array.isArray(fields.tags) || !fields.tags.every((tag) => typeof tag === "string")) {
     return "Tags must be a list of valid values.";
   }
@@ -109,6 +117,11 @@ export function validateSetupFields(
   }
   if (lapTime.length > MAX_LAP_TIME_LENGTH) {
     return `Lap time is too long — max ${MAX_LAP_TIME_LENGTH} characters.`;
+  }
+  const gameVersion =
+    typeof fields.gameVersion === "string" ? fields.gameVersion.trim() : "";
+  if (gameVersion.length > MAX_GAME_VERSION_LENGTH) {
+    return `Game version is too long — max ${MAX_GAME_VERSION_LENGTH} characters.`;
   }
   if (description.length > MAX_DESCRIPTION_LENGTH) {
     return `Description is too long — max ${MAX_DESCRIPTION_LENGTH} characters.`;

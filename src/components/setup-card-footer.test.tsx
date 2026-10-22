@@ -35,7 +35,11 @@ const baseSetup: Setup = {
   fileUrl: null,
 };
 
-function renderFooter(setup: Partial<Setup>, upvotes: number) {
+function renderFooter(
+  setup: Partial<Setup>,
+  upvotes: number,
+  options: { showRigSubScores?: boolean } = {}
+) {
   const onUpvote = vi.fn();
   render(
     <SetupCardFooter
@@ -49,6 +53,7 @@ function renderFooter(setup: Partial<Setup>, upvotes: number) {
       onFavorite={vi.fn()}
       onUpvote={onUpvote}
       onRate={vi.fn()}
+      showRigSubScores={options.showRigSubScores}
     />
   );
   return { onUpvote };
@@ -94,14 +99,15 @@ describe("SetupCardFooter upvote counter", () => {
   it("labels the count rather than printing a bare number", () => {
     renderFooter({}, 12);
 
-    const button = screen.getByRole("button", { name: /upvote this setup — 12 so far/i });
+    // WCAG label-in-name: the visible count is part of the accessible name.
+    const button = screen.getByRole("button", { name: /12 upvotes.*upvote this setup/i });
     expect(button).toHaveTextContent("12 upvotes");
   });
 
   it("shows the action name when nothing has been upvoted yet", () => {
     renderFooter({}, 0);
 
-    const button = screen.getByRole("button", { name: /upvote this setup — 0 so far/i });
+    const button = screen.getByRole("button", { name: /^upvote.*upvote this setup/i });
     expect(button).toHaveTextContent("Upvote");
     expect(button).not.toHaveTextContent("0");
   });
@@ -150,5 +156,64 @@ describe("SetupCardFooter similar-rig split", () => {
     renderFooter({ ratingCount: 0, pace: 0, predictability: 0, ratingSplits: [] }, 0);
     expect(screen.queryByText("On a similar rig")).not.toBeInTheDocument();
     expect(screen.queryByText("Everyone else")).not.toBeInTheDocument();
+  });
+});
+
+describe("SetupCardFooter per-rig-type sub-scores (2c)", () => {
+  const splits = [
+    // Established on both scores (n >= 3).
+    { rigProfile: "Gamepad", paceSum: 12, paceN: 3, predSum: 10.8, predN: 3 },
+    // Established on pace only; predictability withheld (n = 2).
+    { rigProfile: "Wheel + 3 Pedals", paceSum: 13.2, paceN: 3, predSum: 8, predN: 2 },
+    // Below the floor on both: row omitted entirely.
+    { rigProfile: "Direct Drive + Load Cell", paceSum: 5, paceN: 1, predSum: 4, predN: 1 },
+    // Not a rig type: omitted.
+    { rigProfile: null, paceSum: 5, paceN: 1, predSum: 4, predN: 1 },
+  ];
+
+  it("shows rig types at n >= 3 per score, withholds thinner scores behind a dash", () => {
+    renderFooter(
+      {
+        rigProfile: "Direct Drive + Load Cell",
+        ratingCount: 7,
+        pace: 4,
+        predictability: 3.8,
+        ratingSplits: splits,
+      },
+      0,
+      { showRigSubScores: true }
+    );
+
+    expect(screen.getByText("By rig type (3+ ratings)")).toBeInTheDocument();
+    expect(screen.getByText("Gamepad")).toBeInTheDocument();
+    expect(screen.getByText("Wheel + 3 Pedals")).toBeInTheDocument();
+    // Gamepad means: 12/3 pace, 10.8/3 predictability.
+    expect(screen.getByText("4.0 (3)")).toBeInTheDocument();
+    expect(screen.getByText("3.6 (3)")).toBeInTheDocument();
+    // Wheel's pace clears the floor; its 2 predictability ratings are withheld.
+    expect(screen.getByText("4.4 (3)")).toBeInTheDocument();
+    const dash = screen.getByTitle(/fewer than 3 ratings from this rig type/i);
+    expect(dash).toHaveTextContent("—");
+    // Below-floor rig type and the unshared-rig bucket never render as rows.
+    expect(screen.queryAllByText("Direct Drive + Load Cell").length).toBe(1);
+  });
+
+  it("stays hidden on browse cards (slim) and when no rig type clears the floor", () => {
+    renderFooter({ ratingCount: 7, pace: 4, predictability: 3.8, ratingSplits: splits }, 0);
+    expect(screen.queryByText("By rig type (3+ ratings)")).not.toBeInTheDocument();
+    cleanup();
+
+    renderFooter(
+      {
+        ratingCount: 1,
+        pace: 4,
+        predictability: 4,
+        ratingSplits: [{ rigProfile: "Gamepad", paceSum: 4, paceN: 1, predSum: 4, predN: 1 }],
+      },
+      0,
+      { showRigSubScores: true }
+    );
+    expect(screen.queryByText("By rig type (3+ ratings)")).not.toBeInTheDocument();
+    expect(screen.queryByTitle(/fewer than 3 ratings/i)).not.toBeInTheDocument();
   });
 });

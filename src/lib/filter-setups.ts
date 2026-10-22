@@ -1,4 +1,5 @@
 import { similarRigPredictability } from "@/lib/rating-splits";
+import { axesMatch, type RigAxes } from "@/lib/rig-axes";
 import type { Setup } from "@/lib/types";
 
 export type SortOption = "bestMatch" | "newest" | "trending" | "mostDownloaded" | "safest" | "fastest";
@@ -12,6 +13,13 @@ export interface SetupFilters {
   track: string;
   condition: string;
   rig: string;
+  /** SetupTag name or ALL. Deterministic tag filter (also backs the Engineer loop's deep links). */
+  tag: string;
+}
+
+/** Whether the setup was built on the same steering and brake hardware as `axes`. */
+export function setupMatchesRigAxes(setup: Setup, axes: RigAxes | null | undefined): boolean {
+  return axesMatch(axes, { inputDevice: setup.inputDevice ?? null, brakeType: setup.brakeType ?? null });
 }
 
 /** Parses an "M:SS.mmm" lap time into total seconds; unparseable/blank times sort last. */
@@ -66,7 +74,8 @@ export function filterAndSortSetups(
   setups: Setup[],
   filters: SetupFilters,
   sort: SortOption,
-  preferredRig: string | null = null
+  preferredRig: string | null = null,
+  preferredAxes: RigAxes | null = null
 ): Setup[] {
   const query = filters.search.trim();
   const results = setups.filter((s) => {
@@ -75,6 +84,7 @@ export function filterAndSortSetups(
     if (filters.track !== ALL && s.track !== filters.track) return false;
     if (filters.condition !== ALL && s.condition !== filters.condition) return false;
     if (filters.rig !== ALL && s.rigProfile !== filters.rig) return false;
+    if (filters.tag !== ALL && !s.tags.includes(filters.tag as Setup["tags"][number])) return false;
     if (query) {
       const haystack = [s.game, s.car, s.track, s.author, s.description, ...s.tags].join(" ");
       if (!matchesQuery(haystack, query)) return false;
@@ -84,16 +94,22 @@ export function filterAndSortSetups(
 
   switch (sort) {
     // Default. Evidence-first: setups matching the selected (or saved) rig
-    // lead, then more ratings beat fewer, then similar-rig ratings are
-    // consulted before everyone-else ones (P2 item 3), then overall
-    // Predictability. A one-rating 5.0 can never outrank a well-evidenced
-    // 3.8 here -- see compareByEvidence in src/lib/ratings.ts for the same
-    // guarantee in score-only comparisons.
+    // lead -- exact two-axis hardware matches (0039/0040) first, then the
+    // legacy rig-category match -- then more ratings beat fewer, then
+    // similar-rig ratings are consulted before everyone-else ones (P2 item
+    // 3), then overall Predictability. A one-rating 5.0 can never outrank a
+    // well-evidenced 3.8 here -- see compareByEvidence in
+    // src/lib/ratings.ts for the same guarantee in score-only comparisons.
     case "bestMatch": {
       const rig = filters.rig !== ALL ? filters.rig : preferredRig;
       return [...results].sort((a, b) => {
-        const rigA = rig && a.rigProfile === rig ? 0 : 1;
-        const rigB = rig && b.rigProfile === rig ? 0 : 1;
+        const matchTier = (s: Setup) => {
+          if (preferredAxes && setupMatchesRigAxes(s, preferredAxes)) return 0;
+          if (rig && s.rigProfile === rig) return 1;
+          return 2;
+        };
+        const rigA = matchTier(a);
+        const rigB = matchTier(b);
         if (rigA !== rigB) return rigA - rigB;
         if (a.ratingCount !== b.ratingCount) return b.ratingCount - a.ratingCount;
         // Similar-rig predictability (nulls last), only when there's a rig to
