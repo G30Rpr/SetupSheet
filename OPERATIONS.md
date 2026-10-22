@@ -323,3 +323,31 @@ Remove or hide violating content using the existing owner/admin process, and pre
 - **Rolling Back Specific 0034 Changes:**
   - To drop added indexes if needed: `drop index if exists public.<index_name>;`
   - All trigger replacements in `0034` are idempotent `create or replace function`, making rollback as simple as re-applying previous function bodies if necessary.
+
+## Migrations: deploy pipeline (GitHub Actions)
+
+Since 2026-10-22, `supabase/migrations/` deploys to production automatically via
+`.github/workflows/deploy-migrations.yml` — every push to `SetUpSheet` that
+touches `supabase/migrations/` (and manual `workflow_dispatch`, which supports a
+dry run).
+
+- **Fresh-database gate first.** The whole chain must apply to an empty
+  Postgres and pass `supabase/testing/*.test.sql` before production is touched.
+- **Pending-only apply.** Files are matched to
+  `supabase_migrations.schema_migrations` by their 4-digit version prefix
+  (`0042_add_thing.sql` → version `0042`); applied versions are never re-run.
+  The 2026-10-22 baseline recorded `0001`–`0041` as applied (their objects
+  pre-existed in production).
+- **Migration FILES must not contain `BEGIN`/`COMMIT`** (the pipeline wraps each
+  file in one transaction and rejects files that commit early). The
+  BEGIN/COMMIT advice above applies to *manual* SQL-editor work only.
+- **Required repository secret: `SUPABASE_DB_URL`** (Dashboard → Connect → URI,
+  role `postgres`). If it is missing the workflow fails red by design — it never
+  skips silently.
+- **Write migrations for a non-superuser runner** (same limits as the Supabase
+  SQL editor): no `ALTER ROLE ... SUPERUSER`/`NOSUPERUSER`; `ALTER FUNCTION ...
+  OWNER TO <role>` needs that role to hold `CREATE` on the schema (grant it for
+  the statement, revoke after); prefer `public`-schema wrappers over writes to
+  `auth.*`/`storage.*`.
+- **Keep migrations additive** (project rule): Vercel deploys in parallel with
+  this job, so old code must keep working against the migrated schema.

@@ -1,0 +1,166 @@
+name: Deploy Migrations
+
+# Applies supabase/migrations/ to the production database whenever they change
+# on the default branch. This is the deploy step that was missing on 2026-10-22,
+# when merged code shipped against an un-migrated production schema and broke
+# Browse and detail pages for hours.
+#
+# Design:
+#   1. Fresh-database gate first: the full migration chain must apply to an
+#      empty Postgres and pass supabase/testing/*.test.sql before production is
+#      touched (same coverage as the db-migrations job in ci.yml).
+#   2. Pending-only apply: files are matched against
+#      supabase_migrations.schema_migrations (the history table the Supabase
+#      platform maintains, so dashboard/CLI views stay consistent) by their
+#      4-digit version prefix. Applied migrations are never re-run.
+#   3. Atomic per file: each file runs in one transaction. New migration files
+#      must NOT contain BEGIN/COMMIT (enforced below) so the runner can wrap
+#      them. (The 2026-10-22 backfill recorded historical files that do contain
+#      them; the guard only inspects pending files.)
+#   4. Loud failures: a missing secret or a failed file turns the run red.
+#      Never "skip silently" — that is how the drift stayed invisible across
+#      nine commits.
+#
+# Required repository secret:
+#   SUPABASE_DB_URL — production Postgres connection string (Supabase Dashboard
+#   -> Connect -> URI, role postgres). Without it this workflow FAILS BY DESIGN.
+#
+# Notes for migration authors (the production runner is non-superuser):
+#   - Keep migrations additive (project rule): old code must keep working
+#     against the migrated schema, because Vercel deploys in parallel.
+#   - Avoid superuser-only statements (e.g. ALTER ROLE ... SUPERUSER/NOSUPERUSER).
+#   - ALTER FUNCTION ... OWNER TO <role> requires that role to hold CREATE on
+#     the schema; grant it for the statement, then revoke it again.
+#   - Writes to auth.* / storage.* objects may need privileges the app role
+#     does not hold; prefer public-schema wrappers.
+
+on:
+  push:
+    branches: [SetUpSheet]
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/deploy-migrations.yml"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "List pending migrations without applying them"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-migrations-production
+  cancel-in-progress: false
+
+jobs:
+  validate-then-apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Fresh-database gate (all migrations + supabase/testing checks)
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: npm run test:db
+
+      - name: Require production connection secret
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Repository secret SUPABASE_DB_URL is not configured (Supabase Dashboard -> Connect -> URI, role postgres). Refusing to continue: migrations must fail loudly, never skip."
+            exit 1
+          fi
+
+      - name: Apply pending migrations to production
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+          command -v psql >/dev/null || {
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends postgresql-client
+          }
+
+          # Same history table the Supabase platform keeps. Created only if
+          # missing; on an existing project it is already there.
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -q <<'SQL'
+          create schema if not exists supabase_migrations;
+          create table if not exists supabase_migrations.schema_migrations (
+            version text primary key,
+            statements text[],
+            name text,
+            created_by text,
+            idempotency_key text,
+            rollback text[]
+          );
+          SQL
+
+          pending=()
+          for f in supabase/migrations/*.sql; do
+            base="$(basename "$f")"
+            if ! [[ "$base" =~ ^[0-9]{4}_[a-z0-9_]+\.sql$ ]]; then
+              echo "::error file=$f::Migration filenames must look like 0042_add_thing.sql (4-digit version, then lowercase words/underscores)."
+              exit 1
+            fi
+            ver="${base%%_*}"
+            if [ "$(psql "$SUPABASE_DB_URL" -Atc "select 1 from supabase_migrations.schema_migrations where version = '$ver'")" != "1" ]; then
+              pending+=("$ver|$f")
+            fi
+          done
+
+          # The runner wraps each pending file in one transaction, so the file
+          # itself must not commit early. Historical files with BEGIN/COMMIT are
+          # already recorded as applied and are not inspected here.
+          for e in "${pending[@]}"; do
+            f="${e##*|}"
+            if grep -qiE '^[[:space:]]*(begin|commit)[[:space:]]*;' "$f"; then
+              echo "::error file=$f::Migration files must not contain BEGIN/COMMIT; the runner wraps each file in a single transaction."
+              exit 1
+            fi
+          done
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Dry run — pending migrations:"
+            if [ "${#pending[@]}" -eq 0 ]; then echo "  (none)"; fi
+            for e in "${pending[@]}"; do echo "  ${e##*|}"; done
+            exit 0
+          fi
+
+          if [ "${#pending[@]}" -eq 0 ]; then
+            echo "No pending migrations; production schema is up to date."
+            exit 0
+          fi
+
+          for e in "${pending[@]}"; do
+            ver="${e%%|*}"
+            f="${e##*|}"
+            name="$(basename "$f" .sql)"
+            echo "::group::Apply $name"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 --single-transaction -f "$f"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atc \
+              "insert into supabase_migrations.schema_migrations (version, name, created_by) values ('$ver', '$name', 'github-actions deploy-migrations') on conflict (version) do nothing"
+            echo "::endgroup::"
+          done
+
+          echo "Applied ${#pending[@]} migration(s) to production."
