@@ -42,7 +42,7 @@
   --secondary-foreground: oklch(0.94 0.004 260);
 
   --muted: oklch(0.22 0.006 260);
-  --muted-foreground: oklch(0.62 0.014 260);
+  --muted-foreground: oklch(0.72 0.012 260);
 
   /* Darkened from 0.27: dropdown/menu rows hover on this surface, and at
      0.27 --muted-foreground and the accent text tokens fell below AA (4.14 and
@@ -249,8 +249,8 @@
   }
   .bg-grid {
     background-image:
-      linear-gradient(to right, oklch(1 0 0 / 4%) 1px, transparent 1px),
-      linear-gradient(to bottom, oklch(1 0 0 / 4%) 1px, transparent 1px);
+      linear-gradient(to right, oklch(1 0 0 / 2%) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(1 0 0 / 2%) 1px, transparent 1px);
     background-size: 32px 32px;
   }
 }

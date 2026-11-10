@@ -10,6 +10,10 @@ vi.mock("@/lib/actions/engineer-calibration", () => ({
   loadEngineerCalibration: loadEngineerCalibrationMock,
 }));
 
+import { makeSetup } from "@/lib/test-helpers/make-setup";
+
+vi.mock("@/components/setup-card", () => ({ SetupCard: ({ setup }: { setup: { car: string; track: string } }) => <div>{setup.car} at {setup.track}</div> }));
+
 import { EngineerClient } from "@/components/engineer/engineer-client";
 
 afterEach(() => {
@@ -22,6 +26,22 @@ beforeEach(() => {
 });
 
 describe("EngineerClient", () => {
+  it("filters community setups by car and track without changing the test plan", () => {
+    render(<EngineerClient setups={[
+      makeSetup({ id: "one", game: "Assetto Corsa Competizione", car: "Porsche", track: "Spa", tags: ["Safe"], condition: "Dry" }),
+      makeSetup({ id: "two", game: "Assetto Corsa Competizione", car: "Porsche", track: "Monza", tags: ["Safe"], condition: "Dry" }),
+      makeSetup({ id: "three", game: "Assetto Corsa Competizione", car: "BMW", track: "Spa", tags: ["Safe"], condition: "Dry" }),
+    ]} />);
+    fireEvent.change(screen.getByLabelText("Car for community setups"), { target: { value: "Porsche" } });
+    expect(screen.queryByText("BMW at Spa")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Track for community setups"), { target: { value: "Spa" } });
+    expect(screen.getByText("Porsche at Spa")).toBeInTheDocument();
+    expect(screen.queryByText("Porsche at Monza")).not.toBeInTheDocument();
+    expect(screen.getByText("Brake bias")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Car for community setups"), { target: { value: "BMW" } });
+    expect(screen.getByLabelText("Track for community setups")).toHaveValue("");
+  });
+
   it("shows the static recommendations anonymously", () => {
     render(<EngineerClient />);
 
@@ -74,6 +94,6 @@ describe("EngineerClient", () => {
 
     expect(screen.getByText("Brake bias")).toBeInTheDocument();
     expect(screen.getByText("ABS")).toBeInTheDocument();
-    expect(await screen.findByText(/public evidence could not be loaded/i)).toBeInTheDocument();
+    expect(await screen.findByText(/community test results could not be loaded/i)).toBeInTheDocument();
   });
 });

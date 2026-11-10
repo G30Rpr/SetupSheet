@@ -21,8 +21,8 @@ export async function SiteFooter() {
 
   return (
     <footer className="border-t border-border/80 bg-background">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-2">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="flex size-7 items-center justify-center rounded-md bg-racing-coral/15 text-racing-coral ring-1 ring-inset ring-racing-coral/30">
             <LogoMark className="size-3.5" />
           </span>

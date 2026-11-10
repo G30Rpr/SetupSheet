@@ -86,6 +86,8 @@ export function EngineerClient({
   setups?: Setup[];
 } = {}) {
   const [game, setGame] = useState<EngineerGame>(ENGINEER_GAMES[0]);
+  const [matchCar, setMatchCar] = useState("");
+  const [matchTrack, setMatchTrack] = useState("");
   const [symptomId, setSymptomId] = useState<EngineerSymptomId>(ENGINEER_SYMPTOMS[0].id);
   const [severity, setSeverity] = useState<EngineerSeverity>("moderate");
   const [condition, setCondition] = useState<EngineerCondition>("dry");
@@ -135,17 +137,17 @@ export function EngineerClient({
   const wet = condition === "wet";
   const symptomMapping = mappingForSymptom(symptomId, wet);
   const symptomMatches = useMemo(
-    () => setupsForSymptom(setups, symptomId, wet, { game }),
-    [setups, symptomId, wet, game]
+    () => setupsForSymptom(setups.filter((setup) => (!matchCar || setup.car === matchCar) && (!matchTrack || setup.track === matchTrack)), symptomId, wet, { game }),
+    [setups, symptomId, wet, game, matchCar, matchTrack]
   );
   const browseLink = browseLinkForSymptom(symptomId, wet);
   const calibrationMessage = !calibrationMatchesSelection || calibrationState.status === "loading"
-    ? "Static recommendations are ready immediately; public evidence may adjust ranking when available."
+    ? "Your test plan is ready. Community test results may help order these suggestions."
     : calibrationState.status === "unavailable"
-      ? "Public evidence could not be loaded. The static fallback remains active."
+      ? "Community test results could not be loaded. The baseline test plan is still available."
       : hasAppliedEvidence
         ? "Recent public field-test evidence adjusted ranking only. Suggested amounts and wet rules remain unchanged."
-        : "No eligible recent evidence matched these exact parameters and directions. Static ranking remains in use.";
+        : "No matching recent community tests are available, so this plan uses baseline guidance.";
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -153,17 +155,17 @@ export function EngineerClient({
         <div className="max-w-3xl">
           <Badge variant="secondary" className="mb-4 gap-1.5">
             <ShieldCheck aria-hidden="true" />
-            Static Engineer · No account required
+            Setup Engineer · No account required
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Find a calmer next setup change</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
             Describe what the car is doing and get a short, ranked test plan for ACC or Le Mans Ultimate.
-            Advice is available immediately from a local knowledge base; it does not depend on live data.
+            Start with one small change, repeat the same test, and compare the result.
           </p>
         </div>
         <p className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
           <span className="size-2 rounded-full bg-muted-foreground" aria-hidden="true" />
-          Static recommendations ready
+          Your first tests are ready
         </p>
       </header>
 
@@ -178,7 +180,7 @@ export function EngineerClient({
           <div className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="engineer-game">Game</Label>
-              <Select value={game} onValueChange={(value) => setGame(value as EngineerGame)}>
+              <Select value={game} onValueChange={(value) => { setGame(value as EngineerGame); setMatchCar(""); setMatchTrack(""); }}>
                 <SelectTrigger id="engineer-game" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -363,11 +365,28 @@ export function EngineerClient({
         {setups.length > 0 && (
           <section aria-labelledby="engineer-matches-heading" className="rounded-xl border border-border/80 bg-card p-5 shadow-card sm:p-7">
             <h2 id="engineer-matches-heading" className="text-xl font-semibold">
-              Community setups worth a look
+              Explore community starting points
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              {symptomMapping.rationale}
+              {symptomMapping.rationale} These are general starting points selected by game, weather, and tags; they are not a diagnosis or a confirmed fix for your car.
             </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="engineer-match-car">Car for community setups</Label>
+                <select id="engineer-match-car" value={matchCar} onChange={(event) => { setMatchCar(event.target.value); setMatchTrack(""); }} className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm">
+                  <option value="">All cars</option>
+                  {Array.from(new Set(setups.filter((setup) => setup.game === game).map((setup) => setup.car))).sort().map((car) => <option key={car} value={car}>{car}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="engineer-match-track">Track for community setups</Label>
+                <select id="engineer-match-track" value={matchTrack} onChange={(event) => setMatchTrack(event.target.value)} className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm">
+                  <option value="">All tracks</option>
+                  {Array.from(new Set(setups.filter((setup) => setup.game === game && (!matchCar || setup.car === matchCar)).map((setup) => setup.track))).sort().map((track) => <option key={track} value={track}>{track}</option>)}
+                </select>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">These filters narrow community setups only. The test plan above uses your game and symptom.</p>
             {symptomMatches.length > 0 ? (
               <>
                 <ul className="mt-4 grid list-none grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">

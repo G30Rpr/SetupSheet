@@ -44,6 +44,7 @@ import {
 import { SetupCardFooter } from "@/components/setup-card-footer";
 import { ScoreMeters } from "@/components/rating-bar";
 import { readLastRig } from "@/lib/last-rig";
+import { GameVersionBadge } from "@/components/game-version-badge";
 import { TagBadge } from "@/components/tag-badge";
 import {
   deleteSetup,
@@ -355,8 +356,8 @@ export function SetupCard({
   if (isDeleted) return null;
 
   return (
-    <Card as="article" className="content-auto group relative overflow-hidden border-border/80 py-0 motion-safe:motion-transform motion-safe:hover:-translate-y-0.5">
-      <div className="flex flex-col gap-3 p-5">
+    <Card as="article" className={cn("group relative overflow-hidden border-border/80 py-0 shadow-card motion-safe:motion-transform motion-safe:hover:-translate-y-0.5", !isDetail && "content-auto h-full") }>
+      <div className="flex h-full flex-col gap-4 p-5">
         {/* Top row: game + condition + owner controls */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -461,7 +462,7 @@ export function SetupCard({
 
         {/* Car + Track */}
         <div>
-          <Title className="text-lg font-semibold leading-tight tracking-tight text-foreground">
+          <Title className="text-lg font-semibold leading-snug tracking-tight text-foreground">
             {linkTitle ? (
               <Link href={`/setups/${setup.id}`} className="underline-offset-4 hover:underline">
                 {setup.car}
@@ -470,13 +471,14 @@ export function SetupCard({
               setup.car
             )}
           </Title>
-          <p className="text-sm text-muted-foreground">{setup.track}</p>
+          <p className="mt-1 text-sm font-medium text-muted-foreground">{setup.track}</p>
+          {!isDetail && <GameVersionBadge gameVersion={setup.gameVersion} currentVersion={null} />}
         </div>
 
         {/* Lap time — mono/tabular everywhere; every lap on the site is
             author-reported, so it carries the label that says so. */}
         {(setup.lapTime || setup.fileUrl) && (
-          <div className="flex items-center gap-2 rounded-md bg-secondary/60 px-3 py-2.5">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-secondary/40 px-3 py-3">
             <Timer className="size-5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
             {setup.lapTime && (
               <>
@@ -501,7 +503,7 @@ export function SetupCard({
                 File included
               </Badge>
             )}
-            {setup.fileUrl && !setup.description?.trim() && (
+            {isDetail && setup.fileUrl && !setup.description?.trim() && (
               <Badge
                 variant="outline"
                 className="shrink-0"

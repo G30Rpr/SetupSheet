@@ -150,6 +150,7 @@ export function SetupCardFooter({
             pace={setup.pace}
             predictability={setup.predictability}
             ratingCount={setup.ratingCount}
+            includeDefinitions={false}
           />
           {/* One sentence total defining the two scores (P3 detail touch) */}
           <p className="text-xs text-muted-foreground">{SCORE_DEFINITIONS_SENTENCE}</p>

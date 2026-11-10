@@ -514,7 +514,7 @@ export function SetupsBrowser({
           Filter setups
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <FilterSelect
             label="Game"
             value={game}
@@ -536,6 +536,11 @@ export function SetupsBrowser({
             options={trackOptions}
             placeholder="All tracks"
           />
+        </div>
+        <details className="mt-4 rounded-lg border border-border/80 p-3" open={condition !== ALL || rig !== ALL || tag !== ALL ? true : undefined}>
+          <summary className="min-h-8 cursor-pointer text-sm font-medium">More filters · weather, uploader rig, and tags</summary>
+          <p className="mt-2 text-xs text-muted-foreground">The uploader rig filter limits results. Your rig below personalizes their order.</p>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <FilterSelect
             label="Condition"
             value={condition}
@@ -557,7 +562,8 @@ export function SetupsBrowser({
             options={setupTags}
             placeholder="All tags"
           />
-        </div>
+          </div>
+        </details>
 
         {hasActiveFilters && (
           <div className="mt-3 flex justify-end">
@@ -603,7 +609,7 @@ export function SetupsBrowser({
             <SelectContent>
               {sortOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+                  {option.value === "bestMatch" && !myRig?.inputDevice && !savedRig && rig === ALL ? "Recommended" : option.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -704,7 +710,7 @@ export function SetupsBrowser({
             ? myRig.brakeType || myRig.inputDevice === "gamepad"
               ? "Used for Best for my rig and match chips."
               : "Pick what stops the car to get matches."
-            : "Set what you drive to sort Best for my rig and spot matches."}
+            : "Choose your steering and brakes to personalize Recommended results. Matching changes the order; it does not hide other rigs."}
         </p>
         {rigSaveError && (
           <p role="alert" className="text-xs text-destructive">

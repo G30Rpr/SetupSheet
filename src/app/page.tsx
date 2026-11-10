@@ -39,7 +39,7 @@ export default async function Home() {
     <div className="flex flex-col">
       {/* Finder */}
       <section className="relative overflow-hidden border-b border-border/80 bg-grid">
-        <div className="relative mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 py-16 text-center sm:px-6 sm:py-20">
+        <div className="relative mx-auto flex max-w-3xl flex-col items-center gap-5 px-4 py-9 text-center sm:px-6 sm:py-12">
           <Badge
             variant="outline"
             className="gap-2 border-border/80 bg-secondary/50 px-3 py-1 text-xs text-muted-foreground"
@@ -53,9 +53,8 @@ export default async function Home() {
           </h1>
 
           <p className="max-w-xl text-balance text-base text-muted-foreground sm:text-lg">
-            Find a community setup for your car, track, and hardware. Rated
-            for pace, and for how predictable it feels when you are not an
-            alien.
+            Find free community setups for your car, track, and hardware.
+            Compare pace and predictability, then take one out on track.
           </p>
 
           <ComboFinder combos={combos} />
@@ -71,7 +70,7 @@ export default async function Home() {
             </li>
             <li className="flex items-start gap-2">
               <span aria-hidden="true" className="mt-2 size-1.5 shrink-0 rounded-full bg-racing-cyan" />
-              Free to browse and download. No subscription
+              Free downloads. No subscription
             </li>
           </ul>
         </div>
@@ -100,7 +99,7 @@ export default async function Home() {
       )}
 
       {/* Bottom CTA */}
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <section className="mx-auto max-w-6xl w-full px-4 py-10 sm:px-6">
         <div className="rounded-2xl border border-border/80 bg-card p-8 text-center sm:p-12">
           <h2 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">
             Can&apos;t find the combo? Ask the community.

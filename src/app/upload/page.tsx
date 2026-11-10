@@ -48,11 +48,19 @@ export default async function UploadPage({
           Upload Your Setup
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Drop your setup file below and fill in a few details. It only takes
-          a minute, and it&apos;s always free.
+          Share your starting point with the next driver. Sign in with Discord,
+          add your setup, and tell the community how it feels.
         </p>
       </div>
 
+      <section aria-labelledby="upload-checklist-heading" className="mb-6 rounded-xl border border-border bg-card p-5">
+        <h2 id="upload-checklist-heading" className="font-semibold">Before you upload</h2>
+        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+          <li>Have your game, car, track layout, and weather ready.</li>
+          <li>Bring the original setup file or enter setup values manually. File support varies by game.</li>
+          <li>Add the game patch and a short handling note. If sharing a lap time, include fuel, tyres, and temperatures in your note.</li>
+        </ul>
+      </section>
       <UploadForm requestContext={requestContext} />
     </div>
   );

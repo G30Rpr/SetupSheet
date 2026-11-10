@@ -78,8 +78,10 @@ describe("SetupCard slim variant (browse/profile cards)", () => {
     // Byline is the social layer — detail only
     expect(screen.queryByText("Alex R.")).not.toBeInTheDocument();
   });
-  it("labels file-only setups without an author note", () => {
+  it("keeps file-only metadata on the detail page", () => {
     const { rerender } = render(<SetupCard setup={makeSetup({ ...baseSetup, description: "" })} />);
+    expect(screen.queryByText("File only")).not.toBeInTheDocument();
+    rerender(<SetupCard setup={makeSetup({ ...baseSetup, description: "" })} variant="detail" />);
     expect(screen.getByText("File only")).toBeInTheDocument();
 
     // With a note, the label is gone (the note speaks for itself).

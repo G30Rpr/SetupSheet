@@ -124,7 +124,7 @@ export default async function RequestsPage({
             <EmptyState
               icon={MessageSquare}
               title="No requests yet"
-              description="Be the first to ask the community for a setup."
+              description="Tell the community your game, car, track, and what you need help with. For example: ACC · Porsche 992 GT3 R · Spa · a stable dry race setup. Sign in above to post your request; contributors can answer it with a setup upload."
             />
           )
         ) : (

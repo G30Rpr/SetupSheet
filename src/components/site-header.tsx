@@ -96,7 +96,7 @@ export function SiteHeader({
           </span>
         </Link>
 
-        <nav aria-label="Primary navigation" className="hidden shrink-0 items-center gap-3 2xl:flex">
+        <nav aria-label="Primary navigation" className="hidden shrink-0 items-center gap-4 lg:flex">
           {desktopNavLinks.map((link) => {
             const isCurrent = isActiveNavLink(pathname, link.href);
             return (
@@ -112,7 +112,7 @@ export function SiteHeader({
           })}
         </nav>
 
-        <form onSubmit={handleSearchSubmit} className="relative hidden min-w-0 flex-1 max-w-sm lg:block 2xl:max-w-56">
+        <form onSubmit={handleSearchSubmit} className="relative hidden min-w-0 flex-1 max-w-56 xl:block">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             ref={searchInputRef}
@@ -130,7 +130,7 @@ export function SiteHeader({
         </form>
 
         <div className="flex items-center gap-2">
-          <div className="hidden xl:block">
+          <div className="hidden lg:block">
             <Button asChild size="sm">
               <Link href="/upload">
                 <Upload />
@@ -202,7 +202,7 @@ export function SiteHeader({
                     initialNotifications={initialNotifications}
                     initialUnreadCount={initialUnreadCount}
                   />
-                  <div className="xl:hidden">
+                  <div className="lg:hidden">
                     <SheetClose asChild>
                       <Button asChild size="lg" className="w-full">
                         <Link href="/upload">

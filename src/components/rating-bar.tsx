@@ -95,19 +95,21 @@ export function ScoreMeters({
   predictability,
   ratingCount,
   className,
+  includeDefinitions = true,
 }: {
   pace: number;
   predictability: number;
   ratingCount: number;
   className?: string;
+  includeDefinitions?: boolean;
 }) {
   if (!(ratingCount > 0)) {
     return (
       <div className={cn("flex flex-col gap-1", className)}>
         <p className="text-xs text-muted-foreground">Unrated</p>
-        <p className="sr-only">
+        {includeDefinitions && <p className="sr-only">
           {PACE_DEFINITION} {PREDICTABILITY_DEFINITION}
-        </p>
+        </p>}
       </div>
     );
   }
