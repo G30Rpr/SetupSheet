@@ -39,6 +39,8 @@ export function RigMode({ setup }: { setup: RigSetup }) {
   const hasValues = groups.length > 0;
 
   useEffect(() => {
+    // Device capability is browser-only and cannot be known during server rendering.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setWakeSupported("wakeLock" in navigator);
   }, []);
 
