@@ -47,8 +47,12 @@ export function RigMode({ setup }: { setup: RigSetup }) {
   useEffect(() => {
     if (!keepAwake || !("wakeLock" in navigator)) return;
     let cancelled = false;
+    let requesting = false;
     async function acquire() {
-      if (document.visibilityState !== "visible") return;
+      // The document may become visible multiple times before an outstanding
+      // request resolves. Keep only one wake lock and one request at a time.
+      if (cancelled || document.visibilityState !== "visible" || requesting || wakeLockRef.current) return;
+      requesting = true;
       try {
         const next = await navigator.wakeLock.request("screen");
         if (cancelled) {
@@ -56,11 +60,16 @@ export function RigMode({ setup }: { setup: RigSetup }) {
           return;
         }
         wakeLockRef.current = next;
+        next.addEventListener("release", () => {
+          if (wakeLockRef.current === next) wakeLockRef.current = null;
+        });
       } catch {
         if (!cancelled) {
           setKeepAwake(false);
           toast.error("Screen wake lock is unavailable on this device.");
         }
+      } finally {
+        requesting = false;
       }
     }
     function onVisibilityChange() {
