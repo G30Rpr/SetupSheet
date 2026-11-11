@@ -183,6 +183,21 @@ describe("SetupsBrowser empty-combo handoff", () => {
 });
 
 describe("SetupsBrowser mobile filters", () => {
+  it("allows removing an applied filter without opening the filter panel", async () => {
+    loadMoreSetups.mockResolvedValue({ setups: INDEX, nextCursor: null, error: null });
+    render(
+      <SetupsBrowser
+        setups={INDEX}
+        totalCount={500}
+        initialFilters={{ ...EMPTY_FILTERS, rig: "Wheel + 3 Pedals" }}
+      />
+    );
+    const remove = screen.getByRole("button", { name: /Remove uploader rig filter/ });
+    expect(remove).toBeInTheDocument();
+    fireEvent.click(remove);
+    await waitFor(() => expect(screen.queryByRole("button", { name: /Remove uploader rig filter/ })).not.toBeInTheDocument());
+  });
+
   it("toggles the accessible filter region without clearing selections", () => {
     render(
       <SetupsBrowser
