@@ -70,3 +70,13 @@ test("mobile navigation drawer closes with Escape and restores focus", async ({ 
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(menuButton).toBeFocused();
 });
+
+test("browse page does not scroll horizontally on narrow devices", async ({ page }) => {
+  await page.goto("/setups", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Browse Setups" })).toBeVisible();
+  for (const width of [320, 390, 768]) {
+    await page.setViewportSize({ width, height: 840 });
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow, `Browse overflows at ${width}px`).toBeLessThanOrEqual(1);
+  }
+});
