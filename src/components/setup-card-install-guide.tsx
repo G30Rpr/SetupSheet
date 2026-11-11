@@ -49,9 +49,9 @@ export default function SetupCardInstallGuide({ setup }: { setup: Setup }) {
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Installation steps</p>
         <ol className="flex list-decimal flex-col gap-2 pl-5 leading-relaxed text-muted-foreground">
-        {guide.steps.map((step, i) => (
-          <li key={i}>{step}</li>
-        ))}
+          {guide.steps.map((step, i) => (
+            <li key={i}>{step}</li>
+          ))}
         </ol>
       </div>
 
