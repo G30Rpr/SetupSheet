@@ -73,14 +73,14 @@ describe("SetupCard trust labels", () => {
     expect(screen.getByText("File included")).toBeInTheDocument();
   });
 
-  it("keeps 'Verified Lap' for attached evidence and defines it in place", () => {
+  it("keeps 'Lap evidence attached' for attached evidence and defines it in place", () => {
     render(
       <SetupCard
         setup={{ ...baseSetup, isVerifiedLap: true, videoUrl: "https://youtu.be/abc" }}
       />
     );
 
-    const badge = screen.getByText("Verified Lap");
+    const badge = screen.getByText("Lap evidence attached");
     expect(badge).toHaveAttribute("title", expect.stringContaining("not a site verification"));
   });
 
