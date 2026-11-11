@@ -182,6 +182,28 @@ describe("SetupsBrowser empty-combo handoff", () => {
   });
 });
 
+describe("SetupsBrowser mobile filters", () => {
+  it("toggles the accessible filter region without clearing selections", () => {
+    render(
+      <SetupsBrowser
+        setups={INDEX}
+        totalCount={500}
+        initialFilters={{ ...EMPTY_FILTERS, rig: "Wheel + 3 Pedals" }}
+      />
+    );
+    const toggle = screen.getByRole("button", { name: "Hide filters" });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("1 active")).toBeInTheDocument();
+    fireEvent.click(toggle);
+    const reopen = screen.getByRole("button", { name: "Show filters" });
+    expect(reopen).toHaveAttribute("aria-expanded", "false");
+    expect(reopen).toHaveAttribute("aria-controls", "browse-filter-fields");
+    fireEvent.click(reopen);
+    expect(screen.getByRole("button", { name: "Hide filters" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("1 active")).toBeInTheDocument();
+  });
+});
+
 describe("SetupsBrowser hidden rigs", () => {
   const MIXED = [
     makeSetup("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "Matched", "2026-08-30T10:00:00.000Z"),
