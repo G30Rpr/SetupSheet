@@ -18,6 +18,7 @@ const base = {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  Reflect.deleteProperty(navigator, "wakeLock");
 });
 
 describe("RigMode", () => {
@@ -42,4 +43,23 @@ describe("RigMode", () => {
     expect(writeText.mock.calls[0][0]).toContain("26.4 psi");
     expect(writeText.mock.calls[0][0]).toContain("26.7 psi");
   });
+  it("keeps at most one screen wake lock active and releases it when disabled", async () => {
+    const release = vi.fn().mockResolvedValue(undefined);
+    const sentinel = { release, addEventListener: vi.fn() };
+    const request = vi.fn().mockResolvedValue(sentinel);
+    Object.defineProperty(navigator, "wakeLock", {
+      configurable: true,
+      value: { request },
+    });
+    render(<RigMode setup={{ ...base, setupValues: {} }} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Keep screen awake" }));
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+    fireEvent(document, new Event("visibilitychange"));
+    expect(request).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Screen stays awake" }));
+    await waitFor(() => expect(release).toHaveBeenCalledTimes(1));
+  });
+
 });
