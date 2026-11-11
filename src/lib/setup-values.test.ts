@@ -10,7 +10,18 @@ describe("normalizeSetupValues", () => {
   it("keeps a plain string map and uses a null prototype", () => {
     const values = normalizeSetupValues({ frontArb: "3", rearArb: "2" });
     expect(values).toEqual({ frontArb: "3", rearArb: "2" });
-    if (values) expect(Object.getPrototypeOf(values)).toBeNull();
+    // Must be a plain object: React Server Components refuse to serialize
+    // null-prototype objects as props to Client Components (see fix note).
+    if (values) expect(Object.getPrototypeOf(values)).toBe(Object.prototype);
+  });
+
+  it("keeps an own __proto__ key as a data property without polluting", () => {
+    const values = normalizeSetupValues(JSON.parse('{"__proto__": "3", "frontArb": "2"}'));
+    expect(values).not.toBeNull();
+    if (!values) return;
+    expect(Object.getPrototypeOf(values)).toBe(Object.prototype);
+    expect(Object.prototype.hasOwnProperty.call(values, "__proto__")).toBe(true);
+    expect(Object.getPrototypeOf(values).polluted).toBeUndefined();
   });
 
   it("rejects non-object, nested, and oversized values", () => {

@@ -40,7 +40,12 @@ export function normalizeSetupValues(value: unknown): SetupValues | null {
     normalized[key] = item;
   }
 
-  return normalized;
+  // Spread back into a plain object: React Server Components refuse to pass
+  // null-prototype objects to Client Components ("Classes or null prototypes
+  // are not supported"), and setup values are serialized across that boundary.
+  // The spread copies own properties via CreateDataProperty, so an own
+  // "__proto__" key stays a plain own property instead of invoking a setter.
+  return { ...normalized };
 }
 
 export function isValidSetupValues(value: unknown): boolean {
