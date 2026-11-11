@@ -1,3 +1,4 @@
+import Link from "next/link";
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -522,7 +523,7 @@ export function UploadForm({
         </span>
         <div>
           <h2 className="text-xl font-semibold">
-            Log in to {isEditing ? "edit this setup" : "upload a setup"}
+            Sign in with Discord to {isEditing ? "edit this setup" : "share a setup"}
           </h2>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
             Browsing stays open to everyone. We use Discord when you upload so
@@ -559,9 +560,14 @@ export function UploadForm({
             </p>
           )}
         </div>
-        <Button onClick={resetForm} variant="outline">
-          Upload another setup
-        </Button>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Button asChild>
+            <Link href="/setups">Browse published setups</Link>
+          </Button>
+          <Button onClick={resetForm} variant="outline">
+            Upload another setup
+          </Button>
+        </div>
       </Card>
     );
   }
