@@ -18,18 +18,20 @@ const ISO_CURSOR_PATTERN =
 
 /** Loads the next keyset page for the client-side browse index. */
 export async function loadMoreSetups(
-  cursor: SetupCursor,
+  cursor: SetupCursor | null,
   filters: BrowseFilters
 ): Promise<MoreSetupsResult> {
   const normalizedFilters = normalizeBrowseFilters(filters);
   if (
     !normalizedFilters ||
-    !cursor ||
-    typeof cursor.createdAt !== "string" ||
-    cursor.createdAt.length > 64 ||
-    !ISO_CURSOR_PATTERN.test(cursor.createdAt) ||
-    Number.isNaN(Date.parse(cursor.createdAt)) ||
-    !isUuid(cursor.id)
+    (cursor !== null && (
+      !cursor ||
+      typeof cursor.createdAt !== "string" ||
+      cursor.createdAt.length > 64 ||
+      !ISO_CURSOR_PATTERN.test(cursor.createdAt) ||
+      Number.isNaN(Date.parse(cursor.createdAt)) ||
+      !isUuid(cursor.id)
+    ))
   ) {
     return { setups: [], nextCursor: null, fieldTestCounts: {}, error: "That browse cursor is invalid." };
   }

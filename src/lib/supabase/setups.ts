@@ -649,7 +649,7 @@ export async function getSetups(
  * ordering deterministic even when multiple uploads share a timestamp.
  */
 export async function getSetupsAfter(
-  cursor: SetupCursor,
+  cursor: SetupCursor | null,
   filters: BrowseFilters = EMPTY_BROWSE_FILTERS
 ): Promise<{ setups: Setup[]; nextCursor: SetupCursor | null; error: string | null }> {
   const supabase = await createClient();
@@ -658,15 +658,14 @@ export async function getSetupsAfter(
     ? supabase.from("setup_search").select(SETUP_COLUMNS)
     : supabase.from("setups").select(SETUP_COLUMNS);
 
-  // PostgREST exposes one `or` parameter. When searching, use the reliable
-  // timestamp boundary and reserve that single OR expression for the search
-  // fields; with no search, use the full composite cursor.
-  if (searchExpression) {
-    query = query.lt("created_at", cursor.createdAt);
+  const cursorExpression = cursor
+    ? `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`
+    : null;
+  if (cursorExpression && searchExpression) {
+    query = query.or(`and(or(${cursorExpression}),or(${searchExpression}))`);
   } else {
-    query = query.or(
-      `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`
-    );
+    const expression = cursorExpression ?? searchExpression;
+    if (expression) query = query.or(expression);
   }
 
   if (filters.game !== ALL_BROWSE_FILTER) query = query.eq("game", filters.game);
@@ -674,7 +673,6 @@ export async function getSetupsAfter(
   if (filters.track !== ALL_BROWSE_FILTER) query = query.eq("track", filters.track);
   if (filters.condition !== ALL_BROWSE_FILTER) query = query.eq("condition", filters.condition);
   if (filters.rig !== ALL_BROWSE_FILTER) query = query.eq("rig_profile", filters.rig);
-  if (searchExpression) query = query.or(searchExpression);
 
   const result = await query
     .order("created_at", { ascending: false })

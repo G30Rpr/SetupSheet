@@ -7,6 +7,6 @@
 - [ ] Verify production migration history and configure SUPABASE_DB_URL in GitHub Actions.
 - [ ] Add a CI guard for transaction wrappers in new migrations.
 - [ ] Refresh weighted ratings when field-test eligibility changes and backfill existing aggregates.
-- [ ] Reload Browse results when filters change and preserve tied rows during search pagination.
+- [x] Reload Browse results when filters change and preserve tied rows during search pagination.
 - [ ] Store rating reminder dismissals independently of download events.
 - [ ] Triage the nine moderate development dependency advisories.

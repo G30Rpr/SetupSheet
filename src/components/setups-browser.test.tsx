@@ -100,7 +100,7 @@ describe("SetupsBrowser remote paging", () => {
     });
   });
 
-  it("drops appended pages and re-seeds the cursor when a filter changes", async () => {
+  it("loads a new first page when a filter changes", async () => {
     loadMoreSetups.mockResolvedValue({
       setups: [makeSetup("cccccccc-cccc-4ccc-8ccc-cccccccccccc", "Older", "2026-08-28T10:00:00.000Z")],
       nextCursor: { createdAt: "2026-08-28T10:00:00.000Z", id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" },
@@ -121,13 +121,8 @@ describe("SetupsBrowser remote paging", () => {
     expect(screen.queryByText("Older")).not.toBeInTheDocument();
 
     loadMoreSetups.mockResolvedValue({ setups: [], nextCursor: null, error: null });
-    fireEvent.click(screen.getByRole("button", { name: "Load older setups" }));
-
     await waitFor(() => expect(loadMoreSetups).toHaveBeenCalledTimes(2));
-    expect(loadMoreSetups.mock.calls[1][0]).toEqual({
-      createdAt: "2026-08-29T10:00:00.000Z",
-      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-    });
+    expect(loadMoreSetups.mock.calls[1][0]).toBeNull();
     expect(loadMoreSetups.mock.calls[1][1]).toMatchObject({ search: "porsche" });
   });
 });
@@ -194,7 +189,8 @@ describe("SetupsBrowser hidden rigs", () => {
     { ...makeSetup("cccccccc-cccc-4ccc-8ccc-cccccccccccc", "Gamepad Two", "2026-08-28T10:00:00.000Z"), rigProfile: "Gamepad" as const },
   ];
 
-  it("names the hidden rig categories and lets them be shown", () => {
+  it("names the hidden rig categories and lets them be shown", async () => {
+    loadMoreSetups.mockResolvedValue({ setups: MIXED, nextCursor: null, error: null });
     render(
       <SetupsBrowser
         setups={MIXED}
@@ -211,7 +207,7 @@ describe("SetupsBrowser hidden rigs", () => {
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Show them" }));
-    expect(screen.getAllByTestId("card")).toHaveLength(3);
+    expect(await screen.findAllByTestId("card")).toHaveLength(3);
     expect(
       screen.queryByText(/Hiding Gamepad setups/)
     ).not.toBeInTheDocument();

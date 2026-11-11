@@ -102,9 +102,14 @@ export function SetupsBrowser({
   const [remoteError, setRemoteError] = useState<string | null>(null);
   const [isLoadingOlder, startLoadingOlder] = useTransition();
 
+  const [firstPage, setFirstPage] = useState<Setup[] | null>(null);
+  const [needsFirstPage, setNeedsFirstPage] = useState(false);
+  const [refreshAttempt, setRefreshAttempt] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const requestGeneration = useRef(0);
   const loadedSetups = useMemo(
-    () => [...setups, ...additionalSetups],
-    [setups, additionalSetups]
+    () => [...(firstPage ?? setups), ...additionalSetups],
+    [firstPage, setups, additionalSetups]
   );
   const hasMoreRemote = Boolean(
     remoteCursor && (totalCount === null || loadedSetups.length < totalCount)
@@ -117,27 +122,43 @@ export function SetupsBrowser({
   const [condition, setCondition] = useState<string>(initialFilters.condition);
   const [rig, setRig] = useState<string>(initialFilters.rig);
   const [tag, setTag] = useState<string>(initialFilters.tag);
-  // Both the appended pages and the keyset cursor describe one specific query.
-  // Filters are applied client-side over the server-rendered index, so the
-  // moment any filter changes, rows appended under the previous filters are a
-  // different result set and the cursor points into the wrong ordering -- using
-  // either can duplicate or silently skip setups. Re-seeding from the current
-  // server index on every filter/index change is what keeps "load older"
-  // honest. (Adjusting state during render rather than in an effect, so the
-  // first paint after the change already reflects it -- same pattern as
-  // NotificationBell.)
   const filterSignature = JSON.stringify([search, game, car, track, condition, rig, tag]);
   const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
-  const [prevSetups, setPrevSetups] = useState(setups);
-  if (prevFilterSignature !== filterSignature || prevSetups !== setups) {
+  if (prevFilterSignature !== filterSignature) {
     setPrevFilterSignature(filterSignature);
-    setPrevSetups(setups);
     setAdditionalSetups([]);
     setAdditionalFieldTestCounts({});
     setRemoteError(null);
-    const lastSetup = setups.at(-1);
-    setRemoteCursor(lastSetup ? { createdAt: lastSetup.uploadedAt, id: lastSetup.id } : null);
+    setRemoteCursor(null);
+    setNeedsFirstPage(true);
+    setIsRefreshing(true);
   }
+
+  useEffect(() => {
+    const generation = ++requestGeneration.current;
+    if (!needsFirstPage) return;
+    const timer = setTimeout(async () => {
+      try {
+        const result = await loadMoreSetups(null, { search, game, car, track, condition, rig, tag });
+        if (requestGeneration.current !== generation) return;
+        if (result.error) {
+          setRemoteError(result.error);
+          return;
+        }
+        setFirstPage(result.setups);
+        setAdditionalFieldTestCounts(result.fieldTestCounts ?? {});
+        setRemoteCursor(result.nextCursor);
+      } catch {
+        if (requestGeneration.current === generation) setRemoteError("Couldn't refresh setups right now.");
+      } finally {
+        if (requestGeneration.current === generation) setIsRefreshing(false);
+      }
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      requestGeneration.current = generation + 1;
+    };
+  }, [needsFirstPage, refreshAttempt, search, game, car, track, condition, rig, tag]);
 
   const [sort, setSort] = useState<SortOption>(() => {
     const fromUrl = searchParams.get("sort");
@@ -376,6 +397,7 @@ export function SetupsBrowser({
   function handleLoadOlder() {
     if (!remoteCursor || isLoadingOlder) return;
     const cursor = remoteCursor;
+    const generation = requestGeneration.current;
     setRemoteError(null);
 
     startLoadingOlder(async () => {
@@ -389,13 +411,14 @@ export function SetupsBrowser({
           rig,
           tag,
         });
+        if (requestGeneration.current !== generation) return;
         if (result.error) {
           setRemoteError(result.error);
           return;
         }
 
         setAdditionalSetups((previous) => {
-          const knownIds = new Set([...setups, ...previous].map((setup) => setup.id));
+          const knownIds = new Set([...(firstPage ?? setups), ...previous].map((setup) => setup.id));
           return [
             ...previous,
             ...result.setups.filter((setup) => !knownIds.has(setup.id)),
@@ -413,7 +436,7 @@ export function SetupsBrowser({
             : null
         );
       } catch {
-        setRemoteError("Couldn't load older setups right now.");
+        if (requestGeneration.current === generation) setRemoteError("Couldn't load older setups right now.");
       }
     });
   }
@@ -573,7 +596,7 @@ export function SetupsBrowser({
         {/* buttons stay put when the count is hidden */}
         {/* No result count while the read is failing: "0 setups found" next to
             an error state reads as a filter problem. */}
-        {!loadFailed && (
+        {(!loadFailed || needsFirstPage) && !isRefreshing && !remoteError && (
           <p className="text-sm text-muted-foreground">
             {hasMore
               ? `Showing ${visibleSetups.length} of ${filtered.length} setups`
@@ -745,7 +768,18 @@ export function SetupsBrowser({
       )}
 
       <h2 id="setup-results-heading" className="sr-only">Setup results</h2>
-      {filtered.length > 0 ? (
+      {isRefreshing ? (
+        <p role="status" className="text-sm text-muted-foreground">Updating setups…</p>
+      ) : remoteError && !remoteCursor ? (
+        <div className="space-y-2">
+          <p role="alert" className="text-sm text-destructive">{remoteError}</p>
+          <RetryButton label="Retry loading setups" onRetry={() => {
+            setRemoteError(null);
+            setIsRefreshing(true);
+            setRefreshAttempt((attempt) => attempt + 1);
+          }} />
+        </div>
+      ) : filtered.length > 0 ? (
         <>
           <section aria-labelledby="setup-results-heading" aria-busy={deferredSearch !== search}>
             <ul className="grid list-none grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -771,7 +805,7 @@ export function SetupsBrowser({
             </div>
           )}
         </>
-      ) : loadFailed && loadedSetups.length === 0 ? (
+      ) : loadFailed && !needsFirstPage && loadedSetups.length === 0 ? (
         // Empty grid + failed read is an outage, not a quiet community.
         <EmptyState
           tone="error"
@@ -780,7 +814,7 @@ export function SetupsBrowser({
           description="We couldn't reach the setup library just now — this isn't a filter problem. Nothing you've saved or uploaded is affected."
           action={<RetryButton />}
         />
-      ) : loadedSetups.length === 0 ? (
+      ) : loadedSetups.length === 0 && !needsFirstPage ? (
         <EmptyState
           icon={Upload}
           title="No setups yet"
