@@ -41,7 +41,14 @@ jobs:
       - run: npm audit --audit-level=high
 
   e2e:
-    runs-on: ubuntu-latest
+    # Pinned off ubuntu-latest: the Ubuntu 26 rollout (starting 2026-10-19)
+    # breaks `npx playwright install --with-deps` -- the pinned Playwright
+    # release's apt dependency list references packages the new image no
+    # longer has, so the install step exits 1 before any test runs. Verified
+    # on 2026-11-11: e2e green on ubuntu-latest earlier that day, then three
+    # consecutive failures at that step as the rollout reached the pool.
+    # Follow-up: bump Playwright and unpin once its --with-deps supports 26.
+    runs-on: ubuntu-24.04
     needs: lint-test-build
     steps:
       - uses: actions/checkout@v6
