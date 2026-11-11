@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Check, ClipboardCopy, Copy, Moon, Sun } from "lucide-react";
 import { toast } from "sonner";
 
@@ -15,6 +15,7 @@ export function RigMode({ setup }: { setup: RigSetup }) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [keepAwake, setKeepAwake] = useState(false);
   const [wakeSupported, setWakeSupported] = useState(false);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   const groups = useMemo(() => {
     const values = setup.setupValues ?? {};
@@ -43,7 +44,6 @@ export function RigMode({ setup }: { setup: RigSetup }) {
 
   useEffect(() => {
     if (!keepAwake || !("wakeLock" in navigator)) return;
-    let lock: WakeLockSentinel | null = null;
     let cancelled = false;
     async function acquire() {
       if (document.visibilityState !== "visible") return;
@@ -53,7 +53,7 @@ export function RigMode({ setup }: { setup: RigSetup }) {
           await next.release();
           return;
         }
-        lock = next;
+        wakeLockRef.current = next;
       } catch {
         if (!cancelled) {
           setKeepAwake(false);
@@ -69,7 +69,10 @@ export function RigMode({ setup }: { setup: RigSetup }) {
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      if (lock) void lock.release();
+      if (wakeLockRef.current) {
+        void wakeLockRef.current.release();
+        wakeLockRef.current = null;
+      }
     };
   }, [keepAwake]);
 
