@@ -671,44 +671,44 @@ export function SetupCard({
           <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-secondary/20 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Get this setup</p>
             <div className="flex items-stretch gap-2">
-            <Button
-              type="button"
-              onClick={handleDownload}
-              disabled={isDownloading}
-              aria-busy={isDownloading}
-              title={setup.fileName ?? undefined}
-              className="min-w-0 flex-1 justify-between"
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <FileDown className="size-4 shrink-0" />
-                <span className="truncate">
-                  {isDownloading ? "Preparing download..." : "Download Setup"}
-                </span>
-              </span>
-              <span className="shrink-0 text-xs font-normal text-primary-foreground/80">
-                {/* Zero download counts are not advertised — no "0 downloads",
-                    no "Be the first" bait. The count appears once it's real. */}
-                {downloads > 0 ? (
-                  <>
-                    <span className="font-mono tabular-nums">{downloads}</span>{" "}
-                    {downloads === 1 ? "download" : "downloads"}
-                  </>
-                ) : null}
-              </span>
-            </Button>
-            {isDetail && setup.setupValues && (
               <Button
                 type="button"
-                variant="outline"
-                size="icon"
-                onClick={handleCopyValues}
-                aria-label="Copy setup values to clipboard"
-                title="Copy setup values"
-                className="shrink-0"
+                onClick={handleDownload}
+                disabled={isDownloading}
+                aria-busy={isDownloading}
+                title={setup.fileName ?? undefined}
+                className="min-w-0 flex-1 justify-between"
               >
-                <Clipboard className="size-4" />
+                <span className="flex min-w-0 items-center gap-2">
+                  <FileDown className="size-4 shrink-0" />
+                  <span className="truncate">
+                    {isDownloading ? "Preparing download..." : "Download Setup"}
+                  </span>
+                </span>
+                <span className="shrink-0 text-xs font-normal text-primary-foreground/80">
+                  {/* Zero download counts are not advertised — no "0 downloads",
+                      no "Be the first" bait. The count appears once it's real. */}
+                  {downloads > 0 ? (
+                    <>
+                      <span className="font-mono tabular-nums">{downloads}</span>{" "}
+                      {downloads === 1 ? "download" : "downloads"}
+                    </>
+                  ) : null}
+                </span>
               </Button>
-            )}
+              {isDetail && setup.setupValues && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopyValues}
+                  aria-label="Copy setup values to clipboard"
+                  title="Copy setup values"
+                  className="shrink-0"
+                >
+                  <Clipboard className="size-4" />
+                </Button>
+              )}
             </div>
             {isDetail && (
               <p className="text-xs text-muted-foreground">Free download · No account required. Use the installation guide below to get on track.</p>
