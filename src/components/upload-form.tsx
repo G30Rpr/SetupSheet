@@ -590,7 +590,7 @@ export function UploadForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+    <form onSubmit={handleSubmit} aria-busy={isPending} className="flex flex-col gap-6">
       {answering && requestContext && (
         <Card className="gap-1.5 border-racing-coral/40 px-5 py-4">
           <p className="text-sm font-medium">
@@ -770,7 +770,7 @@ export function UploadForm({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lapTime">Lap time</Label>
+              <Label htmlFor="lapTime">Lap time (optional)</Label>
               <Input
                 id="lapTime"
                 name="lapTime"
@@ -801,7 +801,7 @@ export function UploadForm({
               <Label htmlFor="rig">Uploader rig <span className="text-xs font-normal text-muted-foreground">(Required)</span></Label>
               <Select name="rig" required value={rig} onValueChange={setRig}>
                 <SelectTrigger id="rig" className="w-full">
-                  <SelectValue placeholder="Select your rig" />
+                  <SelectValue placeholder="Select uploader hardware" />
                 </SelectTrigger>
                 <SelectContent>
                   {rigProfiles.map((profile) => (
@@ -879,6 +879,14 @@ export function UploadForm({
         </div>
       </Card>
 
+      {isPending && (
+        <div role="status" aria-live="polite" className="rounded-lg border border-border/80 bg-secondary/30 p-4">
+          <p className="text-sm font-medium">{uploadPercent === null ? "Saving your setup…" : uploadPercent >= 100 ? "Upload complete. Finishing publication…" : `Uploading files: ${Math.round(uploadPercent)}%`}</p>
+          {uploadPercent !== null && (
+            <progress value={uploadPercent} max={100} aria-label="File upload progress" className="mt-2 h-2 w-full accent-primary" />
+          )}
+        </div>
+      )}
       <Button type="submit" size="lg" disabled={isPending}>
         {isPending ? (
           <>
