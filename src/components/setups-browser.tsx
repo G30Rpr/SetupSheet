@@ -609,6 +609,32 @@ export function SetupsBrowser({
         </div>
 
         {hasActiveFilters && (
+          <div className="mt-3 flex flex-wrap items-center gap-2" aria-label="Applied search filters">
+            {[
+              { label: "Search", value: search, clear: () => setSearch("") },
+              { label: "Game", value: game, clear: () => handleGameChange(ALL) },
+              { label: "Car", value: car, clear: () => setCar(ALL) },
+              { label: "Track", value: track, clear: () => setTrack(ALL) },
+              { label: "Condition", value: condition, clear: () => setCondition(ALL) },
+              { label: "Uploader rig", value: rig, clear: () => setRig(ALL) },
+              { label: "Tag", value: tag, clear: () => setTag(ALL) },
+            ].filter(({ value }) => Boolean(value) && value !== ALL).map(({ label, value, clear }) => (
+              <Button
+                key={label}
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={clear}
+                aria-label={`Remove ${label.toLowerCase()} filter: ${value}`}
+                className="h-9 max-w-full gap-1.5 rounded-full px-3 text-xs"
+              >
+                <span className="truncate">{label}: {value}</span>
+                <X className="size-3.5 shrink-0" aria-hidden="true" />
+              </Button>
+            ))}
+          </div>
+        )}
+        {hasActiveFilters && (
           <div className="mt-3 flex justify-end">
             <Button variant="ghost" size="sm" onClick={resetFilters}>
               <X />
