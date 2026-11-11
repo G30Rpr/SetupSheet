@@ -203,7 +203,7 @@ describe("SetupsBrowser hidden rigs", () => {
     expect(screen.getAllByTestId("card")).toHaveLength(1);
     // ...and the hidden category is named in a quiet line.
     expect(
-      screen.getByText(/Hiding setups from other uploader rig categories \\(Gamepad\\)\\./)
+      screen.getByText(/Hiding setups from other uploader rig categories \(Gamepad\)\./)
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Show them" }));
