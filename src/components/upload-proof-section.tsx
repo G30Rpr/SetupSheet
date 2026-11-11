@@ -51,7 +51,7 @@ export function UploadProofSection({
           className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
         >
           <CheckCircle2 className="size-4 text-muted-foreground" />
-          Verified Lap Proof &amp; Telemetry
+          Lap Evidence &amp; Telemetry
           <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
         </span>
         <ChevronDown
@@ -63,7 +63,7 @@ export function UploadProofSection({
       </Button>
       <p className="text-xs text-muted-foreground">
         Add proof only if you have it. A video link or telemetry file adds a
-        &ldquo;Verified Lap&rdquo; badge to your setup card.
+        &ldquo;Lap evidence attached&rdquo; badge to your setup card.
       </p>
 
       {showFields && (
