@@ -35,7 +35,7 @@ const questions = [
 
 export default function HelpPage() {
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
+    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
       <div className="mb-10 max-w-2xl">
         <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-racing-coral">Getting started</p>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Help using SetupSheet</h1>
@@ -84,6 +84,6 @@ export default function HelpPage() {
           <Button asChild variant="ghost"><Link href="/community-guidelines">Community guidelines</Link></Button>
         </div>
       </section>
-    </main>
+    </div>
   );
 }
