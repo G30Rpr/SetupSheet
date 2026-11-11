@@ -3,11 +3,13 @@ import { expect, test } from "@playwright/test";
 const widths = [390, 768, 1024, 1280, 1440];
 
 test("landing and Help are readable at release viewport widths", async ({ page }) => {
-  for (const width of widths) {
-    await page.setViewportSize({ width, height: 900 });
-    for (const route of ["/", "/help"]) {
-      await page.goto(route);
-      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  for (const route of ["/", "/help"]) {
+    // Load each server-backed route only once. Viewport changes do not require
+    // refetching failed/slow CI database requests.
+    await page.goto(route, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: 900 });
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow, `Horizontal overflow at ${width}px on ${route}`).toBeLessThanOrEqual(1);
     }
