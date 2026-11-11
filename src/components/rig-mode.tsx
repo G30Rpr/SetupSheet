@@ -95,7 +95,7 @@ export function RigMode({ setup }: { setup: RigSetup }) {
   ]).join("\n").trim();
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-background text-foreground">
+    <div data-rig-mode className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-background text-foreground">
       <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <Button variant="outline" size="sm" asChild>
