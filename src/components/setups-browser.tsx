@@ -122,6 +122,9 @@ export function SetupsBrowser({
   const [condition, setCondition] = useState<string>(initialFilters.condition);
   const [rig, setRig] = useState<string>(initialFilters.rig);
   const [tag, setTag] = useState<string>(initialFilters.tag);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(() =>
+    [initialFilters.game, initialFilters.car, initialFilters.track, initialFilters.condition, initialFilters.rig, initialFilters.tag].some((value) => value !== ALL)
+  );
   const filterSignature = JSON.stringify([search, game, car, track, condition, rig, tag]);
   const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
   if (prevFilterSignature !== filterSignature) {
@@ -369,6 +372,8 @@ export function SetupsBrowser({
   const visibleSetups = filtered.slice(0, page * SETUP_CARD_PAGE_SIZE);
   const hasMore = filtered.length > visibleSetups.length;
 
+  const activeSelectFilterCount = [game, car, track, condition, rig, tag].filter((value) => value !== ALL).length;
+
   const hasActiveFilters =
     search !== "" ||
     game !== ALL ||
@@ -532,12 +537,33 @@ export function SetupsBrowser({
           )}
         </div>
 
-        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <SlidersHorizontal className="size-4" />
-          Filter setups
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <SlidersHorizontal className="size-4" aria-hidden="true" />
+            Filter setups
+            {activeSelectFilterCount > 0 && (
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-foreground">
+                {activeSelectFilterCount} active
+              </span>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="md:hidden"
+            aria-expanded={mobileFiltersOpen}
+            aria-controls="browse-filter-fields"
+            onClick={() => setMobileFiltersOpen((open) => !open)}
+          >
+            {mobileFiltersOpen ? "Hide filters" : "Show filters"}
+          </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div
+          id="browse-filter-fields"
+          className={cn("grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6", mobileFiltersOpen ? "grid" : "hidden md:grid")}
+        >
           <FilterSelect
             label="Game"
             value={game}
