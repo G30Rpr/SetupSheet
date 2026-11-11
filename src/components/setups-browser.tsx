@@ -567,7 +567,7 @@ export function SetupsBrowser({
             placeholder="All conditions"
           />
           <FilterSelect
-            label="Rig"
+            label="Uploader rig"
             value={rig}
             onChange={setRig}
             options={rigProfiles}
@@ -637,7 +637,7 @@ export function SetupsBrowser({
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3 rounded-lg border border-border/80 bg-secondary/40 px-4 py-3">
         <div>
           <span id="my-rig-label" className="text-xs font-medium text-muted-foreground">
-            Your rig
+            My hardware
           </span>
           <div
             className="mt-1.5 flex flex-wrap items-center gap-2"
@@ -725,9 +725,9 @@ export function SetupsBrowser({
         <p className="max-w-[42ch] text-xs text-muted-foreground">
           {myRig?.inputDevice
             ? myRig.brakeType || myRig.inputDevice === "gamepad"
-              ? "Used for Best for my rig and match chips."
+              ? "Used to highlight compatible hardware and improve Best for my rig sorting; it does not filter results."
               : "Pick what stops the car to get matches."
-            : "Set what you drive to sort Best for my rig and spot matches."}
+            : "Set your hardware to see compatibility matches without hiding other setups."}
         </p>
         {rigSaveError && (
           <p role="alert" className="text-xs text-destructive">
@@ -738,8 +738,7 @@ export function SetupsBrowser({
 
       {rig !== ALL && hiddenRigNames.length > 0 && (
         <p className="text-sm text-muted-foreground">
-          Hiding {joinRigNames(hiddenRigNames)} setups that don&apos;t match
-          your rig.{" "}
+          Hiding setups from other uploader rig categories ({joinRigNames(hiddenRigNames)}).{" "}
           <button
             type="button"
             onClick={() => setRig(ALL)}
