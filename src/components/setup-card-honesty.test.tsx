@@ -97,6 +97,18 @@ describe("SetupCard trust labels", () => {
     expect(screen.queryByText(/be the first/i)).not.toBeInTheDocument();
   });
 
+  it("keeps download as the primary action and explains anonymous access on detail", () => {
+    render(
+      <SetupCard
+        variant="detail"
+        setup={{ ...baseSetup, fileUrl: "https://example.com/x.json", fileName: "x.json" }}
+      />
+    );
+    expect(screen.getByText("Get this setup")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /download setup/i })).toBeInTheDocument();
+    expect(screen.getByText(/Free download · No account required/)).toBeInTheDocument();
+  });
+
   it("shows the download count once it is real", () => {
     render(
       <SetupCard
