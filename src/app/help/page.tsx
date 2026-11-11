@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 const steps = [
   { title: "Find a setup", description: "Search by simulator, car and track. Narrow the results with conditions and uploader rig filters.", icon: Search },
   { title: "Review and download", description: "Check the setup context, rating evidence and hardware fit. Browsing and downloading do not require an account.", icon: Download },
-  { title: "Install or enter values", description: "Open a setup detail page for game-specific installation guidance. Some games accept setup files; others need manual value entry.", icon: Upload },
+  { title: "Install or enter values", description: "Open a setup detail page for game-specific installation guidance. Use Rig mode for larger values on a phone or second screen; some games accept setup files, while others need manual entry.", icon: Upload },
 ];
 
 const questions = [
@@ -28,6 +28,7 @@ const questions = [
   { q: "What does 'Lap evidence attached' mean?", a: "The uploader added a lap video or telemetry file. This is author-supplied evidence, not independent verification by SetupSheet." },
   { q: "What is the difference between Uploader rig and My hardware?", a: "Uploader rig limits which submissions you see. My hardware highlights compatible hardware and informs the Best for my rig sort without hiding other setups." },
   { q: "How do I install a downloaded setup?", a: "Open the setup detail and follow its game-specific installation instructions. Importable files and manual-entry setups use different steps." },
+  { q: "Can I use a phone beside my sim rig?", a: "Yes. Open a setup detail and choose Open rig mode for large tuning values and one-tap copying. On supported devices, Keep screen awake prevents the display from sleeping while you work." },
   { q: "What if I cannot find my car and track?", a: "You can ask the community for a missing combination on the Requests page. You can also use Engineer for general tuning guidance." },
   { q: "Are setup ratings and lap times official?", a: "Lap times are self-reported. Community pace and predictability scores reflect user ratings, and low rating counts provide limited evidence." },
 ];
