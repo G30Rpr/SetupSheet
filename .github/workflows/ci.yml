@@ -41,15 +41,11 @@ jobs:
       - run: npm audit --audit-level=high
 
   e2e:
-    # Pinned off ubuntu-latest: the Ubuntu 26 rollout (starting 2026-10-19)
-    # breaks `npx playwright install --with-deps` -- the pinned Playwright
-    # release's apt dependency list references packages the new image no
-    # longer has, so the install step exits 1 before any test runs. Verified
-    # on 2026-11-11: e2e green on ubuntu-latest earlier that day, then three
-    # consecutive failures at that step as the rollout reached the pool.
-    # Follow-up: bump Playwright and unpin once its --with-deps supports 26.
+    # Conservative pin while the ubuntu-latest -> Ubuntu 26 image rollout
+    # (starting 2026-10-19) settles.
     runs-on: ubuntu-24.04
     needs: lint-test-build
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -57,7 +53,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # Plain install, deliberately NOT --with-deps: that variant apt-installs
+      # CJK fonts and extras, and since 2026-11-11 the runner pool cannot
+      # resolve the Ubuntu package mirrors ("Temporary failure resolving
+      # 'azure.archive.ubuntu.com'"), so apt exits 100 after ~10 minutes of
+      # retries. The hosted image already ships the browser's runtime
+      # libraries; if a future image drops one, add the specific package in
+      # its own step rather than returning to --with-deps.
+      - run: npx playwright install chromium
       - run: npm run build
       - run: npx playwright test
 
