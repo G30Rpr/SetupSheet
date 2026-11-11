@@ -42,6 +42,16 @@ if [[ -n "$duplicate_versions" ]]; then
   exit 1
 fi
 
+# Versions before 0041 are historical and may contain explicit transactions.
+for migration in supabase/migrations/*.sql; do
+  version=${migration##*/}
+  version=${version%%_*}
+  if (( 10#$version >= 41 )) && grep -qiE '^[[:space:]]*(begin|commit)[[:space:]]*;' "$migration"; then
+    echo "Migration must use the deployment runner transaction: $migration" >&2
+    exit 1
+  fi
+done
+
 for migration in supabase/migrations/*.sql; do
   echo "Applying $migration"
   psql -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
