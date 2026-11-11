@@ -512,6 +512,12 @@ export type Database = {
         };
         Relationships: Relationships;
       };
+      rating_prompt_dismissals: {
+        Row: { user_id: string; setup_id: string };
+        Insert: { user_id: string; setup_id: string };
+        Update: never;
+        Relationships: Relationships;
+      };
       setup_download_events: {
         Row: {
           id: string;

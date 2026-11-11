@@ -28,7 +28,6 @@
 -- Additive throughout; the only replaced object is the recompute function
 -- body (called out per the migration rules).
 
-begin;
 
 -- ---------------------------------------------------------------------------
 -- 1. Download events (signed-in downloads only).
@@ -106,7 +105,7 @@ $$;
 comment on function public.rating_weight(uuid, uuid) is
   'How much a rating counts (Garage-verified weighting). 2.0 when the rater filed a field-test report for the setup, else 1.0. The single documented source of weighting.';
 
-grant execute on function public.rating_weight(uuid, uuid) to anon, authenticated, service_role;
+revoke execute on function public.rating_weight(uuid, uuid) from PUBLIC, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 3. Weighted aggregates (same signature as 0036; body replaced atomically).
@@ -189,5 +188,3 @@ left join public.setups s on s.user_id = p.id
 left join public.setup_impact_counts imp on imp.setup_id = s.id
 left join public.field_test_counts ft on ft.setup_id = s.id
 group by p.id, p.username, p.avatar_url;
-
-commit;

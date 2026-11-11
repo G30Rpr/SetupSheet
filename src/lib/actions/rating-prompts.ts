@@ -8,7 +8,7 @@ export type DismissRatingPromptResult = { ok: true } | { ok: false; error: strin
 /**
  * Dismisses the 24h rating prompt for one (viewer, setup) pair. The prompt
  * is a nudge, not homework -- dismissal is one tap and permanent per pair.
- * Owner-only RLS (0041) scopes the write to the caller's own download rows.
+ * Owner-only RLS scopes the write to the caller.
  */
 export async function dismissRatingPrompt(setupId: string): Promise<DismissRatingPromptResult> {
   if (!isUuid(setupId)) {
@@ -25,11 +25,11 @@ export async function dismissRatingPrompt(setupId: string): Promise<DismissRatin
     }
 
     const { error } = await supabase
-      .from("setup_download_events")
-      .update({ prompt_dismissed_at: new Date().toISOString() })
-      .eq("user_id", user.id)
-      .eq("setup_id", setupId)
-      .is("prompt_dismissed_at", null);
+      .from("rating_prompt_dismissals")
+      .upsert(
+        { user_id: user.id, setup_id: setupId },
+        { onConflict: "user_id,setup_id", ignoreDuplicates: true }
+      );
     if (error) {
       return { ok: false, error: "Couldn't dismiss the prompt. Try again." };
     }

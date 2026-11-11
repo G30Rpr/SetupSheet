@@ -52,6 +52,10 @@ insert into public.garage_laps (session_id, revision_id, lap_time_ms, condition)
   ('00000000-0000-0000-0000-0000000000a3', '00000000-0000-0000-0000-0000000000b3', 118100, 'Dry'),
   ('00000000-0000-0000-0000-0000000000a3', '00000000-0000-0000-0000-0000000000b3', 117900, 'Dry');
 
+-- Ratings: u2 (plain) 5/5, u3 (verified) 3/3. Author never rates.
+insert into public.setup_ratings (user_id, setup_id, pace, predictability) values
+  ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-0000000000f1', 5, 5),
+  ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-0000000000f1', 3, 3);
 -- u3's Garage-derived field-test report on s1 (u3 becomes "verified").
 insert into public.field_test_reports (id, user_id, garage_session_id, setup_id, game, condition, validated_changes, laps_run, best_lap_ms)
 values (
@@ -62,10 +66,6 @@ values (
   'Assetto Corsa Competizione', 'Dry', '["arbs"]'::jsonb, 2, 119500
 );
 
--- Ratings: u2 (plain) 5/5, u3 (verified) 3/3. Author never rates.
-insert into public.setup_ratings (user_id, setup_id, pace, predictability) values
-  ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-0000000000f1', 5, 5),
-  ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-0000000000f1', 3, 3);
 -- (fixtures stay inside the one transaction that the file ends with rollback on,
 -- so nothing leaks into later zz files)
 
@@ -84,6 +84,12 @@ declare
   v_laps int;
   v_ft int;
 begin
+  if has_function_privilege('anon', 'public.rating_weight(uuid,uuid)', 'EXECUTE')
+    or has_function_privilege('authenticated', 'public.rating_weight(uuid,uuid)', 'EXECUTE')
+  then
+    raise exception 'rating_weight must be internal';
+  end if;
+
   -- 1. rating_weight: 2.0 with a field-test report for THIS setup, else 1.0.
   select public.rating_weight('00000000-0000-0000-0000-000000000003',
                               '00000000-0000-0000-0000-0000000000f1') into w;
@@ -125,6 +131,18 @@ begin
 end;
 $$;
 
+-- Removing the report also removes the extra weight.
+delete from public.field_test_reports
+where id = '00000000-0000-0000-0000-0000000000c1';
+do $$
+begin
+  if (select pace from public.setups
+      where id = '00000000-0000-0000-0000-0000000000f1') is distinct from 4.0 then
+    raise exception 'removing the field test did not restore the unweighted rating';
+  end if;
+end;
+$$;
+
 -- 5. Download events: owner-only, anon sees nothing.
 set local role authenticated;
 do $$
@@ -152,6 +170,20 @@ begin
   -- with-check must have refused it; if we got here the policy failed.
   raise exception 'cross-user download insert was accepted';
 exception when insufficient_privilege or check_violation then null;
+end;
+$$;
+
+-- Old app instances still persist a dismissal for new app instances.
+insert into public.setup_download_events (setup_id, user_id)
+values ('00000000-0000-0000-0000-0000000000f1', auth.uid());
+update public.setup_download_events set prompt_dismissed_at = now()
+where user_id = auth.uid();
+delete from public.setup_download_events where user_id = auth.uid();
+do $$
+begin
+  if (select count(*) from public.rating_prompt_dismissals) <> 1 then
+    raise exception 'dismissal should survive removal of its download event';
+  end if;
 end;
 $$;
 

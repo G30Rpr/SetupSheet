@@ -41,12 +41,13 @@ async function loadPendingPromptPicks(
   const candidateIds = Array.from(new Set(events.map((e) => e.setupId)));
   if (candidateIds.length === 0) return [];
 
-  const [{ data: ratedRows }, { data: setupRows }] = await Promise.all([
+  const [{ data: ratedRows }, { data: setupRows }, dismissals] = await Promise.all([
     supabase.from("setup_ratings").select("setup_id").eq("user_id", userId).in("setup_id", candidateIds),
     supabase
       .from("setups")
       .select("id, game, car, track, user_id")
       .in("id", candidateIds),
+    supabase.from("rating_prompt_dismissals").select("setup_id").eq("user_id", userId).in("setup_id", candidateIds),
   ]);
 
   const ratedSetupIds = new Set((ratedRows ?? []).map((row) => row.setup_id));
@@ -54,7 +55,9 @@ async function loadPendingPromptPicks(
     (setupRows ?? []).filter((row) => row.user_id === userId).map((row) => row.id)
   );
 
-  return pickPendingPrompts(events, ratedSetupIds, authorSetupIds, limit);
+  if (dismissals.error) return [];
+  const dismissedIds = new Set(dismissals.data.map((row) => row.setup_id));
+  return pickPendingPrompts(events.filter((event) => !dismissedIds.has(event.setupId)), ratedSetupIds, authorSetupIds, limit);
 }
 
 /**
