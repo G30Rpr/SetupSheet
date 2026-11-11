@@ -135,6 +135,7 @@ export function UploadForm({
   const [keepExistingTelemetry, setKeepExistingTelemetry] = useState(Boolean(existingSetup?.telemetryFileName));
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "success">("idle");
+  const [publishedSetupId, setPublishedSetupId] = useState<string | null>(null);
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -191,6 +192,7 @@ export function UploadForm({
       if (draft.game) setGame(draft.game);
       if (draft.condition) setCondition(draft.condition);
       if (draft.lapTime) setLapTime(draft.lapTime);
+      if (typeof draft.gameVersion === "string") setGameVersion(draft.gameVersion);
       if (draft.rig) setRig(draft.rig);
       if (draft.description) setDescription(draft.description);
       if (Array.isArray(draft.tags)) setTags(draft.tags);
@@ -219,11 +221,11 @@ export function UploadForm({
     const id = setTimeout(() => {
       localStorage.setItem(
         draftKey(user.id),
-        JSON.stringify({ game, condition, lapTime, rig, description, tags, setupValues, entryMode })
+        JSON.stringify({ game, condition, lapTime, gameVersion, rig, description, tags, setupValues, entryMode })
       );
     }, 500);
     return () => clearTimeout(id);
-  }, [isEditing, user, game, condition, lapTime, rig, description, tags, setupValues, entryMode]);
+  }, [isEditing, user, game, condition, lapTime, gameVersion, rig, description, tags, setupValues, entryMode]);
 
   function toggleTag(tag: SetupTag) {
     setTags((prev) =>
@@ -469,6 +471,7 @@ export function UploadForm({
             setFulfillOutcome(fulfillResult.error ? "unfulfilled" : "fulfilled");
           }
           if (user) localStorage.removeItem(draftKey(user.id));
+          setPublishedSetupId(result.setupId ?? null);
           setStatus("success");
         }
       } catch (cause) {
@@ -492,6 +495,7 @@ export function UploadForm({
     setGame("");
     setCondition("");
     setLapTime("");
+    setGameVersion("");
     setRig("");
     setDescription("");
     setVideoUrl("");
@@ -508,6 +512,8 @@ export function UploadForm({
     setTags([]);
     setError(null);
     setStatus("idle");
+    setPublishedSetupId(null);
+    setFulfillOutcome(null);
   }
 
   if (isLoading) {
@@ -562,7 +568,12 @@ export function UploadForm({
           )}
         </div>
         <div className="flex flex-wrap justify-center gap-3">
-          <Button asChild>
+          {publishedSetupId && (
+            <Button asChild>
+              <Link href={`/setups/${encodeURIComponent(publishedSetupId)}`}>View your published setup</Link>
+            </Button>
+          )}
+          <Button asChild variant={publishedSetupId ? "outline" : "default"}>
             <Link href="/setups">Browse published setups</Link>
           </Button>
           <Button onClick={resetForm} variant="outline">
