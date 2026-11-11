@@ -84,6 +84,12 @@ declare
   v_laps int;
   v_ft int;
 begin
+  if has_function_privilege('anon', 'public.rating_weight(uuid,uuid)', 'EXECUTE')
+    or has_function_privilege('authenticated', 'public.rating_weight(uuid,uuid)', 'EXECUTE')
+  then
+    raise exception 'rating_weight must be internal';
+  end if;
+
   -- 1. rating_weight: 2.0 with a field-test report for THIS setup, else 1.0.
   select public.rating_weight('00000000-0000-0000-0000-000000000003',
                               '00000000-0000-0000-0000-0000000000f1') into w;

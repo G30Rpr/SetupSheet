@@ -157,9 +157,9 @@ jobs:
             f="${e##*|}"
             name="$(basename "$f" .sql)"
             echo "::group::Apply $name"
-            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 --single-transaction -f "$f"
-            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -Atc \
-              "insert into supabase_migrations.schema_migrations (version, name, created_by) values ('$ver', '$name', 'github-actions deploy-migrations') on conflict (version) do nothing"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 --single-transaction \
+              -f "$f" \
+              -c "insert into supabase_migrations.schema_migrations (version, name, created_by) values ('$ver', '$name', 'github-actions deploy-migrations')"
             echo "::endgroup::"
           done
 
