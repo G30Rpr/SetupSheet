@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, ClipboardCopy, Download, PackageOpen } from "lucide-react";
+import { Check, ClipboardCopy, Download, Maximize2, PackageOpen } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,16 +41,19 @@ export default function SetupCardInstallGuide({ setup }: { setup: Setup }) {
   }
 
   return (
-    <div className="mt-2 flex flex-col gap-2.5 rounded-md border border-border/60 px-3 py-2.5 text-xs">
+    <div className="mt-2 flex flex-col gap-4 rounded-lg border border-border/60 bg-secondary/20 p-4 text-sm">
       <Badge variant={guide.supportsFileImport ? "green" : "amber"} className="w-fit">
         {guide.supportsFileImport ? "File import supported" : "Manual entry only"}
       </Badge>
 
-      <ol className="flex list-decimal flex-col gap-1.5 pl-4 text-muted-foreground">
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Installation steps</p>
+        <ol className="flex list-decimal flex-col gap-2 pl-5 leading-relaxed text-muted-foreground">
         {guide.steps.map((step, i) => (
           <li key={i}>{step}</li>
         ))}
-      </ol>
+        </ol>
+      </div>
 
       {guide.folderPath && (
         <div className="flex flex-col gap-1.5 rounded border border-border/60 bg-secondary/40 px-2.5 py-2">
@@ -99,12 +103,19 @@ export default function SetupCardInstallGuide({ setup }: { setup: Setup }) {
       )}
 
       {!guide.supportsFileImport && (
+        <Button asChild variant="outline" size="sm" className="w-fit">
+          <Link href={`/setups/${encodeURIComponent(setup.id)}/rig`}>
+            <Maximize2 className="size-4" aria-hidden="true" />
+            Open values in Rig Mode
+          </Link>
+        </Button>
+      )}
+
+      {!guide.supportsFileImport && (
         <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
           <Download className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
           <span>
-            This title can&apos;t import a file, so use the{" "}
-            <span className="font-medium text-foreground">Copy values</span> button beside
-            Download to take every value across in one paste.
+            This title needs manual entry. Copy the values beside Download, or use Rig Mode for a larger, second-screen view while entering each setting.
           </span>
         </p>
       )}
