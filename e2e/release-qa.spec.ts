@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const widths = [390, 768, 1024, 1280, 1440];
+const widths = [320, 390, 768, 1024, 1280, 1440];
 
 test("landing and Help are readable at release viewport widths", async ({ page }) => {
   for (const route of ["/", "/help"]) {
@@ -49,4 +49,24 @@ test("Help explains trust and offers direct navigation", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Help using SetupSheet" })).toBeVisible();
   await expect(page.getByText(/not independent verification by SetupSheet/)).toBeVisible();
   await expect(page.getByRole("link", { name: "Request a setup" })).toHaveAttribute("href", "/requests");
+});
+
+test("keyboard skip link focuses the primary content", async ({ page }) => {
+  await page.goto("/help", { waitUntil: "domcontentloaded" });
+  await page.keyboard.press("Tab");
+  const skipLink = page.getByRole("link", { name: "Skip to main content" });
+  await expect(skipLink).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#main-content")).toBeFocused();
+});
+
+test("mobile navigation drawer closes with Escape and restores focus", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/help", { waitUntil: "domcontentloaded" });
+  const menuButton = page.getByRole("button", { name: "Open menu" });
+  await menuButton.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(menuButton).toBeFocused();
 });
