@@ -254,3 +254,10 @@
     background-size: 32px 32px;
   }
 }
+
+/* Rig Mode is an immersive second-screen view. Hide the ordinary layout chrome
+   from both visual users and assistive technology while it is mounted. */
+body:has([data-rig-mode]) > header,
+body:has([data-rig-mode]) > footer {
+  display: none;
+}
