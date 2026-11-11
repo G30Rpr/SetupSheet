@@ -48,8 +48,8 @@ export default async function UploadPage({
           Upload Your Setup
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Drop your setup file below and fill in a few details. It only takes
-          a minute, and it&apos;s always free.
+          Upload a setup file or enter tuning values manually, then add the
+          car, track, and driving context. Sharing is free.
         </p>
       </div>
 
