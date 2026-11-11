@@ -1,7 +1,9 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { Flame, MessageSquare, TriangleAlert } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { JsonLd } from "@/components/json-ld";
@@ -85,7 +87,7 @@ export default async function RequestsPage({
         </Card>
       )}
 
-      <div className="mb-8">
+      <div id="new-request" className="mb-8 scroll-mt-24">
         <SetupRequestForm
           prefill={{
             game: params.game,
@@ -125,6 +127,11 @@ export default async function RequestsPage({
               icon={MessageSquare}
               title="No requests yet"
               description="Be the first to ask the community for a setup."
+              action={
+                <Button asChild size="sm" variant="outline">
+                  <Link href="#new-request">Request a setup</Link>
+                </Button>
+              }
             />
           )
         ) : (
