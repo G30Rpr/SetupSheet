@@ -134,10 +134,15 @@ export function UploadForm({
   const [telemetryFile, setTelemetryFile] = useState<File | null>(null);
   const [keepExistingTelemetry, setKeepExistingTelemetry] = useState(Boolean(existingSetup?.telemetryFileName));
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
   const [status, setStatus] = useState<"idle" | "success">("idle");
   const [publishedSetupId, setPublishedSetupId] = useState<string | null>(null);
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
 
   // Loaded once on mount rather than gated behind game selection: this still
   // keeps both rosters out of every /upload page's initial JS (they only
@@ -601,11 +606,22 @@ export function UploadForm({
           </p>
         </Card>
       )}
+      {error && (
+        <p ref={errorRef} tabIndex={-1} role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive focus:outline-none">
+          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <span>{error} Your entries are still here; correct the issue and try again.</span>
+        </p>
+      )}
       <Card className="px-5 py-6 sm:px-8 sm:py-8">
         <div className="flex flex-col gap-6">
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <section aria-labelledby="upload-basics-heading" className="flex flex-col gap-4">
+            <div>
+              <h2 id="upload-basics-heading" className="text-base font-semibold">1. Simulator and conditions</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Start with the game and driving conditions. Fields marked Required must be filled before publishing.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="game">Game</Label>
+              <Label htmlFor="game">Game <span className="text-xs font-normal text-muted-foreground">(Required)</span></Label>
               <Select name="game" required value={game} onValueChange={handleGameChange}>
                 <SelectTrigger id="game" className="w-full">
                   <SelectValue placeholder="Select a game" />
@@ -621,7 +637,7 @@ export function UploadForm({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="condition">Condition</Label>
+              <Label htmlFor="condition">Condition <span className="text-xs font-normal text-muted-foreground">(Required)</span></Label>
               <Select name="condition" required value={condition} onValueChange={setCondition}>
                 <SelectTrigger id="condition" className="w-full">
                   <SelectValue placeholder="Select condition" />
@@ -637,10 +653,10 @@ export function UploadForm({
             </div>
           </section>
 
-          <section className="flex flex-col gap-4">
+          <section aria-labelledby="upload-data-heading" className="flex flex-col gap-4 border-t border-border/80 pt-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Setup data
+              <h2 id="upload-data-heading" className="text-base font-semibold">
+                2. Setup data
               </h2>
               <div className="flex w-full items-center gap-1 rounded-lg border border-border/80 bg-secondary/40 p-1 sm:w-auto">
                 <Button
@@ -718,9 +734,14 @@ export function UploadForm({
             )}
           </section>
 
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <section aria-labelledby="upload-context-heading" className="flex flex-col gap-4 border-t border-border/80 pt-6">
+            <div>
+              <h2 id="upload-context-heading" className="text-base font-semibold">3. Car, track and hardware</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Identify where this setup was tested and the hardware used by its uploader.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5" key={`car-${game}-${detectedCar ?? "none"}`}>
-              <Label htmlFor="car">Car</Label>
+              <Label htmlFor="car">Car <span className="text-xs font-normal text-muted-foreground">(Required)</span></Label>
               <GroupedSelectField
                 id="car"
                 groups={game ? carLists[game] : undefined}
@@ -734,7 +755,7 @@ export function UploadForm({
             </div>
 
             <div className="flex flex-col gap-1.5" key={`track-${game}`}>
-              <Label htmlFor="track">Track</Label>
+              <Label htmlFor="track">Track <span className="text-xs font-normal text-muted-foreground">(Required)</span></Label>
               <GroupedSelectField
                 id="track"
                 groups={game ? trackLists[game] : undefined}
@@ -776,7 +797,7 @@ export function UploadForm({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="rig">Rig profile</Label>
+              <Label htmlFor="rig">Uploader rig <span className="text-xs font-normal text-muted-foreground">(Required)</span></Label>
               <Select name="rig" required value={rig} onValueChange={setRig}>
                 <SelectTrigger id="rig" className="w-full">
                   <SelectValue placeholder="Select your rig" />
@@ -789,6 +810,7 @@ export function UploadForm({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
             </div>
           </section>
 
@@ -813,8 +835,10 @@ export function UploadForm({
             </p>
           )}
 
-          <section className="flex flex-col gap-3">
-            <Label>Tags</Label>
+          <section aria-labelledby="upload-tags-heading" className="flex flex-col gap-3 border-t border-border/80 pt-6">
+            <h2 id="upload-tags-heading" className="text-base font-semibold">4. Driving style and notes</h2>
+            <p className="text-sm text-muted-foreground">Help other drivers decide whether this setup fits their driving style. Tags are optional.</p>
+            <Label>Tags (optional)</Label>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {setupTags.map((tag) => (
                 <label
@@ -853,13 +877,6 @@ export function UploadForm({
           </section>
         </div>
       </Card>
-
-      {error && (
-        <p role="alert" className="flex items-start gap-2 text-sm text-destructive">
-          <AlertCircle className="mt-0.5 size-4 shrink-0" />
-          {error}
-        </p>
-      )}
 
       <Button type="submit" size="lg" disabled={isPending}>
         {isPending ? (
