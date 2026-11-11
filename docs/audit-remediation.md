@@ -9,4 +9,5 @@
 - [x] Refresh weighted ratings when field-test eligibility changes and backfill existing aggregates.
 - [x] Reload Browse results when filters change and preserve tied rows during search pagination.
 - [x] Store rating reminder dismissals independently of download events.
-- [ ] Triage the nine moderate development dependency advisories.
+- [x] Triage the nine moderate development dependency advisories and update Vitest to 4.1.12.
+- [ ] Resolve the seven remaining moderate advisories in the TypeScript ESLint dependency chain.
