@@ -651,6 +651,7 @@ export function UploadForm({
                 </SelectContent>
               </Select>
             </div>
+            </div>
           </section>
 
           <section aria-labelledby="upload-data-heading" className="flex flex-col gap-4 border-t border-border/80 pt-6">
