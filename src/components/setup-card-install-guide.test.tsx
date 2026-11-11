@@ -69,13 +69,16 @@ describe("SetupCardInstallGuide", () => {
     expect(link).toHaveAttribute("download");
   });
 
-  it("points manual-entry titles at the copy-values button instead of a bundle", () => {
+  it("points manual-entry titles at Rig Mode instead of a file bundle", () => {
     render(<SetupCardInstallGuide setup={makeSetup({ game: "F1 25" })} />);
 
     expect(screen.getByText("Manual entry only")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /download install bundle/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/destination folder/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/Copy values/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Open values in Rig Mode/i })).toHaveAttribute(
+      "href", `/setups/${makeSetup().id}/rig`
+    );
+    expect(screen.getByText(/Copy the values beside Download/i)).toBeInTheDocument();
   });
 
   it("keeps a placeholder it cannot fill, and shows the note that explains it", () => {
