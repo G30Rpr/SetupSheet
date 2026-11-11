@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, GitCompare } from "lucide-react";
+import { ArrowLeft, GitCompare, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -57,6 +57,12 @@ export default async function ComparePage({
 
   const setupA = setups.find((s) => s.id === a);
   const setupB = setups.find((s) => s.id === b);
+  const mismatches = setupA && setupB ? [
+    setupA.car !== setupB.car ? "car" : null,
+    setupA.track !== setupB.track ? "track" : null,
+    setupA.condition !== setupB.condition ? "track conditions" : null,
+    setupA.gameVersion && setupB.gameVersion && setupA.gameVersion !== setupB.gameVersion ? "game build" : null,
+  ].filter((value): value is string => value !== null) : [];
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
@@ -94,6 +100,17 @@ export default async function ComparePage({
         />
       ) : (
         <div className="flex flex-col gap-6">
+          {mismatches.length > 0 && (
+            <div role="note" className="flex items-start gap-3 rounded-lg border border-border bg-secondary/40 px-4 py-3">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <div>
+                <p className="text-sm font-semibold">Different driving context — compare with caution</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  These setups differ in {mismatches.join(", ")}. Changes may reflect different requirements rather than an improvement.
+                </p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {[setupA, setupB].map((setup) => (
               <Card key={setup.id} className="gap-1.5 px-4 py-3">
