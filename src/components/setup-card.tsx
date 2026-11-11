@@ -371,7 +371,7 @@ export function SetupCard({
                 title="The author attached a hotlap video or telemetry file for this lap. This is their own evidence, not a site verification."
               >
                 <BadgeCheck className="size-3.5 text-racing-green" />
-                Verified Lap
+                Lap evidence attached
               </Badge>
             )}
             {onToggleCompare && (
