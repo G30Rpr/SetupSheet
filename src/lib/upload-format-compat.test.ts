@@ -24,7 +24,7 @@ async function checkFormats(kind: UploadKind, formats: readonly string[]) {
     const file = sample(ext);
     const target = describeUploadTarget(kind, `sample${ext}`, file.size, owner, makeId);
     expect(target.error, `${kind} ${ext}`).toBeNull();
-    expect(target.target?.path).toMatch(new RegExp(`sample\\${ext.replace(".", "\\.")}$`));
+    expect(target.target?.path.endsWith(`sample${ext}`)).toBe(true);
     expect(await validateFileSignature(file, ext), `signature ${ext}`).toBeNull();
   }
 }
