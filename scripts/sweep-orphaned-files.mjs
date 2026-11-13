@@ -21,7 +21,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { parseStorageSweepArgs } from "./storage-gc-options.mjs";
+import { parseStorageSweepArgs, validateCleanupPaths } from "./storage-gc-options.mjs";
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -80,6 +80,10 @@ async function run() {
     pathsToDelete = (data || []).map((row) => row.object_name);
     console.log(`[Storage GC] Found ${pathsToDelete.length} orphaned object(s).`);
   }
+
+  // Treat malformed RPC output as a hard failure, not a partial cleanup.
+  // Only Storage objects under valid user folders may be removed.
+  pathsToDelete = validateCleanupPaths(pathsToDelete, targetUser);
 
   if (pathsToDelete.length === 0) {
     console.log("[Storage GC] No files to prune. Done.");
