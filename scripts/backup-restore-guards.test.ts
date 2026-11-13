@@ -17,7 +17,7 @@ describe("operator-controlled backup and restore scripts", () => {
 
   it.each(scripts)("%s fails closed without operator credentials", (path) => {
     const result = spawnSync("bash", [path], {
-      env: { PATH: process.env.PATH ?? "/usr/bin:/bin" },
+      env: { PATH: process.env.PATH ?? "/usr/bin:/bin", NODE_ENV: "test" },
       encoding: "utf8",
       timeout: 3000,
     });
