@@ -80,8 +80,8 @@ def encrypt_chunks(chunks, dest, recipient):
         raise
 
 
-def command_chunks(command):
-    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+def command_chunks(command, env=None):
+    proc = subprocess.Popen(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     try:
         size = 0
         while chunk := proc.stdout.read(1024 * 1024):
@@ -169,7 +169,7 @@ def main():
     }
     for filename, flags in exports.items():
         print(f"Exporting {filename}...", flush=True)
-        chunks = command_chunks(["supabase", "db", "dump", f"--remote={db_url}", "--log-level", "error", *flags])
+        chunks = command_chunks(["supabase", "db", "dump", f"--remote={db_url}", "--log-level", "error", *flags], env=env)
         try:
             encrypt_chunks(chunks, dest / filename, args.recipient)
         finally:

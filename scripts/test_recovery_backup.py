@@ -95,7 +95,10 @@ class BackupSafetyTests(unittest.TestCase):
             if fail_download:
                 raise RuntimeError("download fixture failed")
             record.update(sha256=backup.hashlib.sha256(b"fixture").hexdigest(), bytes=7)
-        def sql_chunks(command):
+        def sql_chunks(command, env=None):
+            self.assertNotIn("PGHOSTADDR", env)
+            self.assertNotIn("PGSERVICE", env)
+            self.assertEqual(env["PGHOST"], f"db.{backup.PRODUCTION}.supabase.co")
             yield b"-- SQL fixture"
         real_popen = backup.subprocess.Popen
         with patch.object(sys, "argv", ["backup", "--output", tmp, "--recipient", "dummy"]), \
