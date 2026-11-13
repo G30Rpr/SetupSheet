@@ -61,3 +61,22 @@ export function parseStorageSweepArgs(args) {
   }
   return { dryRun, grace, targetUser, batchSize };
 }
+
+/** Validate backend-provided object paths before any destructive Storage API call. */
+export function validateCleanupPaths(paths, targetUser = null) {
+  if (!Array.isArray(paths)) throw new Error("Storage cleanup enumeration must be an array");
+  const validFolder = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const result = new Set();
+  for (const path of paths) {
+    if (typeof path !== "string" || path.length > 512 || /[\\\\\u0000-\u001f\u007f]/.test(path)) {
+      throw new Error("Backend returned an unsafe Storage path");
+    }
+    const [folder, fileName, extraPart] = path.split("/");
+    if (!validFolder.test(folder) || !fileName || extraPart !== undefined ||
+        fileName === "." || fileName === ".." || (targetUser && folder.toLowerCase() !== targetUser.toLowerCase())) {
+      throw new Error("Backend returned a Storage path outside the approved owner folder");
+    }
+    result.add(path);
+  }
+  return [...result];
+}
