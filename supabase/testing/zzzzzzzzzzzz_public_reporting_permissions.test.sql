@@ -52,7 +52,7 @@ values('77777777-7777-4777-8777-777777777776',
        '77777777-7777-4777-8777-777777777772',
        '77777777-7777-4777-8777-777777777774',
        '77777777-7777-4777-8777-777777777773',
-       'Assetto Corsa Competizione','Dry','[]'::jsonb,2,119000,
+       'Assetto Corsa Competizione','Dry','["arbs"]'::jsonb,2,119000,
        false,'Hidden Person');
 
 \echo 'CHECK 2: anonymous users see correct aggregates but no opt-out name'
