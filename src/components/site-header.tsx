@@ -96,7 +96,7 @@ export function SiteHeader({
           </span>
         </Link>
 
-        <nav aria-label="Primary navigation" className="hidden shrink-0 items-center gap-3 2xl:flex">
+        <nav aria-label="Primary navigation" className="hidden shrink-0 items-center gap-3 lg:flex">
           {desktopNavLinks.map((link) => {
             const isCurrent = isActiveNavLink(pathname, link.href);
             return (
@@ -104,7 +104,7 @@ export function SiteHeader({
                 key={link.href}
                 href={link.href}
                 aria-current={isCurrent ? "page" : undefined}
-                className={`flex min-h-11 items-center whitespace-nowrap text-sm font-medium ${isCurrent ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                className={`flex min-h-11 items-center whitespace-nowrap border-b-2 px-1 text-sm font-medium transition-colors ${isCurrent ? "border-racing-coral text-foreground" : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"}`}
               >
                 {link.label}
               </Link>
@@ -118,7 +118,7 @@ export function SiteHeader({
             ref={searchInputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search track or car"
+            placeholder="Search cars or tracks"
             className="pl-9 pr-8"
             aria-label="Search setups"
           />

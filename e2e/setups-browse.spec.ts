@@ -20,7 +20,7 @@ test("browse page reports an unreachable database instead of an empty library", 
 
   // Filters stay usable during an outage -- they're the recovery path once the
   // read succeeds again.
-  for (const label of ["Game", "Car", "Track", "Condition", "Rig"]) {
+  for (const label of ["Game", "Car", "Track", "Condition", "Uploader rig"]) {
     await expect(page.getByText(label, { exact: true })).toBeVisible();
   }
 

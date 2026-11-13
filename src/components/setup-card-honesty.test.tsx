@@ -73,14 +73,14 @@ describe("SetupCard trust labels", () => {
     expect(screen.getByText("File included")).toBeInTheDocument();
   });
 
-  it("keeps 'Verified Lap' for attached evidence and defines it in place", () => {
+  it("keeps 'Lap evidence attached' for attached evidence and defines it in place", () => {
     render(
       <SetupCard
         setup={{ ...baseSetup, isVerifiedLap: true, videoUrl: "https://youtu.be/abc" }}
       />
     );
 
-    const badge = screen.getByText("Verified Lap");
+    const badge = screen.getByText("Lap evidence attached");
     expect(badge).toHaveAttribute("title", expect.stringContaining("not a site verification"));
   });
 
@@ -95,6 +95,18 @@ describe("SetupCard trust labels", () => {
 
     expect(screen.queryByText("0 downloads")).not.toBeInTheDocument();
     expect(screen.queryByText(/be the first/i)).not.toBeInTheDocument();
+  });
+
+  it("keeps download as the primary action and explains anonymous access on detail", () => {
+    render(
+      <SetupCard
+        variant="detail"
+        setup={{ ...baseSetup, fileUrl: "https://example.com/x.json", fileName: "x.json" }}
+      />
+    );
+    expect(screen.getByText("Get this setup")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /download setup/i })).toBeInTheDocument();
+    expect(screen.getByText(/Free download · No account required/)).toBeInTheDocument();
   });
 
   it("shows the download count once it is real", () => {

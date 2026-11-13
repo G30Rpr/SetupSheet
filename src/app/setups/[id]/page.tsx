@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { Maximize2 } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 import { JsonLd } from "@/components/json-ld";
 import { OpenInGarageLink } from "@/components/open-in-garage-link";
@@ -227,6 +230,17 @@ export default async function SetupDetailPage({
         />
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Button asChild variant="outline">
+          <Link href={`/setups/${encodeURIComponent(setup.id)}/rig`}>
+            <Maximize2 aria-hidden="true" />
+            Open rig mode
+          </Link>
+        </Button>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          Large, easy-to-copy setup values for a phone or second screen at your rig.
+        </p>
+      </div>
       <OpenInGarageLink setupId={setup.id} game={setup.game} />
       {pendingPrompt && (
         <div className="mb-4">

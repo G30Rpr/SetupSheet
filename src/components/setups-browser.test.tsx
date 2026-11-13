@@ -182,6 +182,43 @@ describe("SetupsBrowser empty-combo handoff", () => {
   });
 });
 
+describe("SetupsBrowser mobile filters", () => {
+  it("allows removing an applied filter without opening the filter panel", async () => {
+    loadMoreSetups.mockResolvedValue({ setups: INDEX, nextCursor: null, error: null });
+    render(
+      <SetupsBrowser
+        setups={INDEX}
+        totalCount={500}
+        initialFilters={{ ...EMPTY_FILTERS, rig: "Wheel + 3 Pedals" }}
+      />
+    );
+    const remove = screen.getByRole("button", { name: /Remove uploader rig filter/ });
+    expect(remove).toBeInTheDocument();
+    fireEvent.click(remove);
+    await waitFor(() => expect(screen.queryByRole("button", { name: /Remove uploader rig filter/ })).not.toBeInTheDocument());
+  });
+
+  it("toggles the accessible filter region without clearing selections", () => {
+    render(
+      <SetupsBrowser
+        setups={INDEX}
+        totalCount={500}
+        initialFilters={{ ...EMPTY_FILTERS, rig: "Wheel + 3 Pedals" }}
+      />
+    );
+    const toggle = screen.getByRole("button", { name: "Hide filters" });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("1 active")).toBeInTheDocument();
+    fireEvent.click(toggle);
+    const reopen = screen.getByRole("button", { name: "Show filters" });
+    expect(reopen).toHaveAttribute("aria-expanded", "false");
+    expect(reopen).toHaveAttribute("aria-controls", "browse-filter-fields");
+    fireEvent.click(reopen);
+    expect(screen.getByRole("button", { name: "Hide filters" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("1 active")).toBeInTheDocument();
+  });
+});
+
 describe("SetupsBrowser hidden rigs", () => {
   const MIXED = [
     makeSetup("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "Matched", "2026-08-30T10:00:00.000Z"),
@@ -203,7 +240,7 @@ describe("SetupsBrowser hidden rigs", () => {
     expect(screen.getAllByTestId("card")).toHaveLength(1);
     // ...and the hidden category is named in a quiet line.
     expect(
-      screen.getByText(/Hiding Gamepad setups that don't match your rig\./)
+      screen.getByText(/Hiding setups from other uploader rig categories \(Gamepad\)\./)
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Show them" }));

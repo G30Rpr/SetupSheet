@@ -45,6 +45,9 @@ export async function SiteFooter() {
               Leaderboard
             </Link>
           )}
+          <Link href="/help" className="hover:text-foreground ">
+            Help
+          </Link>
           <Link href="/privacy" className="hover:text-foreground ">
             Privacy
           </Link>

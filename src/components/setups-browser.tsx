@@ -122,6 +122,9 @@ export function SetupsBrowser({
   const [condition, setCondition] = useState<string>(initialFilters.condition);
   const [rig, setRig] = useState<string>(initialFilters.rig);
   const [tag, setTag] = useState<string>(initialFilters.tag);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(() =>
+    [initialFilters.game, initialFilters.car, initialFilters.track, initialFilters.condition, initialFilters.rig, initialFilters.tag].some((value) => value !== ALL)
+  );
   const filterSignature = JSON.stringify([search, game, car, track, condition, rig, tag]);
   const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
   if (prevFilterSignature !== filterSignature) {
@@ -369,6 +372,8 @@ export function SetupsBrowser({
   const visibleSetups = filtered.slice(0, page * SETUP_CARD_PAGE_SIZE);
   const hasMore = filtered.length > visibleSetups.length;
 
+  const activeSelectFilterCount = [game, car, track, condition, rig, tag].filter((value) => value !== ALL).length;
+
   const hasActiveFilters =
     search !== "" ||
     game !== ALL ||
@@ -532,12 +537,33 @@ export function SetupsBrowser({
           )}
         </div>
 
-        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <SlidersHorizontal className="size-4" />
-          Filter setups
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <SlidersHorizontal className="size-4" aria-hidden="true" />
+            Filter setups
+            {activeSelectFilterCount > 0 && (
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-foreground">
+                {activeSelectFilterCount} active
+              </span>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="md:hidden"
+            aria-expanded={mobileFiltersOpen}
+            aria-controls="browse-filter-fields"
+            onClick={() => setMobileFiltersOpen((open) => !open)}
+          >
+            {mobileFiltersOpen ? "Hide filters" : "Show filters"}
+          </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div
+          id="browse-filter-fields"
+          className={cn("grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6", mobileFiltersOpen ? "grid" : "hidden md:grid")}
+        >
           <FilterSelect
             label="Game"
             value={game}
@@ -567,7 +593,7 @@ export function SetupsBrowser({
             placeholder="All conditions"
           />
           <FilterSelect
-            label="Rig"
+            label="Uploader rig"
             value={rig}
             onChange={setRig}
             options={rigProfiles}
@@ -582,6 +608,32 @@ export function SetupsBrowser({
           />
         </div>
 
+        {hasActiveFilters && (
+          <div className="mt-3 flex flex-wrap items-center gap-2" aria-label="Applied search filters">
+            {[
+              { label: "Search", value: search, clear: () => setSearch("") },
+              { label: "Game", value: game, clear: () => handleGameChange(ALL) },
+              { label: "Car", value: car, clear: () => setCar(ALL) },
+              { label: "Track", value: track, clear: () => setTrack(ALL) },
+              { label: "Condition", value: condition, clear: () => setCondition(ALL) },
+              { label: "Uploader rig", value: rig, clear: () => setRig(ALL) },
+              { label: "Tag", value: tag, clear: () => setTag(ALL) },
+            ].filter(({ value }) => Boolean(value) && value !== ALL).map(({ label, value, clear }) => (
+              <Button
+                key={label}
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={clear}
+                aria-label={`Remove ${label.toLowerCase()} filter: ${value}`}
+                className="h-9 max-w-full gap-1.5 rounded-full px-3 text-xs"
+              >
+                <span className="truncate">{label}: {value}</span>
+                <X className="size-3.5 shrink-0" aria-hidden="true" />
+              </Button>
+            ))}
+          </div>
+        )}
         {hasActiveFilters && (
           <div className="mt-3 flex justify-end">
             <Button variant="ghost" size="sm" onClick={resetFilters}>
@@ -637,7 +689,7 @@ export function SetupsBrowser({
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3 rounded-lg border border-border/80 bg-secondary/40 px-4 py-3">
         <div>
           <span id="my-rig-label" className="text-xs font-medium text-muted-foreground">
-            Your rig
+            My hardware
           </span>
           <div
             className="mt-1.5 flex flex-wrap items-center gap-2"
@@ -725,9 +777,9 @@ export function SetupsBrowser({
         <p className="max-w-[42ch] text-xs text-muted-foreground">
           {myRig?.inputDevice
             ? myRig.brakeType || myRig.inputDevice === "gamepad"
-              ? "Used for Best for my rig and match chips."
+              ? "Used to highlight compatible hardware and improve Best for my rig sorting; it does not filter results."
               : "Pick what stops the car to get matches."
-            : "Set what you drive to sort Best for my rig and spot matches."}
+            : "Set your hardware to see compatibility matches without hiding other setups."}
         </p>
         {rigSaveError && (
           <p role="alert" className="text-xs text-destructive">
@@ -738,8 +790,7 @@ export function SetupsBrowser({
 
       {rig !== ALL && hiddenRigNames.length > 0 && (
         <p className="text-sm text-muted-foreground">
-          Hiding {joinRigNames(hiddenRigNames)} setups that don&apos;t match
-          your rig.{" "}
+          Hiding setups from other uploader rig categories ({joinRigNames(hiddenRigNames)}).{" "}
           <button
             type="button"
             onClick={() => setRig(ALL)}

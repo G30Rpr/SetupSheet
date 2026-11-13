@@ -355,8 +355,8 @@ export function SetupCard({
   if (isDeleted) return null;
 
   return (
-    <Card as="article" className="content-auto group relative overflow-hidden border-border/80 py-0 motion-safe:motion-transform motion-safe:hover:-translate-y-0.5">
-      <div className="flex flex-col gap-3 p-5">
+    <Card as="article" className="content-auto group relative overflow-hidden border-border/80 py-0 shadow-card transition-[border-color,box-shadow,transform] duration-200 hover:border-border hover:shadow-popover motion-safe:hover:-translate-y-0.5">
+      <div className="flex flex-col gap-4 p-4 sm:p-5">
         {/* Top row: game + condition + owner controls */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -371,7 +371,7 @@ export function SetupCard({
                 title="The author attached a hotlap video or telemetry file for this lap. This is their own evidence, not a site verification."
               >
                 <BadgeCheck className="size-3.5 text-racing-green" />
-                Verified Lap
+                Lap evidence attached
               </Badge>
             )}
             {onToggleCompare && (
@@ -461,26 +461,26 @@ export function SetupCard({
 
         {/* Car + Track */}
         <div>
-          <Title className="text-lg font-semibold leading-tight tracking-tight text-foreground">
+          <Title className="text-xl font-semibold leading-snug tracking-tight text-foreground">
             {linkTitle ? (
-              <Link href={`/setups/${setup.id}`} className="underline-offset-4 hover:underline">
+              <Link href={`/setups/${setup.id}`} className="rounded-sm underline-offset-4 hover:text-racing-coral hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
                 {setup.car}
               </Link>
             ) : (
               setup.car
             )}
           </Title>
-          <p className="text-sm text-muted-foreground">{setup.track}</p>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{setup.track}</p>
         </div>
 
         {/* Lap time — mono/tabular everywhere; every lap on the site is
             author-reported, so it carries the label that says so. */}
         {(setup.lapTime || setup.fileUrl) && (
-          <div className="flex items-center gap-2 rounded-md bg-secondary/60 px-3 py-2.5">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-2 rounded-lg border border-border/60 bg-secondary/50 px-3 py-3">
             <Timer className="size-5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
             {setup.lapTime && (
               <>
-                <span className="font-mono text-2xl font-bold tabular-nums text-foreground">
+                <span className="font-mono text-xl font-bold tabular-nums tracking-tight text-foreground sm:text-2xl">
                   {setup.lapTime}
                 </span>
                 <span
@@ -525,7 +525,7 @@ export function SetupCard({
         )}
 
         {/* Tags */}
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5" aria-label="Setup characteristics">
           {setup.tags.map((tag) => (
             <TagBadge key={tag} tag={tag} />
           ))}
@@ -534,9 +534,9 @@ export function SetupCard({
         {/* Slim card: rig + community scores, in that order (P3) */}
         {!isDetail && (
           <>
-            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <div className="flex items-center gap-1.5 rounded-md bg-secondary/30 px-3 py-2 text-xs font-medium text-muted-foreground">
               <Gauge className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
-              {setup.rigProfile}
+              <span className="font-semibold text-foreground">Uploader rig:</span> {setup.rigProfile}
             </div>
             <ScoreMeters
               pace={setup.pace}
@@ -668,44 +668,50 @@ export function SetupCard({
         {/* Download: the original uploaded file if there is one, otherwise
             a generated text export of the manually-entered values */}
         {(setup.fileUrl || setup.setupValues) && (
-          <div className="flex items-stretch gap-1.5">
-            <Button
-              type="button"
-              onClick={handleDownload}
-              disabled={isDownloading}
-              aria-busy={isDownloading}
-              title={setup.fileName ?? undefined}
-              className="min-w-0 flex-1 justify-between"
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <FileDown className="size-4 shrink-0" />
-                <span className="truncate">
-                  {isDownloading ? "Preparing download..." : "Download Setup"}
-                </span>
-              </span>
-              <span className="shrink-0 text-xs font-normal text-primary-foreground/80">
-                {/* Zero download counts are not advertised — no "0 downloads",
-                    no "Be the first" bait. The count appears once it's real. */}
-                {downloads > 0 ? (
-                  <>
-                    <span className="font-mono tabular-nums">{downloads}</span>{" "}
-                    {downloads === 1 ? "download" : "downloads"}
-                  </>
-                ) : null}
-              </span>
-            </Button>
-            {isDetail && setup.setupValues && (
+          <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-secondary/20 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Get this setup</p>
+            <div className="flex items-stretch gap-2">
               <Button
                 type="button"
-                variant="outline"
-                size="icon"
-                onClick={handleCopyValues}
-                aria-label="Copy setup values to clipboard"
-                title="Copy setup values"
-                className="shrink-0"
+                onClick={handleDownload}
+                disabled={isDownloading}
+                aria-busy={isDownloading}
+                title={setup.fileName ?? undefined}
+                className="min-w-0 flex-1 justify-between"
               >
-                <Clipboard className="size-4" />
+                <span className="flex min-w-0 items-center gap-2">
+                  <FileDown className="size-4 shrink-0" />
+                  <span className="truncate">
+                    {isDownloading ? "Preparing download..." : "Download Setup"}
+                  </span>
+                </span>
+                <span className="shrink-0 text-xs font-normal text-primary-foreground/80">
+                  {/* Zero download counts are not advertised — no "0 downloads",
+                      no "Be the first" bait. The count appears once it's real. */}
+                  {downloads > 0 ? (
+                    <>
+                      <span className="font-mono tabular-nums">{downloads}</span>{" "}
+                      {downloads === 1 ? "download" : "downloads"}
+                    </>
+                  ) : null}
+                </span>
               </Button>
+              {isDetail && setup.setupValues && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopyValues}
+                  aria-label="Copy setup values to clipboard"
+                  title="Copy setup values"
+                  className="shrink-0"
+                >
+                  <Clipboard className="size-4" />
+                </Button>
+              )}
+            </div>
+            {isDetail && (
+              <p className="text-xs text-muted-foreground">Free download · No account required. Use the installation guide below to get on track.</p>
             )}
           </div>
         )}
