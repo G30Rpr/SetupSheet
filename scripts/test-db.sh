@@ -39,6 +39,10 @@ duplicate_versions=$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' 
   | sort | uniq -d)
 if [[ -n "$duplicate_versions" ]]; then
   echo "Duplicate migration version(s): $duplicate_versions" >&2
+  for version in $duplicate_versions; do
+    echo "Conflicting files for $version:" >&2
+    find supabase/migrations -maxdepth 1 -type f -name "${version}_*.sql" -printf '  %f\\n' | sort >&2
+  done
   exit 1
 fi
 
