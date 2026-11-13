@@ -23,6 +23,8 @@ echo "Checking required restored relations..."
 for relation in public.setups public.profiles auth.users storage.objects supabase_migrations.schema_migrations; do
   result="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SELECT to_regclass('$relation') is not null")"
   [[ "$result" == "t" ]] || { echo "Missing restored relation: $relation" >&2; exit 1; }
+  count="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM $relation")"
+  echo "$relation: $count restored rows"
 done
 echo "Restored database passed minimal schema checks in a disposable local target."
 echo "NOT YET COMPLETE: compare source/target counts, verify OAuth/configuration and Storage object bytes."
