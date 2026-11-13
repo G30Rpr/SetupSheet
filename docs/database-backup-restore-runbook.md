@@ -31,6 +31,21 @@ The script writes only encrypted ciphertext to the specified directory. It remov
 5. Confirm an independent backup of Storage object **bytes** using the Storage API, preserving bucket names, object paths, checksums, size, metadata and access restrictions. Test recovering a sample object in isolated storage.
 6. Record UTC completion time, encrypted backup location, results of restore, expected recovery point and recovery time objectives in a private operator record. Do **not** upload the dump, identity, personally identifying records, or database URLs to GitHub.
 
+## Operator-only encrypted restore verification
+
+A second helper, `scripts/verify-supabase-backup.sh`, decrypts the archive in a pipe, checks its PostgreSQL custom-format table of contents, and attempts an all-or-nothing restore into a **pre-existing disposable local PostgreSQL database**. It refuses remote hosts and database names that do not begin with `setupsheet_restore_`. The operator must set:
+
+- `SETUPSHEET_BACKUP_FILE`: absolute path of the encrypted `.dump.age` file
+- `AGE_IDENTITY_FILE`: local secret age identity file (never put in GitHub or chat)
+- `RESTORE_PGHOST=127.0.0.1`, `RESTORE_PGUSER`, `RESTORE_PGDATABASE=setupsheet_restore_<identifier>`, optionally `RESTORE_PGPORT` and `RESTORE_PGPASSWORD` (or `RESTORE_PGPASSFILE`)
+- `RESTORE_CONFIRM_ISOLATED=RESTORE_TO_DISPOSABLE_LOCAL_DB`
+
+Then execute `bash scripts/verify-supabase-backup.sh` on the trusted operator machine.
+
+**Important limitations:** A raw custom-format dump of managed Supabase schemas may require a compatible Supabase local bootstrap, extensions and roles. A successful `pg_restore --list` validates decryptability and archive readability **but does not prove restoration**. A schema/role/extension conflict means the restore has *failed*; do not declare backup verified. Supabase's [official CLI backup/restore guide](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore) also describes a roles/schema/data sequence and special steps for managed Auth, Storage, Vault, and migration history. Use that supported sequence when a raw custom-format restore cannot recreate the target.
+
+An isolated restore of database rows does **not** validate actual Storage object bytes or re-create Discord OAuth settings. Those require their own independent checks before marking issue #26 complete.
+
 ## Automatic migration deployment hazard
 
 **Critical:** Existing `.github/workflows/deploy-migrations.yml` applies pending database migrations automatically on pushes to `SetUpSheet`. Merging a migration PR is therefore an actual production database change, not merely code review. Never merge PRs #22–#25 or #32 before the encrypted backup and isolated restore have been verified and recorded, and the production deployment order has been approved. See [issue #36](https://github.com/G30Rpr/SetupSheet/issues/36) for the workflow release-control gap. Do not disable the automatic runner without a coordinated app/migration deployment process: that previously caused schema drift and outages.
