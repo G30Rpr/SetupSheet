@@ -38,8 +38,9 @@ export function parseStorageSweepArgs(args) {
         const match = /^([1-9][0-9]{0,2}) (hours?|days?)$/.exec(value);
         if (!match) throw new Error("Grace must look like '24 hours' or '7 days'");
         const n = Number(match[1]);
-        if (n * (match[2].startsWith("day") ? 24 : 1) > 720) {
-          throw new Error("Grace period cannot exceed 30 days");
+        const hours = n * (match[2].startsWith("day") ? 24 : 1);
+        if (hours < 24 || hours > 720) {
+          throw new Error("Grace period must be between 24 hours and 30 days");
         }
         grace = value;
       } else if (flag === "--batch-size") {
