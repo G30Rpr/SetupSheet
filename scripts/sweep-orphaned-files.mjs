@@ -21,21 +21,19 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { parseStorageSweepArgs } from "./storage-gc-options.mjs";
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const args = process.argv.slice(2);
-const isDryRun = args.includes("--dry-run");
-
-function getArgValue(flag) {
-  const index = args.indexOf(flag);
-  return index !== -1 && index + 1 < args.length ? args[index + 1] : null;
+let options;
+try {
+  options = parseStorageSweepArgs(process.argv.slice(2));
+} catch (error) {
+  console.error("[Storage GC] Invalid arguments:", error instanceof Error ? error.message : String(error));
+  process.exit(2);
 }
-
-const graceArg = getArgValue("--grace") || "24 hours";
-const targetUser = getArgValue("--user");
-const batchSize = Math.max(1, parseInt(getArgValue("--batch-size") || "50", 10));
+const { dryRun: isDryRun, grace: graceArg, targetUser, batchSize } = options;
 
 if (!supabaseUrl || !serviceKey) {
   console.error("Error: Missing SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) or SUPABASE_SERVICE_ROLE_KEY.");
@@ -48,7 +46,7 @@ const supabase = createClient(supabaseUrl, serviceKey, {
 });
 
 async function run() {
-  console.log(`[Storage GC] Connecting to ${supabaseUrl}...`);
+  console.log("[Storage GC] Connecting to configured Supabase project...");
   if (isDryRun) {
     console.log("[Storage GC] MODE: DRY-RUN (no files will be deleted)");
   }
@@ -56,7 +54,7 @@ async function run() {
   let pathsToDelete = [];
 
   if (targetUser) {
-    console.log(`[Storage GC] Enumerating files for deleted user: ${targetUser}...`);
+    console.log("[Storage GC] Enumerating files for selected account...");
     const { data, error } = await supabase.rpc("setup_files_for_user", {
       p_user_id: targetUser,
     });
@@ -67,7 +65,7 @@ async function run() {
     }
 
     pathsToDelete = (data || []).map((row) => row.object_name);
-    console.log(`[Storage GC] Found ${pathsToDelete.length} object(s) belonging to user ${targetUser}.`);
+    console.log(`[Storage GC] Found ${pathsToDelete.length} object(s) for selected account.`);
   } else {
     console.log(`[Storage GC] Querying orphaned setup files older than grace window "${graceArg}"...`);
     const { data, error } = await supabase.rpc("orphaned_setup_files", {
@@ -89,10 +87,7 @@ async function run() {
   }
 
   if (isDryRun) {
-    console.log("[Storage GC] Dry-run complete. Files that would be deleted:");
-    for (const path of pathsToDelete) {
-      console.log(`  - ${path}`);
-    }
+    console.log("[Storage GC] Dry-run complete; no files deleted. Object paths are omitted from CI logs.");
     return;
   }
 
@@ -108,13 +103,18 @@ async function run() {
       console.error(`[Storage GC] Batch delete error at offset ${i}:`, error.message);
       errorCount += batch.length;
     } else {
-      const successfulDeletes = data?.length || batch.length;
+      const successfulDeletes = data?.length ?? 0;
+      if (successfulDeletes !== batch.length) {
+        console.error(`[Storage GC] Batch ${Math.floor(i / batchSize) + 1}: only ${successfulDeletes}/${batch.length} objects confirmed removed.`);
+        errorCount += batch.length - successfulDeletes;
+      }
       deletedCount += successfulDeletes;
       console.log(`[Storage GC] Pruned batch ${Math.floor(i / batchSize) + 1} (${successfulDeletes} files)`);
     }
   }
 
   console.log(`[Storage GC] Finished: ${deletedCount} deleted, ${errorCount} errors.`);
+  if (errorCount > 0) process.exitCode = 1;
 }
 
 run().catch((err) => {
