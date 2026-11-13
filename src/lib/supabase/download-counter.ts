@@ -1,4 +1,3 @@
-import "server-only";
 import { createClient } from "@supabase/supabase-js";
 
 import { fetchWithTimeout } from "@/lib/supabase/fetch";
