@@ -7,6 +7,7 @@ import { getActionError } from "@/lib/actions/action-errors";
 import { rigProfiles } from "@/lib/data";
 import { logger } from "@/lib/logger";
 import { getCurrentUser } from "@/lib/supabase/auth";
+import { createDownloadCounterClient } from "@/lib/supabase/download-counter";
 import { createClient } from "@/lib/supabase/server";
 import type { TablesUpdate } from "@/lib/supabase/database.types";
 import {
@@ -687,6 +688,26 @@ async function recordDownloadEvent(
 }
 
 /**
+ * Best-effort, rate-bounded counter write. This runs only on the server and
+ * uses a privileged client solely for the narrowly scoped increment RPC.
+ * A missing secret, quota exhaustion, or transient DB failure can never block
+ * access to an otherwise public setup file or manual-value export.
+ */
+async function incrementDownloadCount(setupId: string): Promise<void> {
+  const counter = createDownloadCounterClient();
+  if (!counter) {
+    logger.warn("incrementDownloadCount: server counter credentials not configured");
+    return;
+  }
+  try {
+    const { error } = await counter.rpc("increment_downloads", { setup_id: setupId });
+    if (error) logger.error("incrementDownloadCount: counter RPC failed", error);
+  } catch (error) {
+    logger.error("incrementDownloadCount: counter RPC threw", error);
+  }
+}
+
+/**
  * Bumps the download counter and returns a public URL for the attached
  * file. Deliberately doesn't require login -- setups are free downloads for
  * anyone, the same as browsing itself.
@@ -710,13 +731,7 @@ export async function downloadSetup(
     return { url: null, fileName: null, error: "No file attached to this setup." };
   }
 
-  const { error: rpcError } = await supabase.rpc("increment_downloads", {
-    setup_id: setupId,
-  });
-
-  if (rpcError) {
-    logger.error("downloadSetup: increment_downloads failed", rpcError);
-  }
+  await incrementDownloadCount(setupId);
   await recordDownloadEvent(supabase, setupId);
 
   const {
@@ -742,12 +757,7 @@ export async function recordSetupExport(setupId: string): Promise<{ error: strin
     return { error: "That setup id is invalid." };
   }
 
-  const { error } = await supabase.rpc("increment_downloads", { setup_id: setupId });
-
-  if (error) {
-    logger.error("recordSetupExport: increment_downloads failed", error);
-    return { error: getActionError(error, "Couldn't record the download right now.") };
-  }
+  await incrementDownloadCount(setupId);
   await recordDownloadEvent(supabase, setupId);
 
   // Download/export counts are updated optimistically in the card; avoid
