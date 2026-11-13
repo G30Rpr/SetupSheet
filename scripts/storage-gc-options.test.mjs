@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseStorageSweepArgs } from "./storage-gc-options.mjs";
+import { parseStorageSweepArgs, validateCleanupPaths } from "./storage-gc-options.mjs";
 
 describe("Storage cleanup command safety", () => {
   it("defaults to the existing weekly 24h policy", () => {
@@ -35,5 +35,30 @@ describe("Storage cleanup command safety", () => {
     expect(parseStorageSweepArgs(["--user", id, "--dry-run"]).dryRun).toBe(true);
     expect(parseStorageSweepArgs(["--user", id, "--confirm-user-delete"]).targetUser).toBe(id);
     expect(() => parseStorageSweepArgs(["--confirm-user-delete"])).toThrow(/requires --user/);
+  });
+});
+
+describe("Storage cleanup path validation", () => {
+  const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const second = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+  it("keeps valid owner paths and drops duplicates", () => {
+    expect(validateCleanupPaths([`${id}/setup.sto`, `${id}/setup.sto`], id)).toEqual([`${id}/setup.sto`]);
+  });
+
+  it.each([
+    "not-a-user/setup.sto",
+    `${id}/../setup.sto`,
+    `${id}/`,
+    `${id}/..`,
+    `${id}/folder/file.sto`,
+    "unknown",
+    `${second}/setup.sto`,
+  ])("rejects unowned or unsafe object paths: %s", (path) => {
+    expect(() => validateCleanupPaths([path], id)).toThrow();
+  });
+
+  it("rejects non-array backend responses", () => {
+    expect(() => validateCleanupPaths(null)).toThrow();
   });
 });
