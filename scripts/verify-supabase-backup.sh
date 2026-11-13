@@ -11,10 +11,20 @@ done
 case "$RESTORE_PGHOST" in localhost|127.0.0.1|::1) ;; *) echo "Refusing non-loopback restore host" >&2; exit 1;; esac
 [[ "$RESTORE_PGDATABASE" =~ ^setupsheet_restore_[a-zA-Z0-9_]+$ ]] || { echo "Restore database name must start with setupsheet_restore_" >&2; exit 1; }
 [[ "${RESTORE_CONFIRM_ISOLATED:-}" == RESTORE_TO_DISPOSABLE_LOCAL_DB ]] || { echo "Explicit isolated-restore confirmation missing" >&2; exit 1; }
+# libpq hostaddr/service/URI can override the apparent PGHOST destination.
+# Explicitly clear those alternate connection selectors before checking the
+# actual server address. PGSERVICEFILE is excluded as well.
+unset PGHOSTADDR PGSERVICE PGSERVICEFILE PGDATABASE_URL DATABASE_URL
 export PGHOST="$RESTORE_PGHOST" PGPORT="${RESTORE_PGPORT:-5432}" PGUSER="$RESTORE_PGUSER" PGDATABASE="$RESTORE_PGDATABASE" PGSSLMODE="${RESTORE_PGSSLMODE:-prefer}"
 if [[ -n "${RESTORE_PGPASSWORD:-}" ]]; then export PGPASSWORD="$RESTORE_PGPASSWORD"; fi
 if [[ -n "${RESTORE_PGPASSFILE:-}" ]]; then export PGPASSFILE="$RESTORE_PGPASSFILE"; fi
-psql -XAtq -v ON_ERROR_STOP=1 -c "select current_database()" >/dev/null
+# Verify both the actual remote endpoint AND the name of the selected
+# database; merely setting PGHOST=localhost does not prove a safe destination.
+identity="$(psql -XAtq -v ON_ERROR_STOP=1 -c "select current_database() || '|' || coalesce(inet_server_addr()::text,'socket')")"
+case "$identity" in
+  "$RESTORE_PGDATABASE|127.0.0.1"|"$RESTORE_PGDATABASE|::1") ;;
+  *) echo "Restore endpoint does not match the disposable loopback database" >&2; exit 1 ;;
+esac
 echo "Checking encrypted archive is readable..."
 age --decrypt --identity "$AGE_IDENTITY_FILE" "$SETUPSHEET_BACKUP_FILE" | pg_restore --list - >/dev/null
 echo "Restoring into disposable loopback database only..."
