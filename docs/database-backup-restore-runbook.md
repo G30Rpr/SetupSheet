@@ -31,6 +31,10 @@ The script writes only encrypted ciphertext to the specified directory. It remov
 5. Confirm an independent backup of Storage object **bytes** using the Storage API, preserving bucket names, object paths, checksums, size, metadata and access restrictions. Test recovering a sample object in isolated storage.
 6. Record UTC completion time, encrypted backup location, results of restore, expected recovery point and recovery time objectives in a private operator record. Do **not** upload the dump, identity, personally identifying records, or database URLs to GitHub.
 
+## Automatic migration deployment hazard
+
+**Critical:** Existing `.github/workflows/deploy-migrations.yml` applies pending database migrations automatically on pushes to `SetUpSheet`. Merging a migration PR is therefore an actual production database change, not merely code review. Never merge PRs #22–#25 or #32 before the encrypted backup and isolated restore have been verified and recorded, and the production deployment order has been approved. See [issue #36](https://github.com/G30Rpr/SetupSheet/issues/36) for the workflow release-control gap. Do not disable the automatic runner without a coordinated app/migration deployment process: that previously caused schema drift and outages.
+
 ## 4. Audit migration deployment gate
 
 - Confirm the current `SetUpSheet` branch, exact latest security PR SHAs, and all GitHub `db-migrations` and end-to-end checks pass.
