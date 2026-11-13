@@ -6,7 +6,7 @@
 set -euo pipefail
 umask 077
 
-for tool in pg_dump age; do
+for tool in pg_dump psql age; do
   command -v "$tool" >/dev/null 2>&1 || { echo "Missing required command: $tool" >&2; exit 1; }
 done
 
@@ -40,7 +40,14 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Creating an encrypted backup of public, auth, and Storage metadata..."
-pg_dump --format=custom --no-owner --schema=public --schema=auth --schema=storage   --file=- | age --recipient "$AGE_RECIPIENT" --output "$dest"
+# Capture migration history as well as the application and managed data.
+# A post-deployment app_private schema may exist; include it when available.
+schemas=(--schema=public --schema=auth --schema=storage --schema=supabase_migrations)
+if [[ "$(psql -XAtq -v ON_ERROR_STOP=1 -c "select count(*) from pg_namespace where nspname='app_private'")" == "1" ]]; then
+  schemas+=(--schema=app_private)
+fi
+pg_dump --format=custom --no-owner --no-acl "${schemas[@]}" --file=- \
+  | age --recipient "$AGE_RECIPIENT" --output "$dest"
 
 if [[ ! -s "$dest" ]]; then
   echo "Backup output is empty" >&2
