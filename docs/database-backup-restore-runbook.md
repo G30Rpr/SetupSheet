@@ -12,6 +12,14 @@ Audit blocker: [issue #26](https://github.com/G30Rpr/SetupSheet/issues/26). Supa
 - Use a role permitted to dump `public`, `auth`, and `storage` schemas. Confirm the selected connection does not run through a transaction pooler for pg_dump.
 - Disconnect other user-facing services from the **isolated restore target**. Never restore over the production database.
 
+## Preferred managed-Supabase restore path (important)
+
+**Use the [official Supabase CLI backup-and-restore process](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore) when restoring into the managed SetupSheet Recovery project.** It exports roles, schema and data as separate SQL artifacts and filters platform-managed objects. The CLI requires Docker and operator-controlled credentials. Keep all generated SQL files in a private, access-restricted workspace; encrypt them promptly with an operator-held encryption key, then securely erase temporary plaintext according to the storage medium's capabilities.
+
+The custom-format `pg_dump` helper in this PR is an **additional encrypted logical archive**, not an established one-command way to clone a hosted Supabase project. It deliberately includes `auth`/`storage` metadata and migration history; restoring these managed schemas with raw `pg_restore` onto a newly provisioned Supabase Recovery project can fail or damage platform-owned objects. The loopback-only verification helper is for a **separate disposable local database**, never the hosted Supabase Recovery project. It can demonstrate archive readability and local recovery where the required compatible bootstrap/extensions are present, but does not substitute for the official managed-project restore flow.
+
+Before claiming recovery success, compare source and target counts, prove sign-in/authorization flows in isolation, verify bucket configuration, and copy and sample-restore Storage object **bytes** separately. Do not reuse production OAuth secrets or publish restored personal data.
+
 ## 2. Create encrypted database backup
 
 Execute on an operator-controlled machine:
