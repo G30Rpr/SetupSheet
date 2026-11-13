@@ -2,7 +2,7 @@
 // A pass confirms HTTP reachability only; it is not a substitute for signed-in
 // API/RLS tests, synthetic browser journeys, or real-user Web Vitals.
 const baseUrl = process.env.SETUPSHEET_HEALTH_BASE_URL || "https://setupsheet.app";
-const paths = ["/", "/help", "/setups", "/requests"];
+const paths = ["/", "/help", "/setups", "/requests", "/api/health"];
 const retries = 3;
 
 if (!baseUrl.startsWith("https://")) {
@@ -49,7 +49,7 @@ if (process.env.GITHUB_STEP_SUMMARY) {
     "## SetupSheet public availability\n\n" +
     "| Route | Result | Detail |\n|---|---|---|\n" +
     results.map((r) => `| ${r.path} | ${r.status} | ${r.durationMs === undefined ? r.detail : `${r.durationMs} ms`} |`).join("\n") +
-    "\n\nOnly HTTP reachability was checked. Backend authentication and recovery are not validated here.\n"
+    "\n\nHTTP availability and one bounded anonymous database read were checked. Authentication, privileged writes and recovery are not validated here.\n"
   );
 }
 if (results.some((r) => r.status !== "PASS")) process.exitCode = 1;
