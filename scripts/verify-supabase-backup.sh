@@ -21,7 +21,7 @@ echo "Restoring into disposable loopback database only..."
 age --decrypt --identity "$AGE_IDENTITY_FILE" "$SETUPSHEET_BACKUP_FILE" | pg_restore --dbname="$RESTORE_PGDATABASE" --no-owner --no-acl --exit-on-error --single-transaction -
 echo "Checking required restored relations..."
 for relation in public.setups public.profiles auth.users storage.objects supabase_migrations.schema_migrations; do
-  result="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SELECT to_regclass(\u0027$relation\u0027) is not null")"
+  result="$(psql -XAtq -v ON_ERROR_STOP=1 -c "SELECT to_regclass('$relation') is not null")"
   [[ "$result" == "t" ]] || { echo "Missing restored relation: $relation" >&2; exit 1; }
 done
 echo "Restored database passed minimal schema checks in a disposable local target."
