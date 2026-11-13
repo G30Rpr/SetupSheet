@@ -29,7 +29,7 @@ begin
   insert into app_private.setup_download_daily_windows (setup_id,day_utc,increment_count)
   select s.id,(now() at time zone 'utc')::date,1
   from public.setups s where s.id=setup_id
-  on conflict(setup_id,day_utc)
+  on conflict on constraint setup_download_daily_windows_pkey
   do update set increment_count = app_private.setup_download_daily_windows.increment_count + 1
   where app_private.setup_download_daily_windows.increment_count < 1000
   returning true into v_accepted;
