@@ -111,7 +111,8 @@ select count(*) from public.orphaned_setup_files('7 days');   -- audit first
   Storage API above; re-running the query afterwards should return 0 rows.
 - Automated CLI tool: run `npm run storage:sweep -- --dry-run` to audit orphans without
   deleting, or `npm run storage:sweep` to delete in batches via the Storage API.
-  For completed account deletions: `npm run storage:sweep -- --user <user-uuid>`.
+  For completed account deletions: first preview with `npm run storage:sweep -- --user <user-uuid> --dry-run`, then (only after verifying the account deletion request) `npm run storage:sweep -- --user <user-uuid> --confirm-user-delete`. Unconfirmed account-folder deletion is rejected.
+- The existing Sunday GitHub Actions scheduled sweep remains destructive; manual workflow dispatch defaults to **dry-run**. The job now fails loudly when credentials are missing, validates paths and parameters, and reports partial deletions as failures. Never place user IDs or Storage object paths into CI logs.
 - Scheduled sweeps: configure a scheduled workflow (or cron) running `npm run storage:sweep`
   with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to automate weekly maintenance.
 
@@ -253,7 +254,9 @@ Remove or hide violating content using the existing owner/admin process, and pre
      ```
   3. Purge user's files from Supabase Storage:
      ```bash
-     npm run storage:sweep -- --user <USER_UUID>
+     npm run storage:sweep -- --user <USER_UUID> --dry-run
+     # After confirming the deletion request and file ownership:
+     npm run storage:sweep -- --user <USER_UUID> --confirm-user-delete
      ```
   4. Complete request and delete user from `auth.users` (cascading public profiles, setups, versions, ratings, comments, and upvotes):
      ```sql
