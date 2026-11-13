@@ -13,7 +13,7 @@ create table public.field_test_public_snapshots (
   condition text not null,
   validated_changes jsonb not null,
   laps_run integer not null,
-  consistency_pct numeric,
+  consistency_pct numeric(4,1),
   best_lap_ms integer not null,
   created_at timestamptz not null,
   display_name text
