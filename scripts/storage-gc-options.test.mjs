@@ -17,6 +17,7 @@ describe("Storage cleanup command safety", () => {
   it.each([
     ["--grace", "1 day'; echo hacked"],
     ["--grace", "0 days"],
+    ["--grace", "1 hour"],
     ["--grace", "31 days"],
     ["--batch-size", "0"],
     ["--batch-size", "101"],
