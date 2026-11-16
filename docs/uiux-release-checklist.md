@@ -51,7 +51,7 @@ Source: authenticated Vercel deployment/project/domain metadata. These deploymen
 - Earlier READY rollback candidate: `dpl_H1vCFnGD79Ac3rE9X5ewfWk2U8GB` (Git SHA `53e3e6c7aebf73abca80246d6160b67e1b5c9c03`)
 - Both candidates were marked `isRollbackCandidate: true` when inspected. **Recheck immediately before release** in case deployments or aliases have changed.
 - Preview deployments are protected by Vercel SSO. Do not disable the protection or publish credentials.
-- `.github/workflows/deploy-migrations.yml` triggers production SQL migration deployment only if `supabase/migrations/**` or that workflow file changes on `SetUpSheet`. Confirm the final PR does not modify those files.
+- Migration-related pushes validate and inventory only. Hosted apply requires a manual approved release; see [migration release controls](migration-release-controls.md). Confirm whether the final PR requires that coordinated release.
 - Hobby runtime logs retain a limited recent interval. A 30-minute production error log aggregation returned no log groups, which is **insufficient to claim no errors**.
 
 ## Current automated evidence

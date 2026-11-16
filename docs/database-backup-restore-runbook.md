@@ -56,7 +56,13 @@ An isolated restore of database rows does **not** validate actual Storage object
 
 ## Automatic migration deployment hazard
 
-**Critical:** Existing `.github/workflows/deploy-migrations.yml` applies pending database migrations automatically on pushes to `SetUpSheet`. Merging a migration PR is therefore an actual production database change, not merely code review. Never merge PRs #22–#25 or #32 before the encrypted backup and isolated restore have been verified and recorded, and the production deployment order has been approved. See [issue #36](https://github.com/G30Rpr/SetupSheet/issues/36) for the workflow release-control gap. Do not disable the automatic runner without a coordinated app/migration deployment process: that previously caused schema drift and outages.
+The earlier workflow applied migrations automatically on qualifying pushes.
+The current workflow validates and inventories on push; hosted apply requires a
+manual exact-SHA release through the `production-database` Environment. See
+[migration release controls](migration-release-controls.md) for the required
+reviewer settings, separate release credential and coordinated app promotion.
+Verify backup and isolated recovery evidence before approving any hosted apply.
+
 
 ## 4. Audit migration deployment gate
 
