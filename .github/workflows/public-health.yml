@@ -1,0 +1,22 @@
+name: SetupSheet public availability
+on:
+  schedule:
+    # Six checks/day. Github may delay scheduled workflows at peak periods.
+    - cron: "13 */4 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: setupsheets-public-health
+  cancel-in-progress: false
+jobs:
+  public-uptime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      - name: Check public endpoints without credentials or writes
+        run: node scripts/check-public-uptime.mjs
