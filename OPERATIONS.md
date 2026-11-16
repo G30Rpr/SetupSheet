@@ -329,28 +329,25 @@ Remove or hide violating content using the existing owner/admin process, and pre
 
 ## Migrations: deploy pipeline (GitHub Actions)
 
-Since 2026-10-22, `supabase/migrations/` deploys to production automatically via
-`.github/workflows/deploy-migrations.yml` — every push to `SetUpSheet` that
-touches `supabase/migrations/` (and manual `workflow_dispatch`, which supports a
-dry run).
+Pushes to `SetUpSheet` validate the migration chain and run a read-only pending
+migration inventory. Hosted SQL is applied only by an explicit manual dispatch
+for an exact approved default-branch SHA, using the protected
+`production-database` Environment and its separate release credential.
 
-- **Fresh-database gate first.** The whole chain must apply to an empty
-  Postgres and pass `supabase/testing/*.test.sql` before production is touched.
-- **Pending-only apply.** Files are matched to
-  `supabase_migrations.schema_migrations` by their 4-digit version prefix
-  (`0042_add_thing.sql` → version `0042`); applied versions are never re-run.
-  The 2026-10-22 baseline recorded `0001`–`0041` as applied (their objects
-  pre-existed in production).
-- **Migration FILES must not contain `BEGIN`/`COMMIT`** (the pipeline wraps each
-  file in one transaction and rejects files that commit early). The
-  BEGIN/COMMIT advice above applies to *manual* SQL-editor work only.
-- **Required repository secret: `SUPABASE_DB_URL`** (Dashboard → Connect → URI,
-  role `postgres`). If it is missing the workflow fails red by design — it never
-  skips silently.
-- **Write migrations for a non-superuser runner** (same limits as the Supabase
-  SQL editor): no `ALTER ROLE ... SUPERUSER`/`NOSUPERUSER`; `ALTER FUNCTION ...
-  OWNER TO <role>` needs that role to hold `CREATE` on the schema (grant it for
-  the statement, revoke after); prefer `public`-schema wrappers over writes to
-  `auth.*`/`storage.*`.
-- **Keep migrations additive** (project rule): Vercel deploys in parallel with
-  this job, so old code must keep working against the migrated schema.
+See [Migration release controls](docs/migration-release-controls.md) for setup,
+recovery prerequisites, rehearsal, application promotion and failure handling.
+The workflow reference alone does not configure required Environment reviewers.
+
+- The full SQL regression suite runs before the hosted inventory or apply.
+- Four-digit legacy versions and CLI-generated timestamp versions are supported.
+- Recorded versions are never replayed automatically; inspect live catalogs to
+  detect drift even when migration history says a version was applied.
+- Each pending file and its history entry are atomic. Pending files must not
+  contain `BEGIN`/`COMMIT`; the complete batch is not one transaction.
+- Inventory never bootstraps missing history. Apply refuses a target without
+  history until its state has been reconciled explicitly.
+- `SUPABASE_DB_URL` is the inventory credential; prefer a read-only role.
+  `SUPABASE_RELEASE_DB_URL` belongs only in the protected release Environment.
+  Missing credentials fail the corresponding job rather than silently skipping.
+- Keep migrations compatible with the running app and the target app. Coordinate
+  the database release and Vercel promotion; an app rollback does not undo SQL.
