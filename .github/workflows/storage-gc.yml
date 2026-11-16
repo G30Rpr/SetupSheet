@@ -2,43 +2,52 @@ name: Storage Garbage Collection
 
 on:
   schedule:
-    # Run weekly on Sundays at 04:00 UTC
+    # Weekly orphan pruning after the database's 24h upload grace period.
     - cron: "0 4 * * 0"
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Perform a dry run without deleting objects"
+        description: "Preview eligible objects without deleting"
         type: boolean
-        default: false
+        default: true
       grace:
-        description: "Grace period interval for orphaned files"
+        description: "Grace interval (e.g. 24 hours; maximum 30 days)"
         type: string
         default: "24 hours"
 
+permissions:
+  contents: read
+
+concurrency:
+  group: setupsheets-storage-gc
+  cancel-in-progress: false
+
 jobs:
   sweep:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: "22"
           cache: npm
       - run: npm ci
-      - name: Run Orphaned Storage Sweep
+      - name: Sweep orphaned Storage safely
+        shell: bash
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL || secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GC_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+          GC_GRACE: ${{ github.event_name == 'workflow_dispatch' && inputs.grace || '24 hours' }}
         run: |
-          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-            echo "Notice: SUPABASE_SERVICE_ROLE_KEY secret is not configured; skipping automated sweep."
-            exit 0
+          set -euo pipefail
+          if [[ -z "$SUPABASE_SERVICE_ROLE_KEY" || -z "$SUPABASE_URL" ]]; then
+            echo "::error::Required Supabase storage cleanup secrets are not configured."
+            exit 1
           fi
-          EXTRA_ARGS=""
-          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            EXTRA_ARGS="$EXTRA_ARGS --dry-run"
+          args=(--grace "$GC_GRACE")
+          if [[ "$GC_DRY_RUN" == "true" ]]; then
+            args+=(--dry-run)
           fi
-          if [ -n "${{ github.event.inputs.grace }}" ]; then
-            EXTRA_ARGS="$EXTRA_ARGS --grace '${{ github.event.inputs.grace }}'"
-          fi
-          npm run storage:sweep -- $EXTRA_ARGS
+          npm run storage:sweep -- "${args[@]}"
