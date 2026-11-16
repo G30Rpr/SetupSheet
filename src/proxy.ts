@@ -162,7 +162,9 @@ export async function proxy(request: NextRequest) {
   // RUM requests are public and do not need a refreshed Supabase session.
   // Avoid spending an auth round trip on every beacon, especially when a
   // signed-in visitor leaves a page. The API route is bounded and stateless.
-  if (pathname === "/api/telemetry") {
+  if (pathname === "/api/telemetry" || pathname === "/api/health") {
+    // Health probes must measure public database availability without
+    // refreshing an unrelated user session or making an Auth round trip.
     return NextResponse.next();
   }
 
