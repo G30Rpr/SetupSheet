@@ -77,6 +77,7 @@ async function readZip(response: Response) {
 afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("GET /api/setups/[id]/bundle", () => {
@@ -130,15 +131,119 @@ describe("GET /api/setups/[id]/bundle", () => {
     expect(archive.length).toBeGreaterThan(4);
   });
 
-  it("still delivers a README when the stored file can't be fetched", async () => {
+  it("returns an uncached error instead of a misleading ZIP when the file fetch fails", async () => {
     getSetupByIdMock.mockResolvedValue(makeSetup());
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
 
     const response = await call();
 
+    expect(response.status).toBe(502);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("content-type")).toContain("application/json");
+    expect(await response.json()).toEqual({ error: "The setup file is unavailable. Please try again." });
+  });
+
+  it.each([403, 404, 500])("rejects an upstream HTTP %s even when values are available", async (status) => {
+    getSetupByIdMock.mockResolvedValue(makeSetup({ setupValues: { frontWing: "5" } }));
+    const cancel = vi.fn();
+    const body = new ReadableStream({ cancel });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, { status })));
+
+    const response = await call();
+
+    expect(response.status).toBe(502);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it("rejects an advertised oversized file before reading it", async () => {
+    getSetupByIdMock.mockResolvedValue(makeSetup());
+    const cancel = vi.fn();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(
+      new ReadableStream({ cancel }),
+      { headers: { "Content-Length": String(10 * 1024 * 1024 + 1) } }
+    )));
+
+    expect((await call()).status).toBe(502);
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it.each([undefined, "1"])("bounds actual bytes when Content-Length is %s", async (length) => {
+    getSetupByIdMock.mockResolvedValue(makeSetup());
+    const cancel = vi.fn();
+    let chunks = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        chunks += 1;
+        controller.enqueue(new Uint8Array(6 * 1024 * 1024));
+      },
+      cancel,
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, {
+      headers: length ? { "Content-Length": length } : {},
+    })));
+
+    expect((await call()).status).toBe(502);
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(chunks).toBeLessThanOrEqual(3);
+  });
+
+  it("accepts an existing attachment exactly at the 10 MiB bucket limit", async () => {
+    getSetupByIdMock.mockResolvedValue(makeSetup());
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response(new Uint8Array(10 * 1024 * 1024))
+    ));
+
+    const response = await call();
+
     expect(response.status).toBe(200);
-    const { names } = await readZip(response);
-    expect(names).toEqual(["README.txt"]);
+    expect((await readZip(response)).names).toEqual(["README.txt", "spa-quali.sto"]);
+  });
+
+  it("rejects an empty attached file", async () => {
+    getSetupByIdMock.mockResolvedValue(makeSetup());
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(new Uint8Array())));
+    expect((await call()).status).toBe(502);
+  });
+
+  it("rejects a stream error instead of delivering a truncated archive", async () => {
+    getSetupByIdMock.mockResolvedValue(makeSetup());
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { controller.error(new Error("disconnected")); },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body)));
+    expect((await call()).status).toBe(502);
+  });
+
+  it("times out a fetch that never returns headers", async () => {
+    vi.useFakeTimers();
+    getSetupByIdMock.mockResolvedValue(makeSetup());
+    vi.stubGlobal("fetch", vi.fn((_url, init: RequestInit) => new Promise((_resolve, reject) => {
+      init.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
+    })));
+
+    const pending = call();
+    await vi.advanceTimersByTimeAsync(10_000);
+    const response = await pending;
+
+    expect(response.status).toBe(504);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("times out and cancels a stalled body after headers arrive", async () => {
+    vi.useFakeTimers();
+    getSetupByIdMock.mockResolvedValue(makeSetup());
+    const cancel = vi.fn();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(new ReadableStream({ cancel }))));
+
+    const pending = call();
+    await vi.advanceTimersByTimeAsync(10_000);
+    const response = await pending;
+
+    expect(response.status).toBe(504);
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("bundles a generated values file for a setup with no uploaded file", async () => {
