@@ -8,6 +8,64 @@ import { getSetupById } from "@/lib/supabase/setups";
 import { logger } from "@/lib/logger";
 import { isUuid } from "@/lib/utils";
 
+const FILE_DOWNLOAD_TIMEOUT_MS = 10_000;
+// Match the bucket's outer limit so existing attachments above the current
+// 5 MiB setup-upload limit remain downloadable. The ZIP adds only bounded text.
+const MAX_BUNDLE_FILE_BYTES = 10 * 1024 * 1024;
+
+async function downloadSetupFile(url: string): Promise<Uint8Array> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort(new DOMException("Setup file download timed out", "TimeoutError"));
+  }, FILE_DOWNLOAD_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, { cache: "no-store", signal: controller.signal });
+    const contentLength = Number(response.headers.get("content-length"));
+    if (!response.ok || !response.body || contentLength > MAX_BUNDLE_FILE_BYTES) {
+      void response.body?.cancel().catch(() => {});
+      throw new Error("Setup file is unavailable or too large");
+    }
+
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    // Cancel even a stalled body read when the deadline expires. Fetch's signal
+    // bounds the headers request too; this listener keeps body cleanup explicit.
+    const cancel = () => { void reader.cancel().catch(() => {}); };
+    controller.signal.addEventListener("abort", cancel, { once: true });
+    try {
+      while (true) {
+        controller.signal.throwIfAborted();
+        const { done, value } = await reader.read();
+        controller.signal.throwIfAborted();
+        if (done) break;
+        total += value.byteLength;
+        if (total > MAX_BUNDLE_FILE_BYTES) throw new Error("Setup file is too large");
+        chunks.push(value);
+      }
+    } finally {
+      controller.signal.removeEventListener("abort", cancel);
+      cancel();
+      reader.releaseLock();
+    }
+    if (total === 0) throw new Error("Setup file is empty");
+
+    const content = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      content.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return content;
+  } catch (error) {
+    if (controller.signal.aborted) throw controller.signal.reason;
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /**
  * One download that contains everything a driver needs: the setup file itself
  * (when the author attached one), a generated text copy of the tuning values,
@@ -52,21 +110,16 @@ export async function GET(
 
   if (setup.fileUrl) {
     try {
-      const response = await fetch(setup.fileUrl, { cache: "no-store" });
-      if (response.ok) {
-        files.push({
-          name: setupFileName,
-          content: new Uint8Array(await response.arrayBuffer()),
-        });
-      } else {
-        logger.error("install bundle: storage fetch failed", {
-          status: response.status,
-          id,
-        });
-      }
+      files.push({ name: setupFileName, content: await downloadSetupFile(setup.fileUrl) });
     } catch (error) {
-      // A README-only bundle still helps; the response below says what's in it.
-      logger.error("install bundle: storage fetch threw", error);
+      const timedOut = error instanceof DOMException && error.name === "TimeoutError";
+      logger.error("install bundle: attachment unavailable", { id, timedOut });
+      return NextResponse.json(
+        { error: timedOut
+          ? "The setup file took too long to download. Please try again."
+          : "The setup file is unavailable. Please try again." },
+        { status: timedOut ? 504 : 502, headers: { "Cache-Control": "no-store" } }
+      );
     }
   }
 
