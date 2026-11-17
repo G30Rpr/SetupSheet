@@ -35,7 +35,14 @@ import type { Tables } from "@/lib/supabase/database.types";
 import { createPublicClient } from "@/lib/supabase/public";
 import { sanitizeDisplayName } from "@/lib/user-display";
 import { normalizeVideoUrl } from "@/lib/video-url";
-import type { Condition, Game, RatingSplit, RigProfile, Setup, SetupTag } from "@/lib/types";
+import type {
+  Condition,
+  Game,
+  RatingSplit,
+  RigProfile,
+  Setup,
+  SetupTag,
+} from "@/lib/types";
 import { SETUP_CARD_PAGE_SIZE } from "@/lib/ui-constants";
 import { isUuid } from "@/lib/utils";
 
@@ -112,7 +119,7 @@ const getCachedBrowseRows = unstable_cache(
     car: string,
     track: string,
     condition: string,
-    rig: string
+    rig: string,
   ): Promise<SetupRow[]> => {
     const supabase = createPublicClient();
     const searchExpression = buildBrowseSearchExpression(search);
@@ -123,7 +130,8 @@ const getCachedBrowseRows = unstable_cache(
     if (game !== ALL_BROWSE_FILTER) query = query.eq("game", game);
     if (car !== ALL_BROWSE_FILTER) query = query.eq("car", car);
     if (track !== ALL_BROWSE_FILTER) query = query.eq("track", track);
-    if (condition !== ALL_BROWSE_FILTER) query = query.eq("condition", condition);
+    if (condition !== ALL_BROWSE_FILTER)
+      query = query.eq("condition", condition);
     if (rig !== ALL_BROWSE_FILTER) query = query.eq("rig_profile", rig);
     if (searchExpression) query = query.or(searchExpression);
 
@@ -132,10 +140,13 @@ const getCachedBrowseRows = unstable_cache(
       .order("id", { ascending: false })
       .limit(SETUPS_BROWSE_LIMIT);
 
-    return unwrapCachedList(result, "getCachedBrowseRows: failed to load setups");
+    return unwrapCachedList(
+      result,
+      "getCachedBrowseRows: failed to load setups",
+    );
   },
   ["setups-browse"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] },
 );
 
 const getCachedFeaturedRows = unstable_cache(
@@ -147,10 +158,13 @@ const getCachedFeaturedRows = unstable_cache(
       .order("upvotes", { ascending: false })
       .limit(Math.min(Math.max(limit, 1), 24));
 
-    return unwrapCachedList(result, "getCachedFeaturedRows: failed to load setups");
+    return unwrapCachedList(
+      result,
+      "getCachedFeaturedRows: failed to load setups",
+    );
   },
   ["setups-featured"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] },
 );
 
 const getCachedStartingPointRows = unstable_cache(
@@ -163,10 +177,13 @@ const getCachedStartingPointRows = unstable_cache(
       .order("id", { ascending: false })
       .limit(Math.min(Math.max(limit, 1), 48));
 
-    return unwrapCachedList(result, "getCachedStartingPointRows: failed to load setups");
+    return unwrapCachedList(
+      result,
+      "getCachedStartingPointRows: failed to load setups",
+    );
   },
   ["setups-starting-points"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] },
 );
 
 /**
@@ -177,7 +194,7 @@ const getCachedStartingPointRows = unstable_cache(
  * it exists so a saved rig can still find older matches as the table grows.
  */
 export async function getStartingPointCandidates(
-  limit = 48
+  limit = 48,
 ): Promise<{ setups: Setup[]; failed: boolean }> {
   const supabase = await createClient();
   try {
@@ -204,13 +221,19 @@ const getCachedFinderCombos = unstable_cache(
       .order("created_at", { ascending: false })
       .limit(500);
 
-    return unwrapCachedList(result, "getCachedFinderCombos: failed to load combos");
+    return unwrapCachedList(
+      result,
+      "getCachedFinderCombos: failed to load combos",
+    );
   },
   ["setups-finder-combos"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] },
 );
 
-export async function getFinderCombos(): Promise<{ combos: FinderCombo[]; failed: boolean }> {
+export async function getFinderCombos(): Promise<{
+  combos: FinderCombo[];
+  failed: boolean;
+}> {
   try {
     return { combos: await getCachedFinderCombos(), failed: false };
   } catch {
@@ -221,11 +244,16 @@ export async function getFinderCombos(): Promise<{ combos: FinderCombo[]; failed
 const getCachedSetupCount = unstable_cache(
   async (): Promise<number> => {
     const supabase = createPublicClient();
-    const result = await supabase.from("setups").select("id", { count: "exact", head: true });
-    return unwrapCachedCount(result, "getCachedSetupCount: failed to count setups");
+    const result = await supabase
+      .from("setups")
+      .select("id", { count: "exact", head: true });
+    return unwrapCachedCount(
+      result,
+      "getCachedSetupCount: failed to count setups",
+    );
   },
   ["setups-count"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] },
 );
 
 interface CachedProfileSetupPage {
@@ -236,7 +264,7 @@ const getCachedProfileSetupPage = unstable_cache(
   async (
     userId: string,
     cursorCreatedAt: string,
-    cursorId: string
+    cursorId: string,
   ): Promise<CachedProfileSetupPage> => {
     const supabase = createPublicClient();
     let query = supabase
@@ -249,17 +277,20 @@ const getCachedProfileSetupPage = unstable_cache(
 
     if (cursorCreatedAt && cursorId) {
       query = query.or(
-        `created_at.lt.${cursorCreatedAt},and(created_at.eq.${cursorCreatedAt},id.lt.${cursorId})`
+        `created_at.lt.${cursorCreatedAt},and(created_at.eq.${cursorCreatedAt},id.lt.${cursorId})`,
       );
     }
 
     const result = await query;
     return {
-      rows: unwrapCachedList(result, "getCachedProfileSetupPage: failed to load setups"),
+      rows: unwrapCachedList(
+        result,
+        "getCachedProfileSetupPage: failed to load setups",
+      ),
     };
   },
   ["setups-profile-page"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] },
 );
 
 const getCachedProfileSetupStats = unstable_cache(
@@ -270,7 +301,10 @@ const getCachedProfileSetupStats = unstable_cache(
       .select("setup_count, total_upvotes, total_ratings")
       .eq("user_id", userId)
       .maybeSingle();
-    const row = unwrapCachedSingle(result, "getCachedProfileSetupStats: failed to load profile totals");
+    const row = unwrapCachedSingle(
+      result,
+      "getCachedProfileSetupStats: failed to load profile totals",
+    );
     if (!row) return null;
 
     return {
@@ -280,7 +314,7 @@ const getCachedProfileSetupStats = unstable_cache(
     };
   },
   ["profile-setup-stats"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: PROFILE_STATS_TAGS }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: PROFILE_STATS_TAGS },
 );
 
 const getCachedSetupRowById = unstable_cache(
@@ -291,27 +325,46 @@ const getCachedSetupRowById = unstable_cache(
       .select(SETUP_COLUMNS)
       .eq("id", id)
       .maybeSingle();
-    return unwrapCachedSingle(result, "getCachedSetupRowById: failed to load setup");
+    return unwrapCachedSingle(
+      result,
+      "getCachedSetupRowById: failed to load setup",
+    );
   },
   ["setup-by-id"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_ROW_TAGS] },
 );
 
 const getCachedAuthorName = unstable_cache(
   async (userId: string): Promise<string> => {
     const supabase = createPublicClient();
-    const result = await supabase.from("profiles").select("username").eq("id", userId).maybeSingle();
-    const row = unwrapCachedSingle(result, "getCachedAuthorName: failed to load profile");
+    const result = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", userId)
+      .maybeSingle();
+    const row = unwrapCachedSingle(
+      result,
+      "getCachedAuthorName: failed to load profile",
+    );
     return sanitizeDisplayName(row?.username);
   },
   ["setup-author-name"],
-  { revalidate: 60, tags: [CACHE_TAG.publicProfiles] }
+  { revalidate: 60, tags: [CACHE_TAG.publicProfiles] },
 );
 
 type SetupSeoRow = Pick<
   SetupRow,
-  "id" | "user_id" | "game" | "car" | "track" | "condition" | "lap_time" |
-    "description" | "tags" | "created_at" | "updated_at"
+  | "id"
+  | "user_id"
+  | "game"
+  | "car"
+  | "track"
+  | "condition"
+  | "lap_time"
+  | "description"
+  | "tags"
+  | "created_at"
+  | "updated_at"
 >;
 
 const getCachedSetupSeoRow = unstable_cache(
@@ -319,13 +372,18 @@ const getCachedSetupSeoRow = unstable_cache(
     const supabase = createPublicClient();
     const result = await supabase
       .from("setups")
-      .select("id, user_id, game, car, track, condition, lap_time, description, tags, created_at, updated_at")
+      .select(
+        "id, user_id, game, car, track, condition, lap_time, description, tags, created_at, updated_at",
+      )
       .eq("id", id)
       .maybeSingle();
-    return unwrapCachedSingle(result, "getCachedSetupSeoRow: failed to load setup");
+    return unwrapCachedSingle(
+      result,
+      "getCachedSetupSeoRow: failed to load setup",
+    );
   },
   ["setup-seo-by-id"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] },
 );
 
 const SITEMAP_SETUP_LIMIT = 24_000;
@@ -350,25 +408,33 @@ const getCachedSitemapRows = unstable_cache(
 
       if (cursor) {
         query = query.or(
-          `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`
+          `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`,
         );
       }
 
-      const page = unwrapCachedList(await query, "getCachedSitemapRows: failed to load setups") as SitemapRow[];
+      const page = unwrapCachedList(
+        await query,
+        "getCachedSitemapRows: failed to load setups",
+      ) as SitemapRow[];
       if (page.length === 0) break;
       rows.push(...page);
 
       if (page.length < SITEMAP_PAGE_SIZE) break;
       const last = page[page.length - 1];
       const nextCursor = { createdAt: last.created_at, id: last.id };
-      if (cursor && cursor.createdAt === nextCursor.createdAt && cursor.id === nextCursor.id) break;
+      if (
+        cursor &&
+        cursor.createdAt === nextCursor.createdAt &&
+        cursor.id === nextCursor.id
+      )
+        break;
       cursor = nextCursor;
     }
 
     return rows;
   },
   ["setups-sitemap"],
-  { revalidate: 3600, tags: [...SETUP_SITEMAP_TAGS] }
+  { revalidate: 3600, tags: [...SETUP_SITEMAP_TAGS] },
 );
 
 interface RelatedSetupRow {
@@ -387,7 +453,7 @@ const getCachedRelatedRows = unstable_cache(
     game: string,
     car: string,
     track: string,
-    fetchCount: number
+    fetchCount: number,
   ): Promise<RelatedSetupRow[]> => {
     const supabase = createPublicClient();
     // Same combo only (game + car + track). Rig/style filtering happens in
@@ -402,10 +468,13 @@ const getCachedRelatedRows = unstable_cache(
       .neq("id", setupId)
       .order("created_at", { ascending: false })
       .limit(Math.min(Math.max(fetchCount, 1), 24));
-    return unwrapCachedList(result, "getCachedRelatedRows: failed to load setups");
+    return unwrapCachedList(
+      result,
+      "getCachedRelatedRows: failed to load setups",
+    );
   },
   ["setups-related"],
-  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] }
+  { revalidate: PUBLIC_DATA_REVALIDATE_SECONDS, tags: [...SETUP_CONTENT_TAGS] },
 );
 
 interface Viewer {
@@ -417,7 +486,7 @@ interface Viewer {
 
 async function getViewer(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  setupIds: string[]
+  setupIds: string[],
 ): Promise<Viewer> {
   if (setupIds.length === 0) {
     return {
@@ -438,20 +507,34 @@ async function getViewer(
     };
   }
 
-  const [{ data: upvotes }, { data: favorites }, { data: ratings }] = await Promise.all([
-    supabase.from("setup_upvotes").select("setup_id").eq("user_id", user.id).in("setup_id", setupIds),
-    supabase.from("setup_favorites").select("setup_id").eq("user_id", user.id).in("setup_id", setupIds),
-    supabase
-      .from("setup_ratings")
-      .select("setup_id, pace, predictability")
-      .eq("user_id", user.id)
-      .in("setup_id", setupIds),
-  ]);
+  const [{ data: upvotes }, { data: favorites }, { data: ratings }] =
+    await Promise.all([
+      supabase
+        .from("setup_upvotes")
+        .select("setup_id")
+        .eq("user_id", user.id)
+        .in("setup_id", setupIds),
+      supabase
+        .from("setup_favorites")
+        .select("setup_id")
+        .eq("user_id", user.id)
+        .in("setup_id", setupIds),
+      supabase
+        .from("setup_ratings")
+        .select("setup_id, pace, predictability")
+        .eq("user_id", user.id)
+        .in("setup_id", setupIds),
+    ]);
 
   const upvotedSetupIds = new Set((upvotes ?? []).map((row) => row.setup_id));
-  const favoritedSetupIds = new Set((favorites ?? []).map((row) => row.setup_id));
+  const favoritedSetupIds = new Set(
+    (favorites ?? []).map((row) => row.setup_id),
+  );
   const myRatings = new Map(
-    (ratings ?? []).map((row) => [row.setup_id, { pace: row.pace, predictability: row.predictability }])
+    (ratings ?? []).map((row) => [
+      row.setup_id,
+      { pace: row.pace, predictability: row.predictability },
+    ]),
   );
 
   return { userId: user.id, upvotedSetupIds, favoritedSetupIds, myRatings };
@@ -461,16 +544,22 @@ function mapRow(
   row: SetupRow,
   viewer: Viewer,
   authors: Map<string, { username: string; avatarUrl: string | null }>,
-  supabase: Awaited<ReturnType<typeof createClient>>
+  supabase: Awaited<ReturnType<typeof createClient>>,
 ): Setup {
   const author = authors.get(row.user_id);
   const safeVideoUrl = normalizeVideoUrl(row.video_url);
-  const safeFilePath = isOwnedStoragePath(row.file_path, row.user_id) ? row.file_path : null;
-  const safeTelemetryPath = isOwnedStoragePath(row.telemetry_file_path, row.user_id)
+  const safeFilePath = isOwnedStoragePath(row.file_path, row.user_id)
+    ? row.file_path
+    : null;
+  const safeTelemetryPath = isOwnedStoragePath(
+    row.telemetry_file_path,
+    row.user_id,
+  )
     ? row.telemetry_file_path
     : null;
   const telemetryUrl = safeTelemetryPath
-    ? supabase.storage.from(SETUP_FILES_BUCKET).getPublicUrl(safeTelemetryPath).data.publicUrl
+    ? supabase.storage.from(SETUP_FILES_BUCKET).getPublicUrl(safeTelemetryPath)
+        .data.publicUrl
     : null;
   const isVerified = Boolean(safeVideoUrl || telemetryUrl);
   const setupValues = normalizeSetupValues(row.setup_values);
@@ -505,7 +594,8 @@ function mapRow(
     setupValues: setupValues ?? undefined,
     fileName: sanitizeStoredFileName(row.file_name),
     fileUrl: safeFilePath
-      ? supabase.storage.from(SETUP_FILES_BUCKET).getPublicUrl(safeFilePath).data.publicUrl
+      ? supabase.storage.from(SETUP_FILES_BUCKET).getPublicUrl(safeFilePath)
+          .data.publicUrl
       : null,
     videoUrl: safeVideoUrl,
     telemetryFileName: sanitizeStoredFileName(row.telemetry_file_name),
@@ -516,9 +606,12 @@ function mapRow(
 
 async function getAuthors(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  userIds: string[]
+  userIds: string[],
 ): Promise<Map<string, { username: string; avatarUrl: string | null }>> {
-  const authors = new Map<string, { username: string; avatarUrl: string | null }>();
+  const authors = new Map<
+    string,
+    { username: string; avatarUrl: string | null }
+  >();
   if (userIds.length === 0) return authors;
 
   const { data: profiles, error } = await supabase
@@ -542,7 +635,7 @@ async function getAuthors(
 /** Hydrates a flat setup query with the viewer state and author metadata shared by every setup reader. */
 async function hydrateSetupRows(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  rows: SetupRow[]
+  rows: SetupRow[],
 ): Promise<Setup[]> {
   const typedRows = rows;
   if (typedRows.length === 0) return [];
@@ -550,15 +643,15 @@ async function hydrateSetupRows(
   const [viewer, authors, splits] = await Promise.all([
     getViewer(
       supabase,
-      typedRows.map((row) => row.id)
+      typedRows.map((row) => row.id),
     ),
     getAuthors(
       supabase,
-      typedRows.map((row) => row.user_id)
+      typedRows.map((row) => row.user_id),
     ),
     getRatingSplitBuckets(
       supabase,
-      typedRows.map((row) => row.id)
+      typedRows.map((row) => row.id),
     ),
   ]);
 
@@ -576,7 +669,7 @@ async function hydrateSetupRows(
  */
 async function getRatingSplitBuckets(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  setupIds: string[]
+  setupIds: string[],
 ): Promise<Map<string, RatingSplit[]>> {
   const bySetup = new Map<string, RatingSplit[]>();
   if (setupIds.length === 0) return bySetup;
@@ -622,7 +715,7 @@ async function getRatingSplitBuckets(
  * that failure mode entirely.
  */
 export async function getSetups(
-  filters: BrowseFilters = EMPTY_BROWSE_FILTERS
+  filters: BrowseFilters = EMPTY_BROWSE_FILTERS,
 ): Promise<{ setups: Setup[]; failed: boolean }> {
   const supabase = await createClient();
   let rows: SetupRow[];
@@ -633,7 +726,7 @@ export async function getSetups(
       filters.car,
       filters.track,
       filters.condition,
-      filters.rig
+      filters.rig,
     );
   } catch {
     // The cache callback throws on query failure, so Next won't retain an
@@ -650,8 +743,12 @@ export async function getSetups(
  */
 export async function getSetupsAfter(
   cursor: SetupCursor | null,
-  filters: BrowseFilters = EMPTY_BROWSE_FILTERS
-): Promise<{ setups: Setup[]; nextCursor: SetupCursor | null; error: string | null }> {
+  filters: BrowseFilters = EMPTY_BROWSE_FILTERS,
+): Promise<{
+  setups: Setup[];
+  nextCursor: SetupCursor | null;
+  error: string | null;
+}> {
   const supabase = await createClient();
   const searchExpression = buildBrowseSearchExpression(filters.search);
   let query = searchExpression
@@ -668,20 +765,31 @@ export async function getSetupsAfter(
     if (expression) query = query.or(expression);
   }
 
-  if (filters.game !== ALL_BROWSE_FILTER) query = query.eq("game", filters.game);
+  if (filters.game !== ALL_BROWSE_FILTER)
+    query = query.eq("game", filters.game);
   if (filters.car !== ALL_BROWSE_FILTER) query = query.eq("car", filters.car);
-  if (filters.track !== ALL_BROWSE_FILTER) query = query.eq("track", filters.track);
-  if (filters.condition !== ALL_BROWSE_FILTER) query = query.eq("condition", filters.condition);
-  if (filters.rig !== ALL_BROWSE_FILTER) query = query.eq("rig_profile", filters.rig);
+  if (filters.track !== ALL_BROWSE_FILTER)
+    query = query.eq("track", filters.track);
+  if (filters.condition !== ALL_BROWSE_FILTER)
+    query = query.eq("condition", filters.condition);
+  if (filters.rig !== ALL_BROWSE_FILTER)
+    query = query.eq("rig_profile", filters.rig);
 
   const result = await query
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(SETUPS_BROWSE_PAGE_SIZE);
 
-  const rows = unwrapList(result, "getSetupsAfter: failed to load older setups");
+  const rows = unwrapList(
+    result,
+    "getSetupsAfter: failed to load older setups",
+  );
   if (result.error) {
-    return { setups: [], nextCursor: null, error: "Couldn't load older setups right now." };
+    return {
+      setups: [],
+      nextCursor: null,
+      error: "Couldn't load older setups right now.",
+    };
   }
 
   const setups = await hydrateSetupRows(supabase, rows);
@@ -705,7 +813,7 @@ export async function getSetupsAfter(
  * in the table down to the client just to sort and slice in JS.
  */
 export async function getFeaturedSetups(
-  limit: number
+  limit: number,
 ): Promise<{ setups: Setup[]; failed: boolean }> {
   const supabase = await createClient();
   try {
@@ -719,7 +827,9 @@ export async function getFeaturedSetups(
 }
 
 /** Total number of setups, optionally scoped to the same server-side browse filters. */
-export async function getSetupCount(filters: BrowseFilters = EMPTY_BROWSE_FILTERS): Promise<number | null> {
+export async function getSetupCount(
+  filters: BrowseFilters = EMPTY_BROWSE_FILTERS,
+): Promise<number | null> {
   // The landing-page stat and browse-page upper bound are intentionally
   // cached for a short window. Upload/update actions invalidate the tag, so
   // normal mutations remain fresh without making every anonymous page hit a
@@ -745,11 +855,15 @@ export async function getSetupCount(filters: BrowseFilters = EMPTY_BROWSE_FILTER
     ? supabase.from("setup_search").select("id", { count: "exact", head: true })
     : supabase.from("setups").select("id", { count: "exact", head: true });
 
-  if (filters.game !== ALL_BROWSE_FILTER) query = query.eq("game", filters.game);
+  if (filters.game !== ALL_BROWSE_FILTER)
+    query = query.eq("game", filters.game);
   if (filters.car !== ALL_BROWSE_FILTER) query = query.eq("car", filters.car);
-  if (filters.track !== ALL_BROWSE_FILTER) query = query.eq("track", filters.track);
-  if (filters.condition !== ALL_BROWSE_FILTER) query = query.eq("condition", filters.condition);
-  if (filters.rig !== ALL_BROWSE_FILTER) query = query.eq("rig_profile", filters.rig);
+  if (filters.track !== ALL_BROWSE_FILTER)
+    query = query.eq("track", filters.track);
+  if (filters.condition !== ALL_BROWSE_FILTER)
+    query = query.eq("condition", filters.condition);
+  if (filters.rig !== ALL_BROWSE_FILTER)
+    query = query.eq("rig_profile", filters.rig);
   if (searchExpression) query = query.or(searchExpression);
 
   try {
@@ -779,9 +893,13 @@ interface SitemapRow {
   updated_at: string;
 }
 
-const getSitemapRows = cache(async (): Promise<SitemapRow[]> => getCachedSitemapRows());
+const getSitemapRows = cache(async (): Promise<SitemapRow[]> =>
+  getCachedSitemapRows(),
+);
 
-export async function getSetupSitemapEntries(): Promise<{ id: string; updatedAt: string }[]> {
+export async function getSetupSitemapEntries(): Promise<
+  { id: string; updatedAt: string }[]
+> {
   const rows = await getSitemapRows();
   return rows.map((row) => ({ id: row.id, updatedAt: row.updated_at }));
 }
@@ -793,7 +911,9 @@ export async function getSetupSitemapEntries(): Promise<{ id: string; updatedAt:
  * view: dedupe client-side off the same bounded, newest-first setups
  * query, keeping each user's most recent upload as their "last modified".
  */
-export async function getProfileSitemapEntries(): Promise<{ userId: string; updatedAt: string }[]> {
+export async function getProfileSitemapEntries(): Promise<
+  { userId: string; updatedAt: string }[]
+> {
   const rows = await getSitemapRows();
 
   const seen = new Map<string, string>();
@@ -817,7 +937,10 @@ export async function getSetupsByIds(ids: string[]): Promise<Setup[]> {
 
   const supabase = await createClient();
 
-  const result = await supabase.from("setups").select(SETUP_COLUMNS).in("id", ids);
+  const result = await supabase
+    .from("setups")
+    .select(SETUP_COLUMNS)
+    .in("id", ids);
 
   const rows = unwrapList(result, "getSetupsByIds: failed to load setups");
   return hydrateSetupRows(supabase, rows);
@@ -830,19 +953,26 @@ const PROFILE_CURSOR_PATTERN =
 function isValidProfileCursor(cursor: SetupCursor | null): boolean {
   return Boolean(
     cursor &&
-      typeof cursor.createdAt === "string" &&
-      cursor.createdAt.length <= 64 &&
-      PROFILE_CURSOR_PATTERN.test(cursor.createdAt) &&
-      !Number.isNaN(Date.parse(cursor.createdAt)) &&
-      isUuid(cursor.id)
+    typeof cursor.createdAt === "string" &&
+    cursor.createdAt.length <= 64 &&
+    PROFILE_CURSOR_PATTERN.test(cursor.createdAt) &&
+    !Number.isNaN(Date.parse(cursor.createdAt)) &&
+    isUuid(cursor.id),
   );
 }
 
 /** Fetches one bounded page of a user's setups, newest first. */
 export const getSetupsByUserPage = cache(
-  async (userId: string, cursor: SetupCursor | null = null): Promise<ProfileSetupPage> => {
+  async (
+    userId: string,
+    cursor: SetupCursor | null = null,
+  ): Promise<ProfileSetupPage> => {
     if (!isUuid(userId) || (cursor !== null && !isValidProfileCursor(cursor))) {
-      return { setups: [], nextCursor: null, error: "That profile page request is invalid." };
+      return {
+        setups: [],
+        nextCursor: null,
+        error: "That profile page request is invalid.",
+      };
     }
 
     const supabase = await createClient();
@@ -851,10 +981,14 @@ export const getSetupsByUserPage = cache(
       cachedPage = await getCachedProfileSetupPage(
         userId,
         cursor?.createdAt ?? "",
-        cursor?.id ?? ""
+        cursor?.id ?? "",
       );
     } catch {
-      return { setups: [], nextCursor: null, error: "Couldn't load profile setups right now." };
+      return {
+        setups: [],
+        nextCursor: null,
+        error: "Couldn't load profile setups right now.",
+      };
     }
 
     const pageRows = cachedPage.rows.slice(0, PROFILE_SETUP_PAGE_SIZE);
@@ -869,11 +1003,13 @@ export const getSetupsByUserPage = cache(
           : null,
       error: null,
     };
-  }
+  },
 );
 
 /** Cached aggregate totals keep the profile header accurate without loading every setup card. */
-export async function getProfileSetupStats(userId: string): Promise<ProfileSetupStats | null> {
+export async function getProfileSetupStats(
+  userId: string,
+): Promise<ProfileSetupStats | null> {
   return getCachedProfileSetupStats(userId);
 }
 
@@ -898,25 +1034,27 @@ export interface SetupSeoData {
  * favorite, rating, and ownership joins during metadata generation, while
  * reusing the shared public detail row cache.
  */
-export const getSetupSeoData = cache(async (id: string): Promise<SetupSeoData | null> => {
-  const row = await getCachedSetupSeoRow(id);
-  if (!row) return null;
+export const getSetupSeoData = cache(
+  async (id: string): Promise<SetupSeoData | null> => {
+    const row = await getCachedSetupSeoRow(id);
+    if (!row) return null;
 
-  return {
-    id: row.id,
-    userId: row.user_id,
-    game: row.game as Game,
-    car: row.car,
-    track: row.track,
-    condition: row.condition as Condition,
-    lapTime: row.lap_time ?? "",
-    description: row.description,
-    tags: row.tags as SetupTag[],
-    author: await getCachedAuthorName(row.user_id),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-});
+    return {
+      id: row.id,
+      userId: row.user_id,
+      game: row.game as Game,
+      car: row.car,
+      track: row.track,
+      condition: row.condition as Condition,
+      lapTime: row.lap_time ?? "",
+      description: row.description,
+      tags: row.tags as SetupTag[],
+      author: await getCachedAuthorName(row.user_id),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  },
+);
 
 export interface RelatedSetup {
   id: string;
@@ -942,25 +1080,27 @@ export interface RelatedSetupSelf {
  * Related setups (P2): same car + track, different rig or style. Ranking is
  * pickRelatedSetups (pure, unit-tested); this stays a plain public-row fetch.
  */
-export const getRelatedSetups = cache(async (self: RelatedSetupSelf, limit = 6): Promise<RelatedSetup[]> => {
-  const rows = await getCachedRelatedRows(
-    self.id,
-    self.game,
-    self.car,
-    self.track,
-    Math.min(Math.max(limit * 2, 2), 24)
-  );
-  const candidates: RelatedSetup[] = rows.map((row) => ({
-    id: row.id,
-    game: row.game as Game,
-    car: row.car,
-    track: row.track,
-    condition: row.condition as Condition,
-    rigProfile: row.rig_profile,
-    tags: row.tags ?? [],
-  }));
-  return pickRelatedSetups(candidates, self, limit);
-});
+export const getRelatedSetups = cache(
+  async (self: RelatedSetupSelf, limit = 6): Promise<RelatedSetup[]> => {
+    const rows = await getCachedRelatedRows(
+      self.id,
+      self.game,
+      self.car,
+      self.track,
+      Math.min(Math.max(limit * 2, 2), 24),
+    );
+    const candidates: RelatedSetup[] = rows.map((row) => ({
+      id: row.id,
+      game: row.game as Game,
+      car: row.car,
+      track: row.track,
+      condition: row.condition as Condition,
+      rigProfile: row.rig_profile,
+      tags: row.tags ?? [],
+    }));
+    return pickRelatedSetups(candidates, self, limit);
+  },
+);
 
 /**
  * Fetches a single setup by id, or null if it doesn't exist / the query

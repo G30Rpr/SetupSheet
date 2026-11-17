@@ -47,17 +47,25 @@ export interface SetupRequestsPage {
  */
 async function hydrateSetupRequestRows(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  rows: SetupRequestRow[]
+  rows: SetupRequestRow[],
 ): Promise<SetupRequest[]> {
   if (rows.length === 0) return [];
 
   const profileIds = Array.from(
     new Set(
-      rows.flatMap((row) => [row.requester_id, row.fulfilled_by].filter((id): id is string => Boolean(id)))
-    )
+      rows.flatMap((row) =>
+        [row.requester_id, row.fulfilled_by].filter((id): id is string =>
+          Boolean(id),
+        ),
+      ),
+    ),
   );
   const fulfilledSetupIds = Array.from(
-    new Set(rows.map((row) => row.fulfilled_setup_id).filter((id): id is string => Boolean(id)))
+    new Set(
+      rows
+        .map((row) => row.fulfilled_setup_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
   );
 
   const [{ data: profiles }, { data: setups }] = await Promise.all([
@@ -65,19 +73,28 @@ async function hydrateSetupRequestRows(
       ? supabase.from("profiles").select("id, username").in("id", profileIds)
       : Promise.resolve({ data: [] as { id: string; username: string }[] }),
     fulfilledSetupIds.length > 0
-      ? supabase.from("setups").select("id, car, track").in("id", fulfilledSetupIds)
-      : Promise.resolve({ data: [] as { id: string; car: string; track: string }[] }),
+      ? supabase
+          .from("setups")
+          .select("id, car, track")
+          .in("id", fulfilledSetupIds)
+      : Promise.resolve({
+          data: [] as { id: string; car: string; track: string }[],
+        }),
   ]);
 
   const usernameById = new Map((profiles ?? []).map((p) => [p.id, p.username]));
   const setupById = new Map((setups ?? []).map((s) => [s.id, s]));
 
   return rows.map((row) => {
-    const fulfilledSetup = row.fulfilled_setup_id ? setupById.get(row.fulfilled_setup_id) : undefined;
+    const fulfilledSetup = row.fulfilled_setup_id
+      ? setupById.get(row.fulfilled_setup_id)
+      : undefined;
     return {
       id: row.id,
       requesterId: row.requester_id,
-      requesterUsername: sanitizeDisplayName(usernameById.get(row.requester_id)),
+      requesterUsername: sanitizeDisplayName(
+        usernameById.get(row.requester_id),
+      ),
       game: row.game as Game,
       car: row.car,
       track: row.track,
@@ -111,7 +128,7 @@ function buildRequestCursorFilter(cursor: SetupRequestCursor): string {
  * fulfilled ones become a short, explicitly labelled preview on the first page.
  */
 export async function getSetupRequestsPage(
-  cursor: SetupRequestCursor | null = null
+  cursor: SetupRequestCursor | null = null,
 ): Promise<SetupRequestsPage> {
   const supabase = await createClient();
 
@@ -144,7 +161,10 @@ export async function getSetupRequestsPage(
     // Logged here rather than left to unwrapList: this branch has to fail the
     // whole page (a silently empty board would look like "no requests"), so the
     // underlying PostgREST error is the only thing that makes it debuggable.
-    logger.error("getSetupRequestsPage: failed to load open requests", openResult.error);
+    logger.error(
+      "getSetupRequestsPage: failed to load open requests",
+      openResult.error,
+    );
     return {
       open: [],
       fulfilled: [],
@@ -156,33 +176,43 @@ export async function getSetupRequestsPage(
 
   const openFetched = unwrapList(
     openResult,
-    "getSetupRequestsPage: failed to load open requests"
+    "getSetupRequestsPage: failed to load open requests",
   ) as unknown as SetupRequestRow[];
   // One row past the page size is fetched purely as a "there is more" signal.
   const hasMoreOpen = openFetched.length > REQUESTS_PAGE_SIZE;
   const openRows = openFetched.slice(0, REQUESTS_PAGE_SIZE);
-  const fulfilledRows = (fulfilledResult
-    ? (unwrapList(fulfilledResult, "getSetupRequestsPage: failed to load fulfilled requests") as unknown as SetupRequestRow[])
-    : []
+  const fulfilledRows = (
+    fulfilledResult
+      ? (unwrapList(
+          fulfilledResult,
+          "getSetupRequestsPage: failed to load fulfilled requests",
+        ) as unknown as SetupRequestRow[])
+      : []
   ).slice(0, FULFILLED_PREVIEW_SIZE);
 
   // Both lists share one hydration pass so the page costs two extra flat
   // queries total, not four.
-  const hydrated = await hydrateSetupRequestRows(supabase, [...openRows, ...fulfilledRows]);
+  const hydrated = await hydrateSetupRequestRows(supabase, [
+    ...openRows,
+    ...fulfilledRows,
+  ]);
   const openIds = new Set(openRows.map((row) => row.id));
   const [open, fulfilled] = hydrated.reduce(
     (acc, request) => {
       acc[openIds.has(request.id) ? 0 : 1].push(request);
       return acc;
     },
-    [[] as SetupRequest[], [] as SetupRequest[]]
+    [[] as SetupRequest[], [] as SetupRequest[]],
   );
 
   const lastRow = openRows.at(-1);
   return {
     open,
     fulfilled,
-    openTotal: unwrapCount(countResult, "getSetupRequestsPage: failed to count open requests"),
+    openTotal: unwrapCount(
+      countResult,
+      "getSetupRequestsPage: failed to count open requests",
+    ),
     nextCursor:
       hasMoreOpen && lastRow
         ? { createdAt: lastRow.created_at, id: lastRow.id }
@@ -199,7 +229,9 @@ export async function getSetupRequestsPage(
  * renders instead of pulling request bodies into React to count them -- and,
  * unlike the old client-side version, it never freezes when the board grows.
  */
-export async function getMostWantedRequests(limit = 5): Promise<MostWantedEntry[]> {
+export async function getMostWantedRequests(
+  limit = 5,
+): Promise<MostWantedEntry[]> {
   const supabase = await createClient();
   const capped = Math.min(Math.max(limit, 1), 25);
 
@@ -212,7 +244,7 @@ export async function getMostWantedRequests(limit = 5): Promise<MostWantedEntry[
 
   const rows = unwrapList(
     result,
-    "getMostWantedRequests: failed to load most-wanted aggregates"
+    "getMostWantedRequests: failed to load most-wanted aggregates",
   );
 
   return rows.map((row) => ({

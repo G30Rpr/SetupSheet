@@ -17,7 +17,8 @@ const SESSION_COLUMNS =
 const REVISION_COLUMNS = "id, session_id, setup_values, note, created_at";
 const RUN_PLAN_COLUMNS =
   "id, session_id, revision_id, parameter, direction, amount, verdict, note, created_at";
-const LAP_COLUMNS = "id, session_id, revision_id, lap_time_ms, condition, note, created_at";
+const LAP_COLUMNS =
+  "id, session_id, revision_id, lap_time_ms, condition, note, created_at";
 const GARAGE_SESSION_LIMIT = 50;
 const GARAGE_CHILD_ROW_LIMIT = 200;
 
@@ -78,7 +79,7 @@ function mapLap(row: GarageLapRow): GarageLap {
 }
 
 export async function getGarageSessions(
-  userId: string
+  userId: string,
 ): Promise<{ sessions: GarageSession[]; error: boolean }> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -94,12 +95,15 @@ export async function getGarageSessions(
     return { sessions: [], error: true };
   }
 
-  return { sessions: (data as unknown as GarageSessionRow[]).map(mapSession), error: false };
+  return {
+    sessions: (data as unknown as GarageSessionRow[]).map(mapSession),
+    error: false,
+  };
 }
 
 export async function getGarageSessionDetail(
   userId: string,
-  sessionId: string
+  sessionId: string,
 ): Promise<{ detail: GarageSessionDetail | null; error: boolean }> {
   const supabase = await createClient();
   const { data: sessionRow, error: sessionError } = await supabase
@@ -110,7 +114,10 @@ export async function getGarageSessionDetail(
     .maybeSingle();
 
   if (sessionError) {
-    logger.error("getGarageSessionDetail: failed to load session", sessionError);
+    logger.error(
+      "getGarageSessionDetail: failed to load session",
+      sessionError,
+    );
     return { detail: null, error: true };
   }
   if (!sessionRow) return { detail: null, error: false };
@@ -142,7 +149,7 @@ export async function getGarageSessionDetail(
   if (revisionsResult.error || runPlanResult.error || lapsResult.error) {
     logger.error(
       "getGarageSessionDetail: failed to load session records",
-      revisionsResult.error ?? runPlanResult.error ?? lapsResult.error
+      revisionsResult.error ?? runPlanResult.error ?? lapsResult.error,
     );
     return { detail: null, error: true };
   }
@@ -150,8 +157,12 @@ export async function getGarageSessionDetail(
   return {
     detail: {
       session: mapSession(sessionRow as unknown as GarageSessionRow),
-      revisions: ((revisionsResult.data ?? []) as unknown as GarageRevisionRow[]).map(mapRevision),
-      runPlanItems: ((runPlanResult.data ?? []) as unknown as GarageRunPlanRow[]).map(mapRunPlanItem),
+      revisions: (
+        (revisionsResult.data ?? []) as unknown as GarageRevisionRow[]
+      ).map(mapRevision),
+      runPlanItems: (
+        (runPlanResult.data ?? []) as unknown as GarageRunPlanRow[]
+      ).map(mapRunPlanItem),
       laps: ((lapsResult.data ?? []) as unknown as GarageLapRow[]).map(mapLap),
     },
     error: false,
