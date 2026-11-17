@@ -76,7 +76,8 @@ export function ReportContentForm({
         </span>
         <h2 className="text-xl font-semibold">Report received</h2>
         <p className="max-w-sm text-sm text-muted-foreground">
-          Thanks for helping keep the community useful and safe. A project operator can review this report.
+          Thanks for helping keep the community useful and safe. A project
+          operator can review this report.
         </p>
       </Card>
     );
@@ -92,14 +93,18 @@ export function ReportContentForm({
           <div>
             <h2 className="font-semibold">What is wrong?</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Reports are private to you and the project operator. Please include only the context needed to investigate.
+              Reports are private to you and the project operator. Please
+              include only the context needed to investigate.
             </p>
           </div>
         </div>
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="report-reason">Reason</Label>
-          <Select value={reason} onValueChange={(value) => setReason(value as ReportReason)}>
+          <Select
+            value={reason}
+            onValueChange={(value) => setReason(value as ReportReason)}
+          >
             <SelectTrigger id="report-reason" className="w-full">
               <SelectValue placeholder="Choose a reason" />
             </SelectTrigger>

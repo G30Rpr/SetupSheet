@@ -8,7 +8,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { getProfile } from "@/lib/supabase/profiles";
 import { getFavoritedSetups } from "@/lib/supabase/setup-favorites";
-import { getProfileSetupStats, getSetupsByUserPage } from "@/lib/supabase/setups";
+import {
+  getProfileSetupStats,
+  getSetupsByUserPage,
+} from "@/lib/supabase/setups";
 import { normalizeHttpsUrl } from "@/lib/safe-url";
 import { fullPageTitle } from "@/lib/seo";
 import { getUserDisplayName } from "@/lib/user-display";
@@ -16,14 +19,21 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const title = "My Profile";
 const socialTitle = fullPageTitle(title);
-const description = "Manage your SetupSheet profile, shared setups, and saved setups.";
+const description =
+  "Manage your SetupSheet profile, shared setups, and saved setups.";
 
 export const metadata: Metadata = {
   title,
   description,
   robots: { index: false, follow: false },
   alternates: { canonical: `${SITE_URL}/profile` },
-  openGraph: { title: socialTitle, description, url: "/profile", type: "website", siteName: SITE_NAME },
+  openGraph: {
+    title: socialTitle,
+    description,
+    url: "/profile",
+    type: "website",
+    siteName: SITE_NAME,
+  },
   twitter: { card: "summary_large_image", title: socialTitle, description },
 };
 
@@ -39,10 +49,12 @@ export default async function ProfilePage() {
             <PenLine className="size-7" />
           </span>
           <div>
-            <h1 className="text-xl font-semibold">Log in to view your profile</h1>
+            <h1 className="text-xl font-semibold">
+              Log in to view your profile
+            </h1>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-              We use Discord to keep track of who uploaded what, so your
-              profile and setups are scoped to your own account.
+              We use Discord to keep track of who uploaded what, so your profile
+              and setups are scoped to your own account.
             </p>
           </div>
           <DiscordLoginButton />
@@ -59,7 +71,8 @@ export default async function ProfilePage() {
   ]);
 
   const displayName = profile?.username ?? getUserDisplayName(user);
-  const avatarUrl = profile?.avatarUrl ?? normalizeHttpsUrl(user.user_metadata?.avatar_url);
+  const avatarUrl =
+    profile?.avatarUrl ?? normalizeHttpsUrl(user.user_metadata?.avatar_url);
 
   return (
     <ProfileView

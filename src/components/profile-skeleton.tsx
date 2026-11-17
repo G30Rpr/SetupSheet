@@ -22,7 +22,10 @@ export function ProfileSkeleton() {
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-96 animate-pulse rounded-xl border border-border/60 bg-secondary/20" />
+          <div
+            key={i}
+            className="h-96 animate-pulse rounded-xl border border-border/60 bg-secondary/20"
+          />
         ))}
       </div>
     </div>

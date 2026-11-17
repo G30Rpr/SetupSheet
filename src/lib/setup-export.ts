@@ -99,7 +99,10 @@ export function buildAccSetupJson(setup: Setup): string {
       aeroBalance: {
         rearWing: parseNum(v.rearWing, 5),
         splitter: parseNum(v.frontDiffuser, 3),
-        brakeDuct: [parseNum(v.frontBrakeDuct, 3), parseNum(v.rearBrakeDuct, 3)],
+        brakeDuct: [
+          parseNum(v.frontBrakeDuct, 3),
+          parseNum(v.rearBrakeDuct, 3),
+        ],
       },
     },
   };
@@ -222,6 +225,9 @@ export function getAvailableExportFormats(setup: Setup): ExportFormatOption[] {
 
 /** Builds a filesystem-safe filename for a generated setup export. */
 export function buildSetupExportFilename(setup: Setup, ext = ".txt"): string {
-  const safe = `${setup.car}-${setup.track}-setup`.replace(/[^a-zA-Z0-9._-]+/g, "_");
+  const safe = `${setup.car}-${setup.track}-setup`.replace(
+    /[^a-zA-Z0-9._-]+/g,
+    "_",
+  );
   return `${safe}${ext.startsWith(".") ? ext : `.${ext}`}`;
 }

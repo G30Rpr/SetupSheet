@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createGarageSession } from "@/lib/actions/garage";
 import type { Setup } from "@/lib/types";
 
-const { createClientMock, getCurrentUserMock, getSetupByIdMock, revalidatePathMock } = vi.hoisted(() => ({
+const {
+  createClientMock,
+  getCurrentUserMock,
+  getSetupByIdMock,
+  revalidatePathMock,
+} = vi.hoisted(() => ({
   createClientMock: vi.fn(),
   getCurrentUserMock: vi.fn(),
   getSetupByIdMock: vi.fn(),
@@ -67,15 +72,18 @@ describe("createGarageSession from a public setup", () => {
     });
 
     expect(getSetupByIdMock).toHaveBeenCalledWith(SOURCE_SETUP_ID);
-    expect(rpc).toHaveBeenCalledWith("create_garage_session_from_setup_with_baseline", {
-      p_source_setup_id: SOURCE_SETUP_ID,
-      p_rig: "Gamepad",
-      p_setup_values: {
-        frontLeftTyrePressure: "26.0 psi",
-        brakeBias: "56% front",
+    expect(rpc).toHaveBeenCalledWith(
+      "create_garage_session_from_setup_with_baseline",
+      {
+        p_source_setup_id: SOURCE_SETUP_ID,
+        p_rig: "Gamepad",
+        p_setup_values: {
+          frontLeftTyrePressure: "26.0 psi",
+          brakeBias: "56% front",
+        },
+        p_note: "From the public setup",
       },
-      p_note: "From the public setup",
-    });
+    );
   });
 
   it("keeps source values out of the baseline unless the user opts in", async () => {
@@ -88,26 +96,37 @@ describe("createGarageSession from a public setup", () => {
       setupValues: { brakeBias: "manually entered" },
     });
 
-    expect(rpc).toHaveBeenCalledWith("create_garage_session_from_setup_with_baseline", {
-      p_source_setup_id: SOURCE_SETUP_ID,
-      p_rig: "Gamepad",
-      p_setup_values: { brakeBias: "manually entered" },
-      p_note: "From the public setup",
-    });
+    expect(rpc).toHaveBeenCalledWith(
+      "create_garage_session_from_setup_with_baseline",
+      {
+        p_source_setup_id: SOURCE_SETUP_ID,
+        p_rig: "Gamepad",
+        p_setup_values: { brakeBias: "manually entered" },
+        p_note: "From the public setup",
+      },
+    );
   });
 
   it("rejects invalid or unsupported source setups before creating any Garage rows", async () => {
     const { client, rpc } = makeSupabase();
     createClientMock.mockResolvedValue(client);
 
-    await expect(createGarageSession({
-      ...validSourceInput,
-      sourceSetupId: "not-a-uuid",
-    })).resolves.toMatchObject({ sessionId: null, error: expect.stringMatching(/source setup is invalid/i) });
+    await expect(
+      createGarageSession({
+        ...validSourceInput,
+        sourceSetupId: "not-a-uuid",
+      }),
+    ).resolves.toMatchObject({
+      sessionId: null,
+      error: expect.stringMatching(/source setup is invalid/i),
+    });
     expect(getSetupByIdMock).not.toHaveBeenCalled();
     expect(rpc).not.toHaveBeenCalled();
 
-    getSetupByIdMock.mockResolvedValue({ ...sourceSetup, game: "Gran Turismo 7" });
+    getSetupByIdMock.mockResolvedValue({
+      ...sourceSetup,
+      game: "Gran Turismo 7",
+    });
     await expect(createGarageSession(validSourceInput)).resolves.toMatchObject({
       sessionId: null,
       error: expect.stringMatching(/ACC and Le Mans Ultimate/i),

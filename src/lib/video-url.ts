@@ -30,7 +30,9 @@ export function normalizeVideoUrl(value: unknown): string | null {
   if (!trimmed || trimmed.length > MAX_VIDEO_URL_LENGTH) return null;
 
   try {
-    const candidate = /^[a-z][a-z\d+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const candidate = /^[a-z][a-z\d+.-]*:/i.test(trimmed)
+      ? trimmed
+      : `https://${trimmed}`;
     const url = new URL(candidate);
     const hostname = url.hostname.toLowerCase();
     const authorityStart = candidate.indexOf("://");
@@ -63,7 +65,8 @@ export function normalizeVideoUrl(value: unknown): string | null {
 /** Returns a user-facing validation message, or null when the value is valid. */
 export function validateVideoUrl(value: unknown): string | null {
   if (value === null || value === undefined) return null;
-  if (typeof value !== "string") return "Video URL must be a YouTube or Twitch HTTPS link.";
+  if (typeof value !== "string")
+    return "Video URL must be a YouTube or Twitch HTTPS link.";
   if (!value.trim()) return null;
   if (value.trim().length > MAX_VIDEO_URL_LENGTH) {
     return `Video URL is too long — max ${MAX_VIDEO_URL_LENGTH} characters.`;

@@ -20,7 +20,9 @@ test("mobile menu exposes the same search flow", async ({ page }) => {
   await page.goto("/");
 
   await page.getByRole("button", { name: "Open menu" }).click();
-  const searchInput = page.getByRole("textbox", { name: "Search setups" }).last();
+  const searchInput = page
+    .getByRole("textbox", { name: "Search setups" })
+    .last();
   await searchInput.fill("spa porsche");
   await searchInput.press("Enter");
 

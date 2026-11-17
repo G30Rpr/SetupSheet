@@ -19,7 +19,7 @@ function postJson(body: unknown) {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: typeof body === "string" ? body : JSON.stringify(body),
-    })
+    }),
   );
 }
 
@@ -53,7 +53,11 @@ describe("POST /api/csp-report", () => {
     const response = await postJson([
       {
         type: "csp-violation",
-        body: { blockedURI: "inline", effectiveDirective: "style-src-elem", documentURL: "https://setupsheet.app/" },
+        body: {
+          blockedURI: "inline",
+          effectiveDirective: "style-src-elem",
+          documentURL: "https://setupsheet.app/",
+        },
       },
     ]);
 
@@ -81,7 +85,9 @@ describe("POST /api/csp-report", () => {
     expect(logged).toContain("…");
 
     warn.mockClear();
-    const oversized = await postJson({ "csp-report": { "violated-directive": "x".repeat(20_000) } });
+    const oversized = await postJson({
+      "csp-report": { "violated-directive": "x".repeat(20_000) },
+    });
     expect(oversized.status).toBe(204);
     expect(warn).not.toHaveBeenCalled();
   });
@@ -90,7 +96,8 @@ describe("POST /api/csp-report", () => {
     await postJson({
       "csp-report": {
         "blocked-uri": "https://evil.example/user/secret?token=do-not-log",
-        "document-uri": "https://setupsheet.app/auth/callback?code=oauth-secret",
+        "document-uri":
+          "https://setupsheet.app/auth/callback?code=oauth-secret",
       },
     });
 
@@ -104,7 +111,10 @@ describe("POST /api/csp-report", () => {
 
   it("ignores unexpected fields instead of copying them through", async () => {
     await postJson({
-      "csp-report": { "violated-directive": "script-src", secret: "token-abc-123" },
+      "csp-report": {
+        "violated-directive": "script-src",
+        secret: "token-abc-123",
+      },
     });
 
     expect(loggedPayload(warn.mock.calls[0])).not.toContain("token-abc-123");
@@ -113,7 +123,10 @@ describe("POST /api/csp-report", () => {
   it("caps how many array reports it will process", async () => {
     const entries = Array.from({ length: 25 }, () => ({
       type: "csp-violation",
-      body: { blockedURI: "https://evil.example/x", effectiveDirective: "script-src" },
+      body: {
+        blockedURI: "https://evil.example/x",
+        effectiveDirective: "script-src",
+      },
     }));
 
     const response = await postJson(entries);

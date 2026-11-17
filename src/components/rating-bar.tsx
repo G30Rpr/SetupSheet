@@ -43,7 +43,9 @@ export function ScoreMeter({
   className?: string;
 }) {
   const max = 5;
-  const safeScore = Number.isFinite(score) ? Math.min(Math.max(score, 0), max) : 0;
+  const safeScore = Number.isFinite(score)
+    ? Math.min(Math.max(score, 0), max)
+    : 0;
   const pct = Math.round((safeScore / max) * 100);
   const rounded = Number(safeScore.toFixed(1));
 

@@ -41,14 +41,14 @@ export function pickPendingPrompts(
   ratedSetupIds: ReadonlySet<string>,
   authorSetupIds: ReadonlySet<string>,
   limit = PROMPT_LIMIT,
-  now: number = Date.now()
+  now: number = Date.now(),
 ): { setupId: string; downloadedAt: string }[] {
   const dismissed = new Set<string>();
   const latestBySetup = new Map<string, string>();
 
   // Events arrive newest-first from the query, but don't rely on that here.
   const sorted = [...events].sort((a, b) =>
-    a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
+    a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0,
   );
   for (const event of sorted) {
     if (event.promptDismissedAt) dismissed.add(event.setupId);

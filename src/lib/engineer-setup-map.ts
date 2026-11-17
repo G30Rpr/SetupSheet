@@ -37,7 +37,10 @@ export interface SymptomSetupMapping {
   linkTag: SetupTag | null;
 }
 
-export const ENGINEER_SETUP_MAP: Record<EngineerSymptomId, SymptomSetupMapping> = {
+export const ENGINEER_SETUP_MAP: Record<
+  EngineerSymptomId,
+  SymptomSetupMapping
+> = {
   "front-locking": {
     rationale:
       "Cars the community finds predictable are easier to modulate on the brakes -- calmer fronts, calmer stops.",
@@ -127,7 +130,7 @@ const EMPTY_FILTERS = {
 /** The mapping a symptom diagnosis should use right now. */
 export function mappingForSymptom(
   symptomId: EngineerSymptomId,
-  wet: boolean
+  wet: boolean,
 ): SymptomSetupMapping {
   return wet ? WET_SETUP_MAPPING : ENGINEER_SETUP_MAP[symptomId];
 }
@@ -153,19 +156,27 @@ export function setupsForSymptom(
   setups: Setup[],
   symptomId: EngineerSymptomId,
   wet: boolean,
-  options: SymptomMatchOptions = {}
+  options: SymptomMatchOptions = {},
 ): Setup[] {
   const { game, limit = SYMPTOM_MATCH_LIMIT } = options;
   const mapping = mappingForSymptom(symptomId, wet);
   const matched = setups.filter((setup) => {
     if (game !== undefined && setup.game !== game) return false;
-    if (mapping.conditions.length > 0 && !mapping.conditions.includes(setup.condition)) {
+    if (
+      mapping.conditions.length > 0 &&
+      !mapping.conditions.includes(setup.condition)
+    ) {
       return false;
     }
     if (mapping.tags.length === 0) return true;
-    return setup.tags.some((tag) => (mapping.tags as readonly string[]).includes(tag));
+    return setup.tags.some((tag) =>
+      (mapping.tags as readonly string[]).includes(tag),
+    );
   });
-  return filterAndSortSetups(matched, EMPTY_FILTERS, mapping.lead).slice(0, limit);
+  return filterAndSortSetups(matched, EMPTY_FILTERS, mapping.lead).slice(
+    0,
+    limit,
+  );
 }
 
 /**
@@ -175,7 +186,7 @@ export function setupsForSymptom(
  */
 export function browseLinkForSymptom(
   symptomId: EngineerSymptomId,
-  wet: boolean
+  wet: boolean,
 ): { tag: SetupTag; sort: SymptomSetupMapping["lead"] } | null {
   const mapping = mappingForSymptom(symptomId, wet);
   if (!mapping.linkTag) return null;

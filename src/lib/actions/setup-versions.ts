@@ -10,8 +10,9 @@ import { isUuid } from "@/lib/utils";
  * setup's history on every render of the browse grid.
  */
 export async function getSetupVersionsAction(
-  setupId: string
+  setupId: string,
 ): Promise<{ versions: SetupVersion[]; error: string | null }> {
-  if (!isUuid(setupId)) return { versions: [], error: "That setup id is invalid." };
+  if (!isUuid(setupId))
+    return { versions: [], error: "That setup id is invalid." };
   return getSetupVersions(setupId);
 }

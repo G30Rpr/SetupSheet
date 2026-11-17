@@ -28,10 +28,10 @@ export function ProfileSetupsGrid({
 }) {
   const [loadedSetups, setLoadedSetups] = useState(setups);
   const [visibleCount, setVisibleCount] = useState(
-    Math.min(SETUP_CARD_PAGE_SIZE, setups.length)
+    Math.min(SETUP_CARD_PAGE_SIZE, setups.length),
   );
   const [nextCursor, setNextCursor] = useState<SetupCursor | null>(
-    pagination?.nextCursor ?? null
+    pagination?.nextCursor ?? null,
   );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, startTransition] = useTransition();
@@ -51,7 +51,10 @@ export function ProfileSetupsGrid({
 
     startTransition(async () => {
       try {
-        const result = await loadMoreProfileSetups(pagination.profileId, cursor);
+        const result = await loadMoreProfileSetups(
+          pagination.profileId,
+          cursor,
+        );
         if (result.error) {
           setLoadError(result.error);
           return;

@@ -12,7 +12,15 @@ const UNDO_WINDOW_MS = 5000;
  * never happens; letting the toast expire commits the real delete.
  */
 export function useUndoableDelete() {
-  const pending = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; commit: () => void | Promise<void> }>());
+  const pending = useRef(
+    new Map<
+      string,
+      {
+        timer: ReturnType<typeof setTimeout>;
+        commit: () => void | Promise<void>;
+      }
+    >(),
+  );
 
   useEffect(() => {
     // A tab close, hard refresh, or full-page navigation (e.g. the Discord

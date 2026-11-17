@@ -52,12 +52,14 @@ export function UploadProofSection({
         >
           <CheckCircle2 className="size-4 text-muted-foreground" />
           Lap Evidence &amp; Telemetry
-          <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
+          <span className="text-xs font-normal text-muted-foreground">
+            (Optional)
+          </span>
         </span>
         <ChevronDown
           className={cn(
             "size-4 shrink-0 text-muted-foreground motion-safe:motion-transform",
-            showFields && "rotate-180"
+            showFields && "rotate-180",
           )}
         />
       </Button>
@@ -69,7 +71,9 @@ export function UploadProofSection({
       {showFields && (
         <div id="lap-proof-fields" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="videoUrl">Hotlap Video URL (YouTube / Twitch)</Label>
+            <Label htmlFor="videoUrl">
+              Hotlap Video URL (YouTube / Twitch)
+            </Label>
             <Input
               id="videoUrl"
               name="videoUrl"
@@ -110,7 +114,8 @@ export function UploadProofSection({
               />
             )}
             <p className="text-xs text-muted-foreground">
-              Supports MoTeC (.ld, .ldx), iRacing (.ibt), VBOX (.vbo), CSV, or ZIP up to 10 MB.
+              Supports MoTeC (.ld, .ldx), iRacing (.ibt), VBOX (.vbo), CSV, or
+              ZIP up to 10 MB.
             </p>
           </div>
         </div>

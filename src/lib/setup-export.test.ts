@@ -25,7 +25,7 @@ describe("buildSetupExportText", () => {
       makeSetup({
         game: "iRacing",
         setupValues: { lfTirePressure: "23.5 psi" },
-      })
+      }),
     );
     expect(text).toContain("Tires & Alignment");
     expect(text).toContain("Left front tire pressure: 23.5 psi");
@@ -33,21 +33,29 @@ describe("buildSetupExportText", () => {
   });
 
   it("emits no group sections when setupValues is empty", () => {
-    const text = buildSetupExportText(makeSetup({ game: "iRacing", setupValues: {} }));
+    const text = buildSetupExportText(
+      makeSetup({ game: "iRacing", setupValues: {} }),
+    );
     expect(text).not.toContain("Tires & Alignment");
   });
 
   it("emits no group sections when setupValues is absent", () => {
-    const text = buildSetupExportText(makeSetup({ game: "iRacing", setupValues: undefined }));
+    const text = buildSetupExportText(
+      makeSetup({ game: "iRacing", setupValues: undefined }),
+    );
     expect(text).not.toContain("Tires & Alignment");
   });
 
   it("includes the description block only when non-empty", () => {
-    const withDescription = buildSetupExportText(makeSetup({ description: "Great for quali" }));
+    const withDescription = buildSetupExportText(
+      makeSetup({ description: "Great for quali" }),
+    );
     expect(withDescription).toContain("Description:");
     expect(withDescription).toContain("Great for quali");
 
-    const withoutDescription = buildSetupExportText(makeSetup({ description: "" }));
+    const withoutDescription = buildSetupExportText(
+      makeSetup({ description: "" }),
+    );
     expect(withoutDescription).not.toContain("Description:");
   });
 
@@ -116,7 +124,7 @@ describe("getAvailableExportFormats", () => {
 describe("buildSetupExportFilename", () => {
   it("sanitizes disallowed characters to underscores and collapses runs", () => {
     const filename = buildSetupExportFilename(
-      makeSetup({ car: "BMW M4 GT3 (2021)", track: "Spa-Francorchamps" })
+      makeSetup({ car: "BMW M4 GT3 (2021)", track: "Spa-Francorchamps" }),
     );
     expect(filename).toBe("BMW_M4_GT3_2021_-Spa-Francorchamps-setup.txt");
   });

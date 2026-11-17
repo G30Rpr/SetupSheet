@@ -10,13 +10,19 @@ const WET_BASE_WARNING =
 
 function addWarnings(
   existing: string[] | undefined,
-  additions: readonly string[]
+  additions: readonly string[],
 ): string[] {
   return [...new Set([...(existing ?? []), ...additions])];
 }
 
-function isParameter(recommendation: EngineerRecommendation, expected: string): boolean {
-  return recommendation.parameter.trim().toLocaleLowerCase() === expected.toLocaleLowerCase();
+function isParameter(
+  recommendation: EngineerRecommendation,
+  expected: string,
+): boolean {
+  return (
+    recommendation.parameter.trim().toLocaleLowerCase() ===
+    expected.toLocaleLowerCase()
+  );
 }
 
 /**
@@ -25,20 +31,27 @@ function isParameter(recommendation: EngineerRecommendation, expected: string): 
  */
 export function applyWetModifiers(
   symptomId: string,
-  recommendations: readonly EngineerRecommendation[]
+  recommendations: readonly EngineerRecommendation[],
 ): EngineerRecommendation[] {
   const result: EngineerRecommendation[] = [];
   const brakeBiasWasBlocked =
-    symptomId === "front-locking" && recommendations.some((item) => isParameter(item, "Brake bias"));
+    symptomId === "front-locking" &&
+    recommendations.some((item) => isParameter(item, "Brake bias"));
 
   for (const recommendation of recommendations) {
     // Without car-specific wet braking data, don't prescribe a balance shift
     // for a front-lock symptom in the wet. The ABS/static alternative remains.
-    if (symptomId === "front-locking" && isParameter(recommendation, "Brake bias")) continue;
+    if (
+      symptomId === "front-locking" &&
+      isParameter(recommendation, "Brake bias")
+    )
+      continue;
 
     const next: EngineerRecommendation = {
       ...recommendation,
-      warnings: recommendation.warnings ? [...recommendation.warnings] : undefined,
+      warnings: recommendation.warnings
+        ? [...recommendation.warnings]
+        : undefined,
     };
     const wetWarnings = [WET_BASE_WARNING];
 
@@ -49,22 +62,38 @@ export function applyWetModifiers(
     ) {
       // Pressure is a continuous value; keep the wet change at a tenth of a psi.
       next.amount = Math.round((recommendation.amount / 2) * 10) / 10;
-      wetWarnings.push("Use the wet target for this car and compound; this smaller step is not an absolute pressure target.");
+      wetWarnings.push(
+        "Use the wet target for this car and compound; this smaller step is not an absolute pressure target.",
+      );
     }
 
-    if (symptomId === "high-speed-instability" && isParameter(recommendation, "Rear wing")) {
-      if (typeof recommendation.amount === "number") next.amount = recommendation.amount + 1;
-      wetWarnings.push("The wet rule adds one rear-wing step for stability; confirm the drag and balance tradeoff.");
+    if (
+      symptomId === "high-speed-instability" &&
+      isParameter(recommendation, "Rear wing")
+    ) {
+      if (typeof recommendation.amount === "number")
+        next.amount = recommendation.amount + 1;
+      wetWarnings.push(
+        "The wet rule adds one rear-wing step for stability; confirm the drag and balance tradeoff.",
+      );
     }
 
-    if (symptomId === "exit-wheelspin" && isParameter(recommendation, "Differential preload")) {
+    if (
+      symptomId === "exit-wheelspin" &&
+      isParameter(recommendation, "Differential preload")
+    ) {
       if (recommendation.direction === "increase") next.direction = "decrease";
-      else if (recommendation.direction === "decrease") next.direction = "increase";
-      wetWarnings.push("Wet differential behavior is car-specific. Treat this direction as a one-step test and revert if wheelspin worsens.");
+      else if (recommendation.direction === "decrease")
+        next.direction = "increase";
+      wetWarnings.push(
+        "Wet differential behavior is car-specific. Treat this direction as a one-step test and revert if wheelspin worsens.",
+      );
     }
 
     if (brakeBiasWasBlocked) {
-      wetWarnings.push("Brake-bias advice is withheld for this wet front-lock symptom because axle balance is car- and grip-dependent.");
+      wetWarnings.push(
+        "Brake-bias advice is withheld for this wet front-lock symptom because axle balance is car- and grip-dependent.",
+      );
     }
 
     next.warnings = addWarnings(next.warnings, wetWarnings);

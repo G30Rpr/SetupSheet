@@ -18,12 +18,13 @@ export type GameVersionState =
 
 export function gameVersionState(
   gameVersion: string | null | undefined,
-  currentVersion: string | null | undefined
+  currentVersion: string | null | undefined,
 ): GameVersionState {
   const version = typeof gameVersion === "string" ? gameVersion.trim() : "";
   if (!version) return { kind: "unreported" };
 
-  const current = typeof currentVersion === "string" ? currentVersion.trim() : "";
+  const current =
+    typeof currentVersion === "string" ? currentVersion.trim() : "";
   if (!current) return { kind: "reported", version };
   if (current === version) return { kind: "current", version };
   return { kind: "stale", version, currentVersion: current };

@@ -42,11 +42,16 @@ describe("last-rig persistence", () => {
 describe("last-rig axes persistence (0039/0040)", () => {
   it("remembers and restores a valid axes pair", () => {
     writeLastRigAxes({ inputDevice: "wheel", brakeType: "load_cell" });
-    expect(JSON.parse(window.localStorage.getItem(LAST_RIG_AXES_KEY) ?? "null")).toEqual({
+    expect(
+      JSON.parse(window.localStorage.getItem(LAST_RIG_AXES_KEY) ?? "null"),
+    ).toEqual({
       inputDevice: "wheel",
       brakeType: "load_cell",
     });
-    expect(readLastRigAxes()).toEqual({ inputDevice: "wheel", brakeType: "load_cell" });
+    expect(readLastRigAxes()).toEqual({
+      inputDevice: "wheel",
+      brakeType: "load_cell",
+    });
   });
 
   it("forgets the axes when cleared", () => {
@@ -59,7 +64,7 @@ describe("last-rig axes persistence (0039/0040)", () => {
   it("discards unknown vocabulary instead of guessing", () => {
     window.localStorage.setItem(
       LAST_RIG_AXES_KEY,
-      JSON.stringify({ inputDevice: "yoke", brakeType: "standard" })
+      JSON.stringify({ inputDevice: "yoke", brakeType: "standard" }),
     );
     expect(readLastRigAxes()).toBeNull();
     window.localStorage.setItem(LAST_RIG_AXES_KEY, "not json");
@@ -69,10 +74,16 @@ describe("last-rig axes persistence (0039/0040)", () => {
   it("readMyRigAxes prefers explicit axes, then derives from the legacy category", () => {
     // Legacy category only -> derived axes (rig_axes_for parity).
     writeLastRig("Wheel + Handbrake");
-    expect(readMyRigAxes()).toEqual({ inputDevice: "wheel", brakeType: "handbrake" });
+    expect(readMyRigAxes()).toEqual({
+      inputDevice: "wheel",
+      brakeType: "handbrake",
+    });
 
     // Explicit axes win.
     writeLastRigAxes({ inputDevice: "gamepad", brakeType: null });
-    expect(readMyRigAxes()).toEqual({ inputDevice: "gamepad", brakeType: null });
+    expect(readMyRigAxes()).toEqual({
+      inputDevice: "gamepad",
+      brakeType: null,
+    });
   });
 });

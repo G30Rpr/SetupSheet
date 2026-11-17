@@ -134,7 +134,7 @@ export interface ResolvedInstallGuide {
  */
 export function resolveInstallGuide(
   game: Game,
-  setup: { car: string; track: string }
+  setup: { car: string; track: string },
 ): ResolvedInstallGuide {
   const guide = installGuides[game];
   const replacements: Record<string, string> = {

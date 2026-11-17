@@ -7,10 +7,18 @@
 export function isSameOriginRequest(request: Request, origin: string): boolean {
   try {
     const requestUrl = new URL(request.url);
-    const forwardedHost = request.headers.get("x-forwarded-host")?.split(",", 1)[0]?.trim();
+    const forwardedHost = request.headers
+      .get("x-forwarded-host")
+      ?.split(",", 1)[0]
+      ?.trim();
     const host = forwardedHost || request.headers.get("host")?.trim();
-    const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",", 1)[0]?.trim();
-    const protocol = forwardedProto ? `${forwardedProto.replace(/:$/, "")}:` : requestUrl.protocol;
+    const forwardedProto = request.headers
+      .get("x-forwarded-proto")
+      ?.split(",", 1)[0]
+      ?.trim();
+    const protocol = forwardedProto
+      ? `${forwardedProto.replace(/:$/, "")}:`
+      : requestUrl.protocol;
     const expected = host ? new URL(`${protocol}//${host}`) : requestUrl;
     return new URL(origin).origin === expected.origin;
   } catch {

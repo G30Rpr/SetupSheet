@@ -9,10 +9,17 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TelemetryProvider } from "@/components/telemetry-provider";
-import { DEFAULT_SITE_DESCRIPTION, absoluteUrl, fullPageTitle } from "@/lib/seo";
+import {
+  DEFAULT_SITE_DESCRIPTION,
+  absoluteUrl,
+  fullPageTitle,
+} from "@/lib/seo";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
-import { getNotifications, getUnreadNotificationCount } from "@/lib/supabase/notifications";
+import {
+  getNotifications,
+  getUnreadNotificationCount,
+} from "@/lib/supabase/notifications";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const title = fullPageTitle("Free Community Sim Racing Setups");
@@ -44,7 +51,14 @@ export const metadata: Metadata = {
     title,
     description,
     url: SITE_URL,
-    images: [{ url: absoluteUrl("/opengraph-image"), width: 1200, height: 630, alt: title }],
+    images: [
+      {
+        url: absoluteUrl("/opengraph-image"),
+        width: 1200,
+        height: 630,
+        alt: title,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -95,7 +109,10 @@ export default async function RootLayout({
   const user = await getCurrentUser(supabase);
 
   const [initialNotifications, initialUnreadCount] = user
-    ? await Promise.all([getNotifications(user.id, 10), getUnreadNotificationCount(user.id)])
+    ? await Promise.all([
+        getNotifications(user.id, 10),
+        getUnreadNotificationCount(user.id),
+      ])
     : [[], 0];
 
   return (
@@ -119,7 +136,12 @@ export default async function RootLayout({
         >
           Skip to main content
         </a>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} nonce={nonce}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          nonce={nonce}
+        >
           <AuthProvider initialUser={user}>
             <SiteHeader
               initialNotifications={initialNotifications}
@@ -128,7 +150,11 @@ export default async function RootLayout({
             {/* tabIndex={-1} so the skip link moves focus here instead of
                 only scrolling, which is what makes it work for screen readers
                 as well as keyboard users. */}
-            <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
+            <main
+              id="main-content"
+              tabIndex={-1}
+              className="flex-1 outline-none"
+            >
               {children}
             </main>
             <SiteFooter />

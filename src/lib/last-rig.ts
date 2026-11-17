@@ -1,9 +1,5 @@
 import { rigProfiles } from "@/lib/data";
-import {
-  axesFromRigProfile,
-  parseRigAxes,
-  type RigAxes,
-} from "@/lib/rig-axes";
+import { axesFromRigProfile, parseRigAxes, type RigAxes } from "@/lib/rig-axes";
 import type { RigProfile } from "@/lib/types";
 
 /**

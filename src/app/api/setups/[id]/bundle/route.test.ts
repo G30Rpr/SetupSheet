@@ -47,7 +47,11 @@ function call(id = SETUP_ID) {
 
 /** Minimal reader so assertions run against the archive, not the implementation. */
 function entryNames(archive: Uint8Array): string[] {
-  const view = new DataView(archive.buffer, archive.byteOffset, archive.byteLength);
+  const view = new DataView(
+    archive.buffer,
+    archive.byteOffset,
+    archive.byteLength,
+  );
   let eocd = -1;
   for (let i = archive.length - 22; i >= 0; i--) {
     if (view.getUint32(i, true) === 0x06054b50) {
@@ -63,7 +67,11 @@ function entryNames(archive: Uint8Array): string[] {
     const nameLength = view.getUint16(offset + 28, true);
     const extraLength = view.getUint16(offset + 30, true);
     const commentLength = view.getUint16(offset + 32, true);
-    names.push(new TextDecoder().decode(archive.subarray(offset + 46, offset + 46 + nameLength)));
+    names.push(
+      new TextDecoder().decode(
+        archive.subarray(offset + 46, offset + 46 + nameLength),
+      ),
+    );
     offset += 46 + nameLength + extraLength + commentLength;
   }
   return names;
@@ -97,7 +105,9 @@ describe("GET /api/setups/[id]/bundle", () => {
   });
 
   it("404s a setup with neither a file nor values to bundle", async () => {
-    getSetupByIdMock.mockResolvedValue(makeSetup({ fileUrl: null, fileName: null }));
+    getSetupByIdMock.mockResolvedValue(
+      makeSetup({ fileUrl: null, fileName: null }),
+    );
 
     const response = await call();
 
@@ -106,13 +116,15 @@ describe("GET /api/setups/[id]/bundle", () => {
 
   it("returns a zip containing the setup file, a values export and the README", async () => {
     getSetupByIdMock.mockResolvedValue(
-      makeSetup({ setupValues: { frontWing: "5", rearWing: "7" } })
+      makeSetup({ setupValues: { frontWing: "5", rearWing: "7" } }),
     );
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(new Uint8Array([1, 2, 3, 4]), { status: 200 })
-      )
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(new Uint8Array([1, 2, 3, 4]), { status: 200 }),
+        ),
     );
 
     const response = await call();
@@ -133,83 +145,117 @@ describe("GET /api/setups/[id]/bundle", () => {
 
   it("returns an uncached error instead of a misleading ZIP when the file fetch fails", async () => {
     getSetupByIdMock.mockResolvedValue(makeSetup());
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("network down")),
+    );
 
     const response = await call();
 
     expect(response.status).toBe(502);
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("content-type")).toContain("application/json");
-    expect(await response.json()).toEqual({ error: "The setup file is unavailable. Please try again." });
+    expect(await response.json()).toEqual({
+      error: "The setup file is unavailable. Please try again.",
+    });
   });
 
-  it.each([403, 404, 500])("rejects an upstream HTTP %s even when values are available", async (status) => {
-    getSetupByIdMock.mockResolvedValue(makeSetup({ setupValues: { frontWing: "5" } }));
-    const cancel = vi.fn();
-    const body = new ReadableStream({ cancel });
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, { status })));
+  it.each([403, 404, 500])(
+    "rejects an upstream HTTP %s even when values are available",
+    async (status) => {
+      getSetupByIdMock.mockResolvedValue(
+        makeSetup({ setupValues: { frontWing: "5" } }),
+      );
+      const cancel = vi.fn();
+      const body = new ReadableStream({ cancel });
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(new Response(body, { status })),
+      );
 
-    const response = await call();
+      const response = await call();
 
-    expect(response.status).toBe(502);
-    expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(cancel).toHaveBeenCalledOnce();
-  });
+      expect(response.status).toBe(502);
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(cancel).toHaveBeenCalledOnce();
+    },
+  );
 
   it("rejects an advertised oversized file before reading it", async () => {
     getSetupByIdMock.mockResolvedValue(makeSetup());
     const cancel = vi.fn();
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(
-      new ReadableStream({ cancel }),
-      { headers: { "Content-Length": String(10 * 1024 * 1024 + 1) } }
-    )));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(new ReadableStream({ cancel }), {
+          headers: { "Content-Length": String(10 * 1024 * 1024 + 1) },
+        }),
+      ),
+    );
 
     expect((await call()).status).toBe(502);
     expect(cancel).toHaveBeenCalledOnce();
   });
 
-  it.each([undefined, "1"])("bounds actual bytes when Content-Length is %s", async (length) => {
-    getSetupByIdMock.mockResolvedValue(makeSetup());
-    const cancel = vi.fn();
-    let chunks = 0;
-    const body = new ReadableStream<Uint8Array>({
-      pull(controller) {
-        chunks += 1;
-        controller.enqueue(new Uint8Array(6 * 1024 * 1024));
-      },
-      cancel,
-    });
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, {
-      headers: length ? { "Content-Length": length } : {},
-    })));
+  it.each([undefined, "1"])(
+    "bounds actual bytes when Content-Length is %s",
+    async (length) => {
+      getSetupByIdMock.mockResolvedValue(makeSetup());
+      const cancel = vi.fn();
+      let chunks = 0;
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          chunks += 1;
+          controller.enqueue(new Uint8Array(6 * 1024 * 1024));
+        },
+        cancel,
+      });
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(body, {
+            headers: length ? { "Content-Length": length } : {},
+          }),
+        ),
+      );
 
-    expect((await call()).status).toBe(502);
-    expect(cancel).toHaveBeenCalledOnce();
-    expect(chunks).toBeLessThanOrEqual(3);
-  });
+      expect((await call()).status).toBe(502);
+      expect(cancel).toHaveBeenCalledOnce();
+      expect(chunks).toBeLessThanOrEqual(3);
+    },
+  );
 
   it("accepts an existing attachment exactly at the 10 MiB bucket limit", async () => {
     getSetupByIdMock.mockResolvedValue(makeSetup());
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(new Uint8Array(10 * 1024 * 1024))
-    ));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(new Uint8Array(10 * 1024 * 1024))),
+    );
 
     const response = await call();
 
     expect(response.status).toBe(200);
-    expect((await readZip(response)).names).toEqual(["README.txt", "spa-quali.sto"]);
+    expect((await readZip(response)).names).toEqual([
+      "README.txt",
+      "spa-quali.sto",
+    ]);
   });
 
   it("rejects an empty attached file", async () => {
     getSetupByIdMock.mockResolvedValue(makeSetup());
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(new Uint8Array())));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(new Uint8Array())),
+    );
     expect((await call()).status).toBe(502);
   });
 
   it("rejects a stream error instead of delivering a truncated archive", async () => {
     getSetupByIdMock.mockResolvedValue(makeSetup());
     const body = new ReadableStream<Uint8Array>({
-      start(controller) { controller.error(new Error("disconnected")); },
+      start(controller) {
+        controller.error(new Error("disconnected"));
+      },
     });
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body)));
     expect((await call()).status).toBe(502);
@@ -218,9 +264,19 @@ describe("GET /api/setups/[id]/bundle", () => {
   it("times out a fetch that never returns headers", async () => {
     vi.useFakeTimers();
     getSetupByIdMock.mockResolvedValue(makeSetup());
-    vi.stubGlobal("fetch", vi.fn((_url, init: RequestInit) => new Promise((_resolve, reject) => {
-      init.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
-    })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_url, init: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            init.signal?.addEventListener(
+              "abort",
+              () => reject(init.signal?.reason),
+              { once: true },
+            );
+          }),
+      ),
+    );
 
     const pending = call();
     await vi.advanceTimersByTimeAsync(10_000);
@@ -235,7 +291,10 @@ describe("GET /api/setups/[id]/bundle", () => {
     vi.useFakeTimers();
     getSetupByIdMock.mockResolvedValue(makeSetup());
     const cancel = vi.fn();
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(new ReadableStream({ cancel }))));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(new ReadableStream({ cancel }))),
+    );
 
     const pending = call();
     await vi.advanceTimersByTimeAsync(10_000);
@@ -248,7 +307,11 @@ describe("GET /api/setups/[id]/bundle", () => {
 
   it("bundles a generated values file for a setup with no uploaded file", async () => {
     getSetupByIdMock.mockResolvedValue(
-      makeSetup({ fileUrl: null, fileName: null, setupValues: { frontWing: "5" } })
+      makeSetup({
+        fileUrl: null,
+        fileName: null,
+        setupValues: { frontWing: "5" },
+      }),
     );
 
     const response = await call();
@@ -256,6 +319,8 @@ describe("GET /api/setups/[id]/bundle", () => {
     expect(response.status).toBe(200);
     const { names } = await readZip(response);
     expect(names).toContain("README.txt");
-    expect(names.some((name) => name.endsWith(".txt") && name !== "README.txt")).toBe(true);
+    expect(
+      names.some((name) => name.endsWith(".txt") && name !== "README.txt"),
+    ).toBe(true);
   });
 });

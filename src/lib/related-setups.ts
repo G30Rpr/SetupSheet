@@ -26,11 +26,19 @@ function sameTags(a: string[], b: string[]): boolean {
 export function pickRelatedSetups<T extends RelatedCandidate>(
   candidates: T[],
   self: RelatedCandidate,
-  limit = 6
+  limit = 6,
 ): T[] {
   return candidates
-    .filter((c) => c.id !== self.id && (c.rigProfile !== self.rigProfile || !sameTags(c.tags, self.tags)))
-    .map((c, index) => ({ c, index, differentRig: c.rigProfile !== self.rigProfile }))
+    .filter(
+      (c) =>
+        c.id !== self.id &&
+        (c.rigProfile !== self.rigProfile || !sameTags(c.tags, self.tags)),
+    )
+    .map((c, index) => ({
+      c,
+      index,
+      differentRig: c.rigProfile !== self.rigProfile,
+    }))
     .sort((a, b) => {
       if (a.differentRig !== b.differentRig) return a.differentRig ? -1 : 1;
       return a.index - b.index; // stable: keeps the caller's newest-first order

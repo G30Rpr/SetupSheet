@@ -13,19 +13,26 @@ describe("OpenInGarageLink", () => {
       <OpenInGarageLink
         setupId="11111111-1111-4111-8111-111111111111"
         game="Assetto Corsa Competizione"
-      />
+      />,
     );
 
-    expect(screen.getByRole("link", { name: "Open in Garage" })).toHaveAttribute(
+    expect(
+      screen.getByRole("link", { name: "Open in Garage" }),
+    ).toHaveAttribute(
       "href",
-      "/garage?from=11111111-1111-4111-8111-111111111111"
+      "/garage?from=11111111-1111-4111-8111-111111111111",
     );
-    expect(screen.getByText(/setup values are copied only if you opt in/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/setup values are copied only if you opt in/i),
+    ).toBeInTheDocument();
   });
 
   it("does not advertise the Garage flow for unreviewed games", () => {
     const { container } = render(
-      <OpenInGarageLink setupId="11111111-1111-4111-8111-111111111111" game="iRacing" />
+      <OpenInGarageLink
+        setupId="11111111-1111-4111-8111-111111111111"
+        game="iRacing"
+      />,
     );
 
     expect(container).toBeEmptyDOMElement();

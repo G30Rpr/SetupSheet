@@ -46,7 +46,9 @@ describe("GET /api/health", () => {
   });
 
   it("handles unexpected client failures", async () => {
-    select.mockImplementation(() => { throw new Error("connection secret"); });
+    select.mockImplementation(() => {
+      throw new Error("connection secret");
+    });
     const response = await GET();
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ status: "unavailable" });

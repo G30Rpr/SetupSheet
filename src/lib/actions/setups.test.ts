@@ -27,11 +27,15 @@ function makeSupabase(options: {
   const eq2 = vi.fn().mockReturnValue({ maybeSingle });
   const select = vi.fn().mockReturnValue({ eq: eq2 });
 
-  const deleteEq2 = vi.fn().mockResolvedValue({ error: options.deleteError ?? null });
+  const deleteEq2 = vi
+    .fn()
+    .mockResolvedValue({ error: options.deleteError ?? null });
   const deleteEq1 = vi.fn().mockReturnValue({ eq: deleteEq2 });
   const del = vi.fn().mockReturnValue({ eq: deleteEq1 });
 
-  const insert = vi.fn().mockResolvedValue({ error: options.insertError ?? null });
+  const insert = vi
+    .fn()
+    .mockResolvedValue({ error: options.insertError ?? null });
 
   return {
     from: vi.fn((table: string) => {
@@ -119,7 +123,10 @@ describe("rateSetup", () => {
 
   const validSetupId = "11111111-1111-4111-8111-111111111111";
 
-  function makeRateSupabase(options: { setupOwnerId?: string; upsertError?: unknown }) {
+  function makeRateSupabase(options: {
+    setupOwnerId?: string;
+    upsertError?: unknown;
+  }) {
     const maybeSingle = vi.fn().mockResolvedValue({
       data: options.setupOwnerId ? { user_id: options.setupOwnerId } : null,
       error: null,
@@ -127,7 +134,9 @@ describe("rateSetup", () => {
     const eq2 = vi.fn().mockReturnValue({ maybeSingle });
     const select = vi.fn().mockReturnValue({ eq: eq2 });
 
-    const upsert = vi.fn().mockResolvedValue({ error: options.upsertError ?? null });
+    const upsert = vi
+      .fn()
+      .mockResolvedValue({ error: options.upsertError ?? null });
 
     return {
       from: vi.fn((table: string) => {
@@ -166,10 +175,17 @@ describe("rateSetup", () => {
     createClientMock.mockResolvedValue(supabase);
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
 
-    await expect(rateSetup(validSetupId, 4, 3)).resolves.toEqual({ error: null });
+    await expect(rateSetup(validSetupId, 4, 3)).resolves.toEqual({
+      error: null,
+    });
     expect(supabase.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ user_id: "user-1", setup_id: validSetupId, pace: 4, predictability: 3 }),
-      { onConflict: "user_id,setup_id" }
+      expect.objectContaining({
+        user_id: "user-1",
+        setup_id: validSetupId,
+        pace: 4,
+        predictability: 3,
+      }),
+      { onConflict: "user_id,setup_id" },
     );
   });
 
@@ -189,10 +205,12 @@ describe("rateSetup", () => {
     createClientMock.mockResolvedValue(supabase);
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
 
-    await expect(rateSetup(validSetupId, 4, 3, "Gamepad")).resolves.toEqual({ error: null });
+    await expect(rateSetup(validSetupId, 4, 3, "Gamepad")).resolves.toEqual({
+      error: null,
+    });
     expect(supabase.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ user_id: "user-1", rater_rig: "Gamepad" }),
-      { onConflict: "user_id,setup_id" }
+      { onConflict: "user_id,setup_id" },
     );
   });
 
@@ -204,13 +222,13 @@ describe("rateSetup", () => {
     await rateSetup(validSetupId, 4, 3, "Steering Wheel Only");
     expect(supabase.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ rater_rig: null }),
-      { onConflict: "user_id,setup_id" }
+      { onConflict: "user_id,setup_id" },
     );
 
     await rateSetup(validSetupId, 4, 3);
     expect(supabase.upsert).toHaveBeenLastCalledWith(
       expect.objectContaining({ rater_rig: null }),
-      { onConflict: "user_id,setup_id" }
+      { onConflict: "user_id,setup_id" },
     );
   });
 });
@@ -232,7 +250,10 @@ describe("createSetup author note", () => {
     const rpc = vi.fn();
     createClientMock.mockResolvedValue({ rpc });
 
-    const result = await createSetup({ ...baseCreateInput, description: "   " });
+    const result = await createSetup({
+      ...baseCreateInput,
+      description: "   ",
+    });
 
     expect(result.error).toBe(AUTHOR_NOTE_REQUIRED_ERROR);
     expect(rpc).not.toHaveBeenCalled();
@@ -240,12 +261,15 @@ describe("createSetup author note", () => {
 
   it("lets a noted upload through to the create RPC", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    const rpc = vi.fn().mockResolvedValue({ data: null, error: { message: "boom" } });
+    const rpc = vi
+      .fn()
+      .mockResolvedValue({ data: null, error: { message: "boom" } });
     createClientMock.mockResolvedValue({ rpc });
 
     const result = await createSetup({
       ...baseCreateInput,
-      description: "Likes a planted rear. Hates kerbs. Softened the ARB one click.",
+      description:
+        "Likes a planted rear. Hates kerbs. Softened the ARB one click.",
     });
 
     expect(rpc).toHaveBeenCalledOnce();
@@ -259,7 +283,8 @@ describe("createSetup request fulfillment support", () => {
     car: "Porsche 911 GT3 Cup",
     track: "Spa",
     condition: "Dry",
-    description: "Likes a planted rear. Hates kerbs. Softened the ARB one click.",
+    description:
+      "Likes a planted rear. Hates kerbs. Softened the ARB one click.",
     tags: ["Safe"],
     rigProfile: "Wheel + 3 Pedals",
     lapTime: "",

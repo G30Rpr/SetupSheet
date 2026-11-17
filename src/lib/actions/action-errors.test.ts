@@ -7,18 +7,21 @@ describe("getActionError", () => {
     expect(
       getActionError(
         { code: "PGRST123", message: "relation private_table does not exist" },
-        "Please try again."
-      )
+        "Please try again.",
+      ),
     ).toBe("Please try again.");
   });
 
   it("maps stable database codes without exposing SQL details", () => {
-    expect(getActionError({ code: "23505", message: "duplicate key" }, "fallback")).toBe(
-      "That action has already been applied."
-    );
-    expect(getActionError({ code: "42501", message: "permission denied" }, "fallback")).toBe(
-      "You are not allowed to perform that action."
-    );
+    expect(
+      getActionError({ code: "23505", message: "duplicate key" }, "fallback"),
+    ).toBe("That action has already been applied.");
+    expect(
+      getActionError(
+        { code: "42501", message: "permission denied" },
+        "fallback",
+      ),
+    ).toBe("You are not allowed to perform that action.");
   });
 
   it("allows a small explicit list of expected action messages", () => {
@@ -26,8 +29,8 @@ describe("getActionError", () => {
       getActionError(
         { code: "P0001", message: "This request has already been fulfilled" },
         "fallback",
-        ["This request has already been fulfilled"]
-      )
+        ["This request has already been fulfilled"],
+      ),
     ).toBe("This request has already been fulfilled");
   });
 });

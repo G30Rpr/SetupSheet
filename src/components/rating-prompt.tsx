@@ -36,7 +36,7 @@ function ScoreRow({
               "size-9 rounded-md border border-border/80 text-xs font-mono tabular-nums transition-colors",
               value === score
                 ? "border-primary bg-primary/15 text-foreground"
-                : "text-muted-foreground hover:border-foreground/40 hover:text-foreground"
+                : "text-muted-foreground hover:border-foreground/40 hover:text-foreground",
             )}
           >
             {score}
@@ -85,7 +85,12 @@ export function RatingPrompt({
     if (pace === null || predictability === null) return;
     startTransition(async () => {
       setError(null);
-      const result = await rateSetup(prompt.setupId, pace, predictability, readLastRig());
+      const result = await rateSetup(
+        prompt.setupId,
+        pace,
+        predictability,
+        readLastRig(),
+      );
       if (result.error) {
         setError(result.error);
       } else {
@@ -125,7 +130,11 @@ export function RatingPrompt({
       </p>
       <div className="flex flex-col gap-2">
         <ScoreRow label="Pace" value={pace} onPick={setPace} />
-        <ScoreRow label="Predictability" value={predictability} onPick={setPredictability} />
+        <ScoreRow
+          label="Predictability"
+          value={predictability}
+          onPick={setPredictability}
+        />
       </div>
       {error && (
         <p role="alert" className="text-xs text-destructive">
@@ -141,7 +150,12 @@ export function RatingPrompt({
           <Star className="size-3.5" aria-hidden="true" />
           {isPending ? "Sharing…" : "Share rating"}
         </Button>
-        <Button size="sm" variant="ghost" onClick={dismiss} disabled={isPending}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={dismiss}
+          disabled={isPending}
+        >
           Not now
         </Button>
       </div>

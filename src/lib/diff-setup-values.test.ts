@@ -19,26 +19,42 @@ describe("diffSetupValues", () => {
     const groups = diffSetupValues(
       "iRacing",
       { lfTirePressure: "23.5 psi" },
-      { lfTirePressure: "24.0 psi" }
+      { lfTirePressure: "24.0 psi" },
     );
-    const row = groups.flatMap((g) => g.rows).find((r) => r.key === "lfTirePressure");
-    expect(row).toMatchObject({ valueA: "23.5 psi", valueB: "24.0 psi", differs: true });
+    const row = groups
+      .flatMap((g) => g.rows)
+      .find((r) => r.key === "lfTirePressure");
+    expect(row).toMatchObject({
+      valueA: "23.5 psi",
+      valueB: "24.0 psi",
+      differs: true,
+    });
   });
 
   it("includes a field present on only one side, with the missing side as null", () => {
     const groups = diffSetupValues("iRacing", { crossWeight: "50.0%" }, {});
-    const row = groups.flatMap((g) => g.rows).find((r) => r.key === "crossWeight");
+    const row = groups
+      .flatMap((g) => g.rows)
+      .find((r) => r.key === "crossWeight");
     expect(row).toMatchObject({ valueA: "50.0%", valueB: null, differs: true });
   });
 
   it("omits fields that are blank on both sides", () => {
-    const groups = diffSetupValues("iRacing", { lfTirePressure: "23.5 psi" }, {});
+    const groups = diffSetupValues(
+      "iRacing",
+      { lfTirePressure: "23.5 psi" },
+      {},
+    );
     const keys = groups.flatMap((g) => g.rows).map((r) => r.key);
     expect(keys).toEqual(["lfTirePressure"]);
   });
 
   it("omits groups left with no rows after filtering", () => {
-    const groups = diffSetupValues("iRacing", { lfTirePressure: "23.5 psi" }, {});
+    const groups = diffSetupValues(
+      "iRacing",
+      { lfTirePressure: "23.5 psi" },
+      {},
+    );
     expect(groups).toHaveLength(1);
     expect(groups[0].title).toBe("Tires & Alignment");
   });
@@ -48,7 +64,11 @@ describe("diffSetupValues", () => {
   });
 
   it("uses the schema for the given game, so unrelated games' fields never appear", () => {
-    const groups = diffSetupValues("Gran Turismo 7", { lfTirePressure: "23.5 psi" }, {});
+    const groups = diffSetupValues(
+      "Gran Turismo 7",
+      { lfTirePressure: "23.5 psi" },
+      {},
+    );
     const keys = groups.flatMap((g) => g.rows).map((r) => r.key);
     expect(keys).not.toContain("lfTirePressure");
   });
@@ -70,13 +90,23 @@ describe("diffTopLevelFields", () => {
   });
 
   it("reports only the fields that changed", () => {
-    const changes = diffTopLevelFields(baseFields, { ...baseFields, track: "Monza" });
-    expect(changes).toEqual([{ label: "Track", before: "Spa-Francorchamps", after: "Monza" }]);
+    const changes = diffTopLevelFields(baseFields, {
+      ...baseFields,
+      track: "Monza",
+    });
+    expect(changes).toEqual([
+      { label: "Track", before: "Spa-Francorchamps", after: "Monza" },
+    ]);
   });
 
   it("joins tags for comparison so a reorder-free add/remove is detected", () => {
-    const changes = diffTopLevelFields(baseFields, { ...baseFields, tags: ["Safe", "Race"] });
-    expect(changes).toEqual([{ label: "Tags", before: "", after: "Safe, Race" }]);
+    const changes = diffTopLevelFields(baseFields, {
+      ...baseFields,
+      tags: ["Safe", "Race"],
+    });
+    expect(changes).toEqual([
+      { label: "Tags", before: "", after: "Safe, Race" },
+    ]);
   });
 });
 
@@ -95,10 +125,12 @@ describe("buildComparisonDiff", () => {
         frontArb: "5", // key family, differs — kept
         crossWeight: "51.0%", // differs but not a key family — dropped
         frontSpring: "900 lbs/in", // differs but not a key family — dropped
-      }
+      },
     );
 
-    expect(groups.flatMap((g) => g.rows.map((r) => r.key))).toEqual(["frontArb"]);
+    expect(groups.flatMap((g) => g.rows.map((r) => r.key))).toEqual([
+      "frontArb",
+    ]);
   });
 
   it("covers the eight families and skips the diffuser brake-migration traps", () => {
@@ -125,7 +157,7 @@ describe("buildComparisonDiff", () => {
         tractionControl: "5",
         frontLeftTyrePressure: "26.0 psi",
         frontDiffuser: "3",
-      }
+      },
     );
 
     const keys = groups.flatMap((g) => g.rows.map((r) => r.key)).sort();
@@ -139,7 +171,7 @@ describe("buildComparisonDiff", () => {
         "frontRideHeight",
         "rearWing",
         "tractionControl",
-      ].sort()
+      ].sort(),
     );
   });
 
@@ -154,8 +186,8 @@ describe("buildComparisonDiff", () => {
       buildComparisonDiff(
         "iRacing",
         { brakeBias: "48%", frontArb: "3" },
-        { brakeBias: "48%", frontArb: "3" }
-      )
+        { brakeBias: "48%", frontArb: "3" },
+      ),
     ).toEqual([]);
   });
 
@@ -164,8 +196,8 @@ describe("buildComparisonDiff", () => {
       buildComparisonDiff(
         "Le Mans Ultimate",
         { brakeBias: "52%", brakeMigration: "0.1" },
-        { brakeBias: "52%", brakeMigration: "0.3" }
-      )
+        { brakeBias: "52%", brakeMigration: "0.3" },
+      ),
     ).toEqual([]);
   });
 });

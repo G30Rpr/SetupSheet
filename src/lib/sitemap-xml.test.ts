@@ -13,15 +13,19 @@ describe("serializeSitemap", () => {
       },
     ]);
 
-    expect(xml).toContain("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-    expect(xml).toContain("https://setupsheet.app/setups/a?x=1&amp;y=&lt;two&gt;");
+    expect(xml).toContain('<?xml version="1.0" encoding="UTF-8"?>');
+    expect(xml).toContain(
+      "https://setupsheet.app/setups/a?x=1&amp;y=&lt;two&gt;",
+    );
     expect(xml).toContain("<lastmod>2026-09-30T12:00:00.000Z</lastmod>");
     expect(xml).toContain("<changefreq>weekly</changefreq>");
     expect(xml).toContain("<priority>0.7</priority>");
   });
 
   it("omits malformed last-modified dates", () => {
-    const xml = serializeSitemap([{ url: "https://setupsheet.app/", lastModified: "not-a-date" }]);
+    const xml = serializeSitemap([
+      { url: "https://setupsheet.app/", lastModified: "not-a-date" },
+    ]);
     expect(xml).not.toContain("<lastmod>");
   });
 });
