@@ -171,8 +171,12 @@ supabase/
 
 ## Getting started
 
+Use Node.js 24.x, matching CI and the Vercel project runtime. The checked-in
+`.nvmrc` selects that major with nvm; Node type definitions also target 24.
+
 ```bash
-npm install
+nvm use
+npm ci
 cp .env.local.example .env.local   # then fill in your Supabase values
 npm run dev
 ```
