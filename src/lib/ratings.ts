@@ -25,7 +25,7 @@ export function bayesianAverage(
   sum: number,
   n: number,
   globalMean: number,
-  C: number = BAYESIAN_C
+  C: number = BAYESIAN_C,
 ): number {
   if (!Number.isFinite(globalMean)) return 0;
   if (!Number.isFinite(n) || n <= 0 || !Number.isFinite(sum)) return globalMean;
@@ -41,7 +41,10 @@ export function formatScore(score: number): string {
 
 /** "1 rating" / "3 ratings" — always shown beside a score. */
 export function formatRatingCount(ratingCount: number): string {
-  const safe = Number.isFinite(ratingCount) && ratingCount > 0 ? Math.floor(ratingCount) : 0;
+  const safe =
+    Number.isFinite(ratingCount) && ratingCount > 0
+      ? Math.floor(ratingCount)
+      : 0;
   return `${safe} ${safe === 1 ? "rating" : "ratings"}`;
 }
 
@@ -85,7 +88,7 @@ export function evidenceLabel(ratingCount: number): string {
 export function compareByEvidence(
   a: { ratingCount: number; score: number },
   b: { ratingCount: number; score: number },
-  globalMean: number
+  globalMean: number,
 ): number {
   const countA = Math.max(0, Math.floor(a.ratingCount));
   const countB = Math.max(0, Math.floor(b.ratingCount));
@@ -96,7 +99,8 @@ export function compareByEvidence(
 }
 
 /** Tooltip copy — kept here so every surface defines the scores identically. */
-export const PACE_DEFINITION = "Pace is how much lap time drivers think it finds.";
+export const PACE_DEFINITION =
+  "Pace is how much lap time drivers think it finds.";
 export const PREDICTABILITY_DEFINITION =
   "Predictability is whether it does the same thing next lap.";
 

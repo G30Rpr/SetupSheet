@@ -35,10 +35,14 @@ export const SETUP_ROW_TAGS: readonly CacheTag[] = [
 ];
 
 /** Reader caches derived only from setup content (no counters, no ordering by them). */
-export const SETUP_CONTENT_TAGS: readonly CacheTag[] = [CACHE_TAG.setupsContent];
+export const SETUP_CONTENT_TAGS: readonly CacheTag[] = [
+  CACHE_TAG.setupsContent,
+];
 
 /** The sitemap document's cache: ids and timestamps only. */
-export const SETUP_SITEMAP_TAGS: readonly CacheTag[] = [CACHE_TAG.setupsSitemap];
+export const SETUP_SITEMAP_TAGS: readonly CacheTag[] = [
+  CACHE_TAG.setupsSitemap,
+];
 
 /**
  * Tags a create/update/delete must invalidate. Content edits change what the
@@ -46,7 +50,11 @@ export const SETUP_SITEMAP_TAGS: readonly CacheTag[] = [CACHE_TAG.setupsSitemap]
  * this is the only mutation class that touches all three setup tags.
  */
 export function tagsForContentMutation(): readonly CacheTag[] {
-  return [CACHE_TAG.setupsContent, CACHE_TAG.setupsCounters, CACHE_TAG.setupsSitemap];
+  return [
+    CACHE_TAG.setupsContent,
+    CACHE_TAG.setupsCounters,
+    CACHE_TAG.setupsSitemap,
+  ];
 }
 
 /**

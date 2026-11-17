@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 
 vi.mock("sonner", () => ({
   toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }),
@@ -55,7 +61,9 @@ describe("SetupCardInstallGuide", () => {
     const expected = String.raw`Documents\Assetto Corsa Competizione\Setups\Ford Mustang GT3\Zandvoort`;
     expect(screen.getByText(expected)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /copy the destination folder path/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /copy the destination folder path/i }),
+    );
 
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(expected));
     await waitFor(() => expect(screen.getByText("Copied")).toBeInTheDocument());
@@ -65,7 +73,10 @@ describe("SetupCardInstallGuide", () => {
     render(<SetupCardInstallGuide setup={makeSetup()} />);
 
     const link = screen.getByRole("link", { name: /download install bundle/i });
-    expect(link).toHaveAttribute("href", `/api/setups/${makeSetup().id}/bundle`);
+    expect(link).toHaveAttribute(
+      "href",
+      `/api/setups/${makeSetup().id}/bundle`,
+    );
     expect(link).toHaveAttribute("download");
   });
 
@@ -73,16 +84,22 @@ describe("SetupCardInstallGuide", () => {
     render(<SetupCardInstallGuide setup={makeSetup({ game: "F1 25" })} />);
 
     expect(screen.getByText("Manual entry only")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /download install bundle/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /download install bundle/i }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/destination folder/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Open values in Rig Mode/i })).toHaveAttribute(
-      "href", `/setups/${makeSetup().id}/rig`
-    );
-    expect(screen.getByText(/Copy the values beside Download/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Open values in Rig Mode/i }),
+    ).toHaveAttribute("href", `/setups/${makeSetup().id}/rig`);
+    expect(
+      screen.getByText(/Copy the values beside Download/i),
+    ).toBeInTheDocument();
   });
 
   it("keeps a placeholder it cannot fill, and shows the note that explains it", () => {
-    render(<SetupCardInstallGuide setup={makeSetup({ game: "Automobilista 2" })} />);
+    render(
+      <SetupCardInstallGuide setup={makeSetup({ game: "Automobilista 2" })} />,
+    );
 
     // The resolved path shows up twice on purpose: once inside the numbered
     // step, once in the copyable block (with the token left visible for the
@@ -92,8 +109,14 @@ describe("SetupCardInstallGuide", () => {
   });
 
   it("hides the bundle when there is nothing to bundle", () => {
-    render(<SetupCardInstallGuide setup={makeSetup({ fileUrl: null, fileName: null })} />);
+    render(
+      <SetupCardInstallGuide
+        setup={makeSetup({ fileUrl: null, fileName: null })}
+      />,
+    );
 
-    expect(screen.queryByRole("link", { name: /download install bundle/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /download install bundle/i }),
+    ).not.toBeInTheDocument();
   });
 });

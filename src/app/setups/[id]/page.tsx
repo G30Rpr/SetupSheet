@@ -66,14 +66,14 @@ export async function generateMetadata({
   const socialTitle = fullPageTitle(title);
   const description = truncateMetaDescription(
     setup.description ||
-      `A free ${setup.game} setup for the ${setup.car} at ${setup.track}, shared by ${setup.author}.`
+      `A free ${setup.game} setup for the ${setup.car} at ${setup.track}, shared by ${setup.author}.`,
   );
   const url = `/setups/${encodeURIComponent(id)}`;
   // The OG route is CDN-cacheable for a day per URL (next.config.ts), so the URL
   // has to change when the setup does -- otherwise an edited setup keeps serving
   // its old card image to every unfurling bot for 24h.
   const ogImageUrl = absoluteUrl(
-    `${url}/opengraph-image?v=${encodeURIComponent(ogImageVersion(setup, id))}`
+    `${url}/opengraph-image?v=${encodeURIComponent(ogImageVersion(setup, id))}`,
   );
 
   return {
@@ -91,12 +91,20 @@ export async function generateMetadata({
       authors: [setup.author],
       images: [{ url: ogImageUrl, width: 1200, height: 630, alt: socialTitle }],
     },
-    twitter: { card: "summary_large_image", title: socialTitle, description, images: [ogImageUrl] },
+    twitter: {
+      card: "summary_large_image",
+      title: socialTitle,
+      description,
+      images: [ogImageUrl],
+    },
   };
 }
 
 /** Cache-busting token for the OG image: the setup's last edit, or its id. */
-function ogImageVersion(setup: { updatedAt: string; createdAt: string }, fallbackId: string): string {
+function ogImageVersion(
+  setup: { updatedAt: string; createdAt: string },
+  fallbackId: string,
+): string {
   const parsed = Date.parse(setup.updatedAt || setup.createdAt);
   return Number.isNaN(parsed) ? fallbackId : String(parsed);
 }
@@ -119,12 +127,20 @@ export default async function SetupDetailPage({
     // transient database outage into a misleading 404 state.
     return (
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
-        <section role="alert" className="rounded-xl border border-border bg-card p-6">
-          <h1 className="text-2xl font-bold tracking-tight">Setup temporarily unavailable</h1>
+        <section
+          role="alert"
+          className="rounded-xl border border-border bg-card p-6"
+        >
+          <h1 className="text-2xl font-bold tracking-tight">
+            Setup temporarily unavailable
+          </h1>
           <p className="mt-2 text-muted-foreground">
             We couldn&apos;t load this setup. Please try again shortly.
           </p>
-          <Link href="/setups" className="mt-4 inline-flex text-foreground underline underline-offset-4">
+          <Link
+            href="/setups"
+            className="mt-4 inline-flex text-foreground underline underline-offset-4"
+          >
             Back to Browse Setups
           </Link>
         </section>
@@ -134,17 +150,21 @@ export default async function SetupDetailPage({
 
   if (!setup) notFound();
 
-  const [fieldTestSummary, currentGameVersion, pendingPrompt] = await Promise.all([
-    getPublicFieldTestSummary(setup.id, 5),
-    getGameCurrentVersion(setup.game),
-    hasPendingRatingPrompt(setup.id),
-  ]);
+  const [fieldTestSummary, currentGameVersion, pendingPrompt] =
+    await Promise.all([
+      getPublicFieldTestSummary(setup.id, 5),
+      getGameCurrentVersion(setup.game),
+      hasPendingRatingPrompt(setup.id),
+    ]);
   const canonicalPath = `/setups/${encodeURIComponent(setup.id)}`;
   const setupUrl = absoluteUrl(canonicalPath);
-  const authorUrl = absoluteUrl(`/profile/${encodeURIComponent(setup.authorId)}`);
+  const authorUrl = absoluteUrl(
+    `/profile/${encodeURIComponent(setup.authorId)}`,
+  );
   const setupTitle = `${setup.car} @ ${setup.track}`;
   const setupDescription = truncateMetaDescription(
-    setup.description || `A free ${setup.game} setup for the ${setup.car} at ${setup.track}.`
+    setup.description ||
+      `A free ${setup.game} setup for the ${setup.car} at ${setup.track}.`,
   );
 
   // The visible card shows a Pace and a Predictability average from real
@@ -157,7 +177,9 @@ export default async function SetupDetailPage({
     ratingCount > 0
       ? {
           "@type": "AggregateRating",
-          ratingValue: Number(((setup.pace + setup.predictability) / 2).toFixed(1)),
+          ratingValue: Number(
+            ((setup.pace + setup.predictability) / 2).toFixed(1),
+          ),
           bestRating: 5,
           worstRating: 1,
           ratingCount,
@@ -187,8 +209,18 @@ export default async function SetupDetailPage({
         "@type": "BreadcrumbList",
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-          { "@type": "ListItem", position: 2, name: "Browse Setups", item: absoluteUrl("/setups") },
-          { "@type": "ListItem", position: 3, name: setupTitle, item: setupUrl },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Browse Setups",
+            item: absoluteUrl("/setups"),
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: setupTitle,
+            item: setupUrl,
+          },
         ],
       },
     ],
@@ -200,20 +232,30 @@ export default async function SetupDetailPage({
       <nav aria-label="Breadcrumb" className="mb-6">
         <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
           <li>
-            <Link href="/" className=" hover:text-foreground">Home</Link>
+            <Link href="/" className=" hover:text-foreground">
+              Home
+            </Link>
           </li>
           <li aria-hidden="true">/</li>
           <li>
-            <Link href="/setups" className=" hover:text-foreground">Browse Setups</Link>
+            <Link href="/setups" className=" hover:text-foreground">
+              Browse Setups
+            </Link>
           </li>
           <li aria-hidden="true">/</li>
-          <li aria-current="page" className="max-w-[14rem] truncate text-foreground">{setupTitle}</li>
+          <li
+            aria-current="page"
+            className="max-w-[14rem] truncate text-foreground"
+          >
+            {setupTitle}
+          </li>
         </ol>
       </nav>
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          {setup.car} <span className="text-muted-foreground">@ {setup.track}</span>
+          {setup.car}{" "}
+          <span className="text-muted-foreground">@ {setup.track}</span>
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {setup.game} · {setup.condition} setup
@@ -238,7 +280,8 @@ export default async function SetupDetailPage({
           </Link>
         </Button>
         <p className="max-w-sm text-sm text-muted-foreground">
-          Large, easy-to-copy setup values for a phone or second screen at your rig.
+          Large, easy-to-copy setup values for a phone or second screen at your
+          rig.
         </p>
       </div>
       <OpenInGarageLink setupId={setup.id} game={setup.game} />

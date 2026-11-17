@@ -6,7 +6,8 @@
 const ALLOWED_AVATAR_HOSTS = new Set(["cdn.discordapp.com"]);
 
 export function normalizeHttpsUrl(value: unknown): string | null {
-  if (typeof value !== "string" || !value.trim() || value.trim().length > 2048) return null;
+  if (typeof value !== "string" || !value.trim() || value.trim().length > 2048)
+    return null;
 
   try {
     const url = new URL(value.trim());

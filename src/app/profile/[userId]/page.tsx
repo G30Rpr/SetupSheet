@@ -8,7 +8,10 @@ import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isFollowing } from "@/lib/supabase/follows";
 import { getProfile } from "@/lib/supabase/profiles";
-import { getProfileSetupStats, getSetupsByUserPage } from "@/lib/supabase/setups";
+import {
+  getProfileSetupStats,
+  getSetupsByUserPage,
+} from "@/lib/supabase/setups";
 import { absoluteUrl, fullPageTitle } from "@/lib/seo";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { isUuid } from "@/lib/utils";
@@ -23,13 +26,19 @@ export async function generateMetadata({
   // src/app/setups/[id]/page.tsx (a mid-render notFound() cannot set the HTTP
   // status while the layout streams, so noindex is what does the work here).
   if (!isUuid(userId)) {
-    return { title: "Profile not found", robots: { index: false, follow: false } };
+    return {
+      title: "Profile not found",
+      robots: { index: false, follow: false },
+    };
   }
 
   const profile = await getProfile(userId);
 
   if (!profile) {
-    return { title: "Profile not found", robots: { index: false, follow: false } };
+    return {
+      title: "Profile not found",
+      robots: { index: false, follow: false },
+    };
   }
 
   const title = profile.username;
@@ -38,14 +47,33 @@ export async function generateMetadata({
   const url = `/profile/${encodeURIComponent(userId)}`;
   const image = profile.avatarUrl
     ? [{ url: profile.avatarUrl, alt: `${profile.username}'s avatar` }]
-    : [{ url: absoluteUrl("/opengraph-image"), width: 1200, height: 630, alt: socialTitle }];
+    : [
+        {
+          url: absoluteUrl("/opengraph-image"),
+          width: 1200,
+          height: 630,
+          alt: socialTitle,
+        },
+      ];
 
   return {
     title,
     description,
     alternates: { canonical: `${SITE_URL}${url}` },
-    openGraph: { title: socialTitle, description, url, type: "profile", siteName: SITE_NAME, images: image },
-    twitter: { card: "summary_large_image", title: socialTitle, description, images: image.map(({ url: imageUrl }) => imageUrl) },
+    openGraph: {
+      title: socialTitle,
+      description,
+      url,
+      type: "profile",
+      siteName: SITE_NAME,
+      images: image,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: socialTitle,
+      description,
+      images: image.map(({ url: imageUrl }) => imageUrl),
+    },
   };
 }
 
@@ -70,7 +98,8 @@ export default async function PublicProfilePage({
     getProfileSetupStats(userId),
   ]);
   const viewerIsOwner = user?.id === userId;
-  const viewerFollowsThem = !viewerIsOwner && (await isFollowing(user?.id ?? null, userId));
+  const viewerFollowsThem =
+    !viewerIsOwner && (await isFollowing(user?.id ?? null, userId));
   const profileUrl = absoluteUrl(`/profile/${encodeURIComponent(userId)}`);
 
   const jsonLd = {
@@ -95,14 +124,23 @@ export default async function PublicProfilePage({
         <nav aria-label="Breadcrumb" className="mb-6">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
             <li>
-              <Link href="/" className=" hover:text-foreground">Home</Link>
+              <Link href="/" className=" hover:text-foreground">
+                Home
+              </Link>
             </li>
             <li aria-hidden="true">/</li>
             <li>
-              <Link href="/leaderboard" className=" hover:text-foreground">Leaderboard</Link>
+              <Link href="/leaderboard" className=" hover:text-foreground">
+                Leaderboard
+              </Link>
             </li>
             <li aria-hidden="true">/</li>
-            <li aria-current="page" className="max-w-[14rem] truncate text-foreground">{profile.username}</li>
+            <li
+              aria-current="page"
+              className="max-w-[14rem] truncate text-foreground"
+            >
+              {profile.username}
+            </li>
           </ol>
         </nav>
       </div>
@@ -112,7 +150,11 @@ export default async function PublicProfilePage({
         avatarUrl={profile.avatarUrl ?? undefined}
         memberSince={profile.memberSince}
         followerCount={profile.followerCount}
-        follow={viewerIsOwner ? undefined : { targetUserId: userId, initialIsFollowing: viewerFollowsThem }}
+        follow={
+          viewerIsOwner
+            ? undefined
+            : { targetUserId: userId, initialIsFollowing: viewerFollowsThem }
+        }
         setups={setupPage.setups}
         stats={stats}
         pagination={{ profileId: userId, nextCursor: setupPage.nextCursor }}

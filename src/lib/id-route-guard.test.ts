@@ -10,7 +10,9 @@ describe("unresolvableIdSegment", () => {
     expect(unresolvableIdSegment("/setups/123")).toBe("123");
     expect(unresolvableIdSegment("/setups/not-a-uuid/edit")).toBe("not-a-uuid");
     expect(unresolvableIdSegment("/profile/not-a-uuid")).toBe("not-a-uuid");
-    expect(unresolvableIdSegment("/setups/not-a-uuid/opengraph-image")).toBe("not-a-uuid");
+    expect(unresolvableIdSegment("/setups/not-a-uuid/opengraph-image")).toBe(
+      "not-a-uuid",
+    );
   });
 
   it("leaves well-formed uuids alone, including trailing slashes", () => {
@@ -20,11 +22,15 @@ describe("unresolvableIdSegment", () => {
     expect(unresolvableIdSegment(`/setups/${UUID}/opengraph-image`)).toBeNull();
     expect(unresolvableIdSegment(`/profile/${UUID}`)).toBeNull();
     expect(unresolvableIdSegment(`/profile/${UUID}/`)).toBeNull();
-    expect(unresolvableIdSegment(`/profile/${UUID}/opengraph-image`)).toBeNull();
+    expect(
+      unresolvableIdSegment(`/profile/${UUID}/opengraph-image`),
+    ).toBeNull();
   });
 
   it("accepts a percent-encoded uuid, since the segment still decodes to one", () => {
-    expect(unresolvableIdSegment(`/setups/${encodeURIComponent(UUID)}`)).toBeNull();
+    expect(
+      unresolvableIdSegment(`/setups/${encodeURIComponent(UUID)}`),
+    ).toBeNull();
   });
 
   it("treats a malformed percent-escape as unresolvable instead of throwing", () => {

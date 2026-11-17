@@ -11,7 +11,10 @@ export default function LoadingRequests() {
 
       <div className="flex flex-col gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-28 animate-pulse rounded-xl border border-border/60 bg-secondary/20" />
+          <div
+            key={i}
+            className="h-28 animate-pulse rounded-xl border border-border/60 bg-secondary/20"
+          />
         ))}
       </div>
     </div>

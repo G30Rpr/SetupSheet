@@ -31,14 +31,18 @@ vi.mock("@/lib/supabase/auth", () => ({
   getCurrentUser: (...args: unknown[]) => getCurrentUser(...args),
 }));
 
-const { createUploadTarget, verifyUploadedFile } = await import("@/lib/actions/setups");
+const { createUploadTarget, verifyUploadedFile } =
+  await import("@/lib/actions/setups");
 
 describe("createUploadTarget", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getCurrentUser.mockResolvedValue({ id: USER_ID });
     consumeUploadTargetRateLimit.mockResolvedValue({ data: true, error: null });
-    createSignedUploadUrl.mockResolvedValue({ data: { token: "signed-token" }, error: null });
+    createSignedUploadUrl.mockResolvedValue({
+      data: { token: "signed-token" },
+      error: null,
+    });
   });
 
   it("returns an owner-scoped path and token for a valid, authenticated upload", async () => {
@@ -69,14 +73,21 @@ describe("createUploadTarget", () => {
   });
 
   it("refuses a file over the limit without signing anything", async () => {
-    const result = await createUploadTarget("setup", "big.json", 6 * 1024 * 1024);
+    const result = await createUploadTarget(
+      "setup",
+      "big.json",
+      6 * 1024 * 1024,
+    );
 
     expect(result.error).toContain("5 MB");
     expect(createSignedUploadUrl).not.toHaveBeenCalled();
   });
 
   it("surfaces a signing failure as a retryable error and leaks no path", async () => {
-    createSignedUploadUrl.mockResolvedValue({ data: null, error: { message: "nope" } });
+    createSignedUploadUrl.mockResolvedValue({
+      data: null,
+      error: { message: "nope" },
+    });
 
     const result = await createUploadTarget("setup", "Monza.json", 1024);
 
@@ -94,7 +105,10 @@ describe("createUploadTarget", () => {
   });
 
   it("uses the shared database limit before minting a signed URL", async () => {
-    consumeUploadTargetRateLimit.mockResolvedValue({ data: false, error: null });
+    consumeUploadTargetRateLimit.mockResolvedValue({
+      data: false,
+      error: null,
+    });
 
     const result = await createUploadTarget("setup", "overflow.json", 1024);
 
@@ -136,14 +150,22 @@ describe("verifyUploadedFile", () => {
 
   it("rejects a path belonging to another user before touching Storage", async () => {
     const foreign = "11111111-2222-3333-4444-555555555555/their-file.json";
-    const result = await verifyUploadedFile("setup", foreign, "their-file.json");
+    const result = await verifyUploadedFile(
+      "setup",
+      foreign,
+      "their-file.json",
+    );
 
     expect(result.error).toContain("doesn't belong");
     expect(storageInfo).not.toHaveBeenCalled();
   });
 
   it("rejects traversal and multi-segment paths", async () => {
-    for (const bad of [`${USER_ID}/../other.json`, `${USER_ID}/a/b.json`, "not-a-path"]) {
+    for (const bad of [
+      `${USER_ID}/../other.json`,
+      `${USER_ID}/a/b.json`,
+      "not-a-path",
+    ]) {
       const result = await verifyUploadedFile("setup", bad, "other.json");
       expect(result.error).not.toBeNull();
     }
@@ -151,9 +173,16 @@ describe("verifyUploadedFile", () => {
   });
 
   it("rejects a missing object (upload never landed)", async () => {
-    storageInfo.mockResolvedValue({ data: null, error: { message: "not found" } });
+    storageInfo.mockResolvedValue({
+      data: null,
+      error: { message: "not found" },
+    });
 
-    const result = await verifyUploadedFile("setup", `${USER_ID}/x-Monza.json`, "Monza.json");
+    const result = await verifyUploadedFile(
+      "setup",
+      `${USER_ID}/x-Monza.json`,
+      "Monza.json",
+    );
 
     expect(result.error).toContain("didn't finish");
   });
@@ -161,21 +190,36 @@ describe("verifyUploadedFile", () => {
   it("rejects an object Storage reports as empty", async () => {
     storageInfo.mockResolvedValue({ data: { size: 0 }, error: null });
 
-    const result = await verifyUploadedFile("setup", `${USER_ID}/x-Monza.json`, "Monza.json");
+    const result = await verifyUploadedFile(
+      "setup",
+      `${USER_ID}/x-Monza.json`,
+      "Monza.json",
+    );
 
     expect(result.error).toContain("empty");
   });
 
   it("rejects an object Storage reports as over the per-kind limit", async () => {
-    storageInfo.mockResolvedValue({ data: { size: 11 * 1024 * 1024 }, error: null });
+    storageInfo.mockResolvedValue({
+      data: { size: 11 * 1024 * 1024 },
+      error: null,
+    });
 
-    const result = await verifyUploadedFile("setup", `${USER_ID}/x-Monza.json`, "Monza.json");
+    const result = await verifyUploadedFile(
+      "setup",
+      `${USER_ID}/x-Monza.json`,
+      "Monza.json",
+    );
 
     expect(result.error).toContain("5 MB");
   });
 
   it("rejects a filename whose extension is not allowed for that kind", async () => {
-    const result = await verifyUploadedFile("setup", `${USER_ID}/x-run.vbo`, "run.vbo");
+    const result = await verifyUploadedFile(
+      "setup",
+      `${USER_ID}/x-run.vbo`,
+      "run.vbo",
+    );
 
     expect(result.error).toContain("Unsupported");
   });
@@ -183,7 +227,11 @@ describe("verifyUploadedFile", () => {
   it("refuses an anonymous caller", async () => {
     getCurrentUser.mockResolvedValue(null);
 
-    const result = await verifyUploadedFile("setup", `${USER_ID}/x-Monza.json`, "Monza.json");
+    const result = await verifyUploadedFile(
+      "setup",
+      `${USER_ID}/x-Monza.json`,
+      "Monza.json",
+    );
 
     expect(result.error).toContain("logged in");
     expect(storageInfo).not.toHaveBeenCalled();

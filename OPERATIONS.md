@@ -225,11 +225,11 @@ Remove or hide violating content using the existing owner/admin process, and pre
     setup downloads; this limit is to constrain automated fetch amplification.
   - Authentication failures: configure the provider's Auth rate limits separately, since
     browser auth requests go directly to Supabase rather than through the app's WAF path.
-  Migration `0035` provides a shared atomic 30-requests/user/hour upload-target quota. Edge
-  limits remain defense in depth and protect unauthenticated endpoints, anonymous download
-  counter actions, and serverless capacity. Confirm the deployed plan supports the rules;
-  if not, configure equivalent limits at the CDN or another shared edge provider and record
-  a burst/false-positive review before enforcement.
+    Migration `0035` provides a shared atomic 30-requests/user/hour upload-target quota. Edge
+    limits remain defense in depth and protect unauthenticated endpoints, anonymous download
+    counter actions, and serverless capacity. Confirm the deployed plan supports the rules;
+    if not, configure equivalent limits at the CDN or another shared edge provider and record
+    a burst/false-positive review before enforcement.
 - Configure malware scanning/quarantine if community uploads are not manually reviewed.
 - Replace repository-based privacy contact language with a monitored contact.
 - Restrict SQL Editor/service-role access to trusted operators and rotate credentials according to the provider policy.
@@ -237,6 +237,7 @@ Remove or hide violating content using the existing owner/admin process, and pre
 ## Operator SLAs and Review Procedures
 
 ### Account Deletion Requests (`account_deletion_requests`)
+
 - **Target SLA:** Review and execute within **7 calendar days** of submission (well within statutory GDPR 30-day and CCPA 45-day requirements).
 - **Execution Runbook:**
   1. Inspect pending requests:
@@ -270,6 +271,7 @@ Remove or hide violating content using the existing owner/admin process, and pre
      ```
 
 ### Content Moderation Reports (`content_reports`)
+
 - **Target SLA:**
   - **Critical (spam, unsafe_file, harassment):** Review within **24 hours**.
   - **Standard (copyright, other):** Review within **72 hours**.
@@ -303,6 +305,7 @@ Remove or hide violating content using the existing owner/admin process, and pre
 ## Backup, Restore, and Migration Rollback Policy
 
 ### Automated & On-Demand Backups
+
 1. **Automated Backups:** Ensure daily automated backups and Point-In-Time Recovery (PITR) are enabled in the Supabase Dashboard under **Project Settings > Database > Backups**.
 2. **On-Demand Operator Snapshot:** Before running any manual DDL or running migrations against production, take an explicit logical schema + data snapshot:
    ```bash
@@ -314,6 +317,7 @@ Remove or hide violating content using the existing owner/admin process, and pre
    ```
 
 ### Restoration Runbook
+
 - **Point-In-Time Restore (PITR):** In the Supabase Dashboard, select PITR to restore to a specific timestamp or spin up a restored branch.
 - **SQL Dump Restore:** To restore a custom dump file to a recovery database:
   ```bash
@@ -321,6 +325,7 @@ Remove or hide violating content using the existing owner/admin process, and pre
   ```
 
 ### Migration Rollback Policy
+
 - **Forward-Fix Principle:** SetupSheet operates on a strict forward-fix migration policy. Never delete historical migration files that have already been applied to production. Write a new sequential migration (`0035_...`) to revert or adjust schema definitions.
 - **Transactional DDL:** PostgreSQL supports fully transactional DDL (`CREATE INDEX`, `ALTER TABLE`, `CREATE FUNCTION`). Wrap manual DDL alterations in `BEGIN ... COMMIT;` blocks so a failed alteration rolls back completely without leaving partial schema changes.
 - **Rolling Back Specific 0034 Changes:**

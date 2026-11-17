@@ -11,35 +11,35 @@
 
 SetupSheet is a genuinely well-built Next.js 16 / Supabase app: the RLS model is layered (row + column grants), PostgREST input is constrained, CSP is nonce-based, there are no third-party scripts, and no `select("*")` on public readers. **It is not a "done, just deploy" state.** This pass found defects the last audit missed or that have since regressed:
 
-| Severity | Count | Headline |
-|---|---|---|
-| Critical | 4 | soft-404 + unbounded OG-image oracle; unbounded/orphaned Storage uploads; dependency-vulnerability regression with no CI gate; SQL layer still never executed |
-| High | 4 | cache-tag thrash from counters; "Most wanted" reads the *oldest* 500; requests board silently truncates; uploaded files survive account deletion |
-| Medium | 8 | `.vbo` uploads rejected; orphan objects on failed submit; layout blocks first paint on notifications; 500-row "load more" pages; anon download-counter RPC; no username uniqueness; thin test coverage on the riskiest files; stale docs |
-| Low | 9 | OG-image CDN staleness, dead fields, duplicated helpers, `NOT VALID` never validated, etc. |
+| Severity | Count | Headline                                                                                                                                                                                                                                 |
+| -------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Critical | 4     | soft-404 + unbounded OG-image oracle; unbounded/orphaned Storage uploads; dependency-vulnerability regression with no CI gate; SQL layer still never executed                                                                            |
+| High     | 4     | cache-tag thrash from counters; "Most wanted" reads the _oldest_ 500; requests board silently truncates; uploaded files survive account deletion                                                                                         |
+| Medium   | 8     | `.vbo` uploads rejected; orphan objects on failed submit; layout blocks first paint on notifications; 500-row "load more" pages; anon download-counter RPC; no username uniqueness; thin test coverage on the riskiest files; stale docs |
+| Low      | 9     | OG-image CDN staleness, dead fields, duplicated helpers, `NOT VALID` never validated, etc.                                                                                                                                               |
 
 ### What actually ran (evidence)
 
-| Command | Result |
-|---|---|
-| `npm ci` | 535 packages installed; **`4 vulnerabilities (3 moderate, 1 high)`** |
-| `npm run lint` | pass, no warnings |
-| `npx tsc --noEmit` | pass, 0 errors |
-| `npx vitest run` | **27 files / 134 tests passed** (6.5 s) |
-| `npm run build` | pass; **23 routes** — 19 dynamic (`ƒ`) and 4 static (`○`: `icon.svg`, `/opengraph-image`, `/robots.txt`, `/sitemap.xml`), all HTML routes dynamic because the root layout reads `headers()`/`cookies()` |
-| `node scripts/check-performance-budget.mjs` | pass — 36 chunks, 402.9 KiB gzip, largest 71.5 KiB |
-| `npm run build:budget` | pass (build + budget) |
-| `npx next start -H 0.0.0.0` + `curl` | 200s, headers/CSP/nonce, `?code=` forward, 404 behaviour — see §2 |
-| `npm run test:db` | **not runnable** (no `psql`); CI's `postgres:16` job is still the only SQL gate |
-| `npm run test:e2e` | **not runnable** (no Chromium); `--list` discovery only |
+| Command                                     | Result                                                                                                                                                                                                  |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm ci`                                    | 535 packages installed; **`4 vulnerabilities (3 moderate, 1 high)`**                                                                                                                                    |
+| `npm run lint`                              | pass, no warnings                                                                                                                                                                                       |
+| `npx tsc --noEmit`                          | pass, 0 errors                                                                                                                                                                                          |
+| `npx vitest run`                            | **27 files / 134 tests passed** (6.5 s)                                                                                                                                                                 |
+| `npm run build`                             | pass; **23 routes** — 19 dynamic (`ƒ`) and 4 static (`○`: `icon.svg`, `/opengraph-image`, `/robots.txt`, `/sitemap.xml`), all HTML routes dynamic because the root layout reads `headers()`/`cookies()` |
+| `node scripts/check-performance-budget.mjs` | pass — 36 chunks, 402.9 KiB gzip, largest 71.5 KiB                                                                                                                                                      |
+| `npm run build:budget`                      | pass (build + budget)                                                                                                                                                                                   |
+| `npx next start -H 0.0.0.0` + `curl`        | 200s, headers/CSP/nonce, `?code=` forward, 404 behaviour — see §2                                                                                                                                       |
+| `npm run test:db`                           | **not runnable** (no `psql`); CI's `postgres:16` job is still the only SQL gate                                                                                                                         |
+| `npm run test:e2e`                          | **not runnable** (no Chromium); `--list` discovery only                                                                                                                                                 |
 
 ### Corrections to the 2026-08-28 report
 
 Three of its "verified" statements are now false or were never true:
 
-1. *“`npm audit --audit-level=high`: 0 vulnerabilities after the … overrides”* → today the same lockfile reports **4, one high** (§2.3). Nothing was upgraded; new advisories landed against already-pinned versions, and no CI job runs `npm audit`, so the claim could not stay true.
-2. *“proper `notFound()` paths are implemented”* → `notFound()` is called and renders correctly, **but the HTTP status is 200**, measured live (§2.1).
-3. *“Phase 3.3 … the 500-row client index remains the separate payload opportunity”* framed the browse index as only a payload problem; it is also a **correctness** problem — the expansion cursor is never reset when filters change, and each “load older” click fetches another 500 hydrated rows (§4.3).
+1. _“`npm audit --audit-level=high`: 0 vulnerabilities after the … overrides”_ → today the same lockfile reports **4, one high** (§2.3). Nothing was upgraded; new advisories landed against already-pinned versions, and no CI job runs `npm audit`, so the claim could not stay true.
+2. _“proper `notFound()` paths are implemented”_ → `notFound()` is called and renders correctly, **but the HTTP status is 200**, measured live (§2.1).
+3. _“Phase 3.3 … the 500-row client index remains the separate payload opportunity”_ framed the browse index as only a payload problem; it is also a **correctness** problem — the expansion cursor is never reset when filters change, and each “load older” click fetches another 500 hydrated rows (§4.3).
 
 Its remaining claims (public/private cache separation, viewer state never cached, explicit projections, CSP + escaped JSON-LD, keyset cursors, bounded metadata descriptions) were re-checked and **do hold**.
 
@@ -68,23 +68,24 @@ GET /totally-bogus-page                          -> 404   (framework 404, as exp
 
 `src/app/setups/[id]/page.tsx:60` and `src/app/profile/[userId]/page.tsx:56` call `notFound()`, but because the root layout is dynamic and streams, the document status is already committed as 200 before the segment throws. Consequences:
 
-* **SEO:** Google treats 200-with-not-found-copy as a soft 404; deleted setups keep their PageRank-bearing URL and pollute the crawl budget instead of dropping out. The sitemap (`/sitemap.xml`, hourly) re-advertises deleted setups until revalidation.
-* **Abuse amplifier:** `src/app/setups/[id]/opengraph-image.tsx` runs a full Satori/PNG render for **any** string in `[id]` and the response is CDN-cacheable for 24 h per URL. A caller with a list of random paths can force unbounded CPU on the server and unbounded distinct cache objects at the edge. `generateMetadata` for the not-found case also emits `og:image: /setups/<arbitrary>/opengraph-image`, so unfurl bots fetch that generated image for junk URLs.
+- **SEO:** Google treats 200-with-not-found-copy as a soft 404; deleted setups keep their PageRank-bearing URL and pollute the crawl budget instead of dropping out. The sitemap (`/sitemap.xml`, hourly) re-advertises deleted setups until revalidation.
+- **Abuse amplifier:** `src/app/setups/[id]/opengraph-image.tsx` runs a full Satori/PNG render for **any** string in `[id]` and the response is CDN-cacheable for 24 h per URL. A caller with a list of random paths can force unbounded CPU on the server and unbounded distinct cache objects at the edge. `generateMetadata` for the not-found case also emits `og:image: /setups/<arbitrary>/opengraph-image`, so unfurl bots fetch that generated image for junk URLs.
 
 **Fix (small, three parts):**
+
 1. **Guard the OG route in `src/proxy.ts`** — for `^/setups/([^/]+)/opengraph-image$`, if the segment is not a UUID, answer `new NextResponse(null, { status: 404 })` directly. This is the security-relevant half: it removes the render-and-cache oracle entirely (no page render, no edge cache entry, no CPU) and it also stops `getCachedSetupRowById` (`src/lib/supabase/setups.ts:184`) from allocating one `unstable_cache` entry per junk id an attacker invents.
-2. **Guard the page render on shape too** — validate the id in `generateMetadata`/page and short-circuit for non-UUID input. Note the framework nuance: because the root layout is dynamic and streams, a mid-render `notFound()` cannot change an already-flushed status; Next does not expose a supported "set HTTP status from a Server Component" API in 16.3 (only `headers`/`cookies`/`draftMode` in `next/headers`). So for *valid-UUID-but-missing* rows, the honest options are (a) keep the streamed 404 UI with `noindex, nofollow` (already emitted) and accept status 200, or (b) serve `/setups/[id]` through a Route Handler-shaped path that can set the status. Pick (a) and document it, or pick (b) — but don't leave the code comment claiming "proper `notFound()` paths" as if the status were correct.
+2. **Guard the page render on shape too** — validate the id in `generateMetadata`/page and short-circuit for non-UUID input. Note the framework nuance: because the root layout is dynamic and streams, a mid-render `notFound()` cannot change an already-flushed status; Next does not expose a supported "set HTTP status from a Server Component" API in 16.3 (only `headers`/`cookies`/`draftMode` in `next/headers`). So for _valid-UUID-but-missing_ rows, the honest options are (a) keep the streamed 404 UI with `noindex, nofollow` (already emitted) and accept status 200, or (b) serve `/setups/[id]` through a Route Handler-shaped path that can set the status. Pick (a) and document it, or pick (b) — but don't leave the code comment claiming "proper `notFound()` paths" as if the status were correct.
 3. In `src/app/setups/[id]/page.tsx`, the not-found `generateMetadata` branch must not advertise an `og:image` (a live request proved it does: `og:image: https://setupsheet.app/setups/not-a-uuid/opengraph-image?…`), and should not emit `alternates.canonical` — it currently resolves to the site root (`<link rel="canonical" href="https://setupsheet.app">` on a not-found page), which is worse than emitting nothing.
 
 **Status — fixed in part, verified against a production build (`2026-09-11).** Two commits:
 
-* `src/lib/setup-og-image-path.ts` + `src/proxy.ts`: a `/setups/<seg>/opengraph-image`
+- `src/lib/setup-og-image-path.ts` + `src/proxy.ts`: a `/setups/<seg>/opengraph-image`
   request whose segment is not a UUID is answered `new NextResponse(null, { status: 404 })`
   in middleware. Measured on `next start` after this change:
   `/setups/not-a-uuid/opengraph-image -> 404, 0 bytes` (was `200 image/png, 27,761 B` with
   `s-maxage=86400`), while a real id still returns `200 image/png`. The render-and-cache
   oracle and the per-junk-id `unstable_cache` entry are both gone.
-* `src/app/setups/[id]/page.tsx` and `src/app/profile/[userId]/page.tsx` short-circuit
+- `src/app/setups/[id]/page.tsx` and `src/app/profile/[userId]/page.tsx` short-circuit
   non-UUID params before any lookup, and the **site-wide `alternates.canonical` was removed
   from `src/app/layout.tsx`** — that inheritance is what put
   `canonical → https://setupsheet.app` on a not-found page. Verified: not-found pages now
@@ -99,7 +100,7 @@ Two parts of the recommendation need correcting:
    return value can suppress it. The middleware guard is therefore the fix that matters
    (the tag now points at a URL that 404s with zero work), and the earlier "don't emit
    og:image" instruction is not implementable as written.
-2. The HTTP status for *valid-but-missing* ids stays 200. This revision of Next exposes no
+2. The HTTP status for _valid-but-missing_ ids stays 200. This revision of Next exposes no
    supported status setter from a Server Component, so `noindex, nofollow` (present, verified)
    is the crawler-facing contract. If a hard 404 is ever required, the page has to move behind
    a Route Handler-shaped response or the layout has to stop streaming — a much larger change
@@ -107,9 +108,9 @@ Two parts of the recommendation need correcting:
 
 ### 2.2 Upload path is unbounded: no rate limit, no bucket limits, no cleanup
 
-* `src/lib/actions/setups.ts:104-196` (`uploadSetupFile`, `uploadTelemetryFile`) — authenticated, size- and extension-checked, but **not rate-limited and not tied to a successful setup row**. The DB rate limits in `0021_insert_grants_and_rate_limits.sql` cover `setups`/`setup_comments`/`setup_requests` inserts only. One account can therefore POST millions of objects.
-* `supabase/migrations/0004_setup_files.sql:16` creates the bucket with no `file_size_limit` and no `allowed_mime_types`, and no later migration adds them (grep: zero hits). So the 5 MB / 10 MB caps exist **only** in the Server Action; a caller hitting the Storage REST API directly with a valid session can upload up to the project default (50 MB) of any extension allowed by the `0019` filename regex, in any quantity.
-* Orphan lifecycle: see §4.1 — nothing ever deletes an object whose row never materialised.
+- `src/lib/actions/setups.ts:104-196` (`uploadSetupFile`, `uploadTelemetryFile`) — authenticated, size- and extension-checked, but **not rate-limited and not tied to a successful setup row**. The DB rate limits in `0021_insert_grants_and_rate_limits.sql` cover `setups`/`setup_comments`/`setup_requests` inserts only. One account can therefore POST millions of objects.
+- `supabase/migrations/0004_setup_files.sql:16` creates the bucket with no `file_size_limit` and no `allowed_mime_types`, and no later migration adds them (grep: zero hits). So the 5 MB / 10 MB caps exist **only** in the Server Action; a caller hitting the Storage REST API directly with a valid session can upload up to the project default (50 MB) of any extension allowed by the `0019` filename regex, in any quantity.
+- Orphan lifecycle: see §4.1 — nothing ever deletes an object whose row never materialised.
 
 **Fix:** add a per-user upload limiter (same advisory-lock trigger pattern as `0021`, on a tiny `storage`-adjacent counter table, or a Vercel/CDN edge limit), set `file_size_limit`/`allowed_mime_types` on the bucket in a new migration, and add a nightly sweeper that deletes `setup-files` objects with no matching `setups.file_path`/`telemetry_file_path` older than 24 h.
 
@@ -135,11 +136,11 @@ The orphan half of this finding is closed from the other direction (§4.1's clea
 
 `npm ci` reports `4 vulnerabilities (3 moderate, 1 high)`:
 
-| Package | Sev | Advisory |
-|---|---|---|
-| `browserslist` ≤4.28.6 | **high** | GHSA-c83g-rgw3-j3cx (unbounded memory growth → OOM), GHSA-73wf-gq98-2v4g (crash/prototype write via untrusted `browserslist-stats.json`) |
-| `@vitest/mocker` 2.1.0–4.1.10 (via `vitest`) | moderate | GHSA-82fw-gwwq-j7x9 (path traversal / arbitrary file read via redirect mock) |
-| `baseline-browser-mapping` ≥2.0.0 <2.11.0 | moderate | GHSA-w5vr-8v7q-w6rv (DoS on invalid input) |
+| Package                                      | Sev      | Advisory                                                                                                                                 |
+| -------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `browserslist` ≤4.28.6                       | **high** | GHSA-c83g-rgw3-j3cx (unbounded memory growth → OOM), GHSA-73wf-gq98-2v4g (crash/prototype write via untrusted `browserslist-stats.json`) |
+| `@vitest/mocker` 2.1.0–4.1.10 (via `vitest`) | moderate | GHSA-82fw-gwwq-j7x9 (path traversal / arbitrary file read via redirect mock)                                                             |
+| `baseline-browser-mapping` ≥2.0.0 <2.11.0    | moderate | GHSA-w5vr-8v7q-w6rv (DoS on invalid input)                                                                                               |
 
 All three are **build/dev-time, not shipped runtime**, and none is currently reachable in this repo's usage — but the `@vitest/mocker` one is a real file-read primitive in a test runner that executes arbitrary repo code, and the last audit's "0 vulnerabilities" claim shows the gap: `.github/workflows/ci.yml` never runs `npm audit`, so drift is invisible until someone re-reads the lockfile.
 
@@ -170,7 +171,7 @@ not a release-week change).
 `supabase/migrations/0023`–`0026` (the `leaderboard`/`setup_search` views, `updated_at`, deletion-request and report tables) are the load-bearing half of the security model, and the trust boundary is Postgres — not the React code. `scripts/test-db.sh` is well written (fresh scratch DB, duplicate-version guard, `ON_ERROR_STOP`, nine `.test.sql` files), but this sandbox has no `psql` and no Docker, so **zero SQL assertions were run by this audit**. Same for `npx playwright test`.
 
 **Status — retracted in part, and the underlying gate was worse than reported.** The
-claim "never executed anywhere" was true of *this sandbox* only: `.github/workflows/ci.yml`
+claim "never executed anywhere" was true of _this sandbox_ only: `.github/workflows/ci.yml`
 has a `db-migrations` job that applies all migrations to `postgres:16` and runs
 `supabase/testing/*.test.sql`. What the API shows instead is that the job has been
 **failing on every branch for 13 days, including the merged default branch** — the SQL
@@ -191,13 +192,13 @@ apply and pass at `3ceef48`; `scripts/test-db.sh` itself still needs `psql` to r
 
 ### 3.1 `revalidateTag("public-setups")` makes the highest-frequency write invalidate the most expensive caches
 
-`src/lib/actions/setups.ts:48-50` is called by `createSetup`, `updateSetup`, `deleteSetup`, **`toggleUpvote` (line 505)** and **`rateSetup` (line 543)**. The tag is attached to *everything* public:
+`src/lib/actions/setups.ts:48-50` is called by `createSetup`, `updateSetup`, `deleteSetup`, **`toggleUpvote` (line 505)** and **`rateSetup` (line 543)**. The tag is attached to _everything_ public:
 
-* browse rows (500/setup), featured, count, detail, related, profile pages (`src/lib/supabase/setups.ts:99,114,124,160,195,226,293`)
-* **the sitemap's 24,000-row keyset walk**, which is deliberately given `revalidate: 3600` (`setups.ts:269`)
-* the leaderboard (`src/lib/supabase/leaderboard.ts:24`) and profile stats (`setups.ts:160`)
+- browse rows (500/setup), featured, count, detail, related, profile pages (`src/lib/supabase/setups.ts:99,114,124,160,195,226,293`)
+- **the sitemap's 24,000-row keyset walk**, which is deliberately given `revalidate: 3600` (`setups.ts:269`)
+- the leaderboard (`src/lib/supabase/leaderboard.ts:24`) and profile stats (`setups.ts:160`)
 
-So every single upvote or star click on any setup by any user drops the hourly sitemap cache (a 24-request PostgREST walk) and re-runs the 500-row browse query for the next visitor on each filtered combination. Counter clicks are the most common mutation on a community site; the revalidation cost is proportional to the *catalog* size, not the mutation.
+So every single upvote or star click on any setup by any user drops the hourly sitemap cache (a 24-request PostgREST walk) and re-runs the 500-row browse query for the next visitor on each filtered combination. Counter clicks are the most common mutation on a community site; the revalidation cost is proportional to the _catalog_ size, not the mutation.
 
 **Fix:** split tags — `setups-content` (create/update/delete: browse, detail, related, sitemap, profile), `setups-counters` (upvote/rate: count, featured, leaderboard, detail only), and give the sitemap walk its own `setups-sitemap` tag that content mutations do **not** touch. `revalidateTag(tag, "max")` is correct in Next 16; the problem is tag granularity, not the API.
 
@@ -225,7 +226,7 @@ a unit test rather than a production cache.
 .limit(500);
 ```
 
-Ordering ascending + limit means "the 500 oldest open requests, forever." Once the board has >500 open requests, every *new* request is invisible to the feature the whole page is built around — the demand signal silently freezes in time while the list below it keeps growing.
+Ordering ascending + limit means "the 500 oldest open requests, forever." Once the board has >500 open requests, every _new_ request is invisible to the feature the whole page is built around — the demand signal silently freezes in time while the list below it keeps growing.
 
 **Fix:** order descending (newest 500) at minimum; better, add a `supabase/migrations/0027_most_wanted_view.sql` `security_invoker` view doing `group by game, car, track` with a `created_at >= now() - interval '90 days'` window and `order by count desc`, then `limit` — which also removes the in-JS grouping this endpoint does today.
 
@@ -242,7 +243,7 @@ grouping, and answered-requests-drop-out), which runs in CI via `npm run test:db
 
 ### 3.3 Requests board: silent truncation at 100, and open items can disappear
 
-`getAllSetupRequests(limit = 100)` (`setup-requests.ts:28`) is called with no argument from `src/app/requests/page.tsx:30`, then **re-sorted in memory** to put open requests first. So the page shows the 100 newest rows sorted open-first; as soon as the newest 100 are mostly fulfilled, older *open* requests are not on the page at all, and there is no pagination, no filter, and no "open only" toggle. `requesterAvatarUrl` is hard-coded `null` (`setup-requests.ts:67`) while `src/lib/types.ts:119` still declares it — a dead contract field.
+`getAllSetupRequests(limit = 100)` (`setup-requests.ts:28`) is called with no argument from `src/app/requests/page.tsx:30`, then **re-sorted in memory** to put open requests first. So the page shows the 100 newest rows sorted open-first; as soon as the newest 100 are mostly fulfilled, older _open_ requests are not on the page at all, and there is no pagination, no filter, and no "open only" toggle. `requesterAvatarUrl` is hard-coded `null` (`setup-requests.ts:67`) while `src/lib/types.ts:119` still declares it — a dead contract field.
 
 **Fix:** push the ordering into the query (`.is("fulfilled_setup_id", null)` first-class, or an index-backed `order by (fulfilled_setup_id is not null), created_at desc` via a view), add a cursor like the profile/browse pages already use, and either populate the avatar (the `profiles` query at line 47 already runs — add `avatar_url`) or delete the field.
 
@@ -274,7 +275,7 @@ Deleting a setup does best-effort Storage cleanup (`src/lib/actions/setups.ts`, 
 
 **Status — fixed (2026-09-11), with one operational step left.** `0028_setup_files_gc.sql`
 adds two `security definer`, service-role-only enumerators: `orphaned_setup_files(grace)`
-(older than 24h, referenced by no `setups` *or* `setup_versions` path) and
+(older than 24h, referenced by no `setups` _or_ `setup_versions` path) and
 `setup_files_for_user(uid)` (everything under a departed account's folder).
 `OPERATIONS.md` (repo root) documents the account-deletion runbook around them, and
 `supabase/testing/zzzzzzz_setup_files_gc.test.sql` pins the enumeration.
@@ -292,11 +293,12 @@ function the operator adds); see §2.2.
 ## 4. Medium
 
 ### 4.1 Failed submit orphans uploaded objects
-`src/components/upload-form.tsx:404-437`: `resolveFileFields()` + `resolveTelemetryFields()` upload to Storage, then `createSetup`/`updateSetup` may fail validation or hit the 20/hour DB rate limit. The uploaded object is never removed — no client-side retry, no server-side GC, and the user gets "Couldn't publish" with a file sitting in public storage. On edit, a *replacement* upload followed by a failed update leaks the new object too (correctly, the old one is preserved). **Fix:** on a failed row write, fire a best-effort `removeSetupFile(path)` action; or restructure so the bytes are uploaded as part of the atomic write (signed upload URL created inside the RPC path), and GC orphans nightly (§2.2).
+
+`src/components/upload-form.tsx:404-437`: `resolveFileFields()` + `resolveTelemetryFields()` upload to Storage, then `createSetup`/`updateSetup` may fail validation or hit the 20/hour DB rate limit. The uploaded object is never removed — no client-side retry, no server-side GC, and the user gets "Couldn't publish" with a file sitting in public storage. On edit, a _replacement_ upload followed by a failed update leaks the new object too (correctly, the old one is preserved). **Fix:** on a failed row write, fire a best-effort `removeSetupFile(path)` action; or restructure so the bytes are uploaded as part of the atomic write (signed upload URL created inside the RPC path), and GC orphans nightly (§2.2).
 
 **Status — fixed (2026-09-11).** `src/components/upload-form.tsx` now hoists
 `uploadedPaths` above the `try`, records whichever of the two parallel uploads
-actually landed (setup file *and* telemetry — the partial-failure case previously
+actually landed (setup file _and_ telemetry — the partial-failure case previously
 leaked the successful one), and hands them to the new `discardUploadedFiles`
 Server Action (`src/lib/actions/setups.ts:229`) on all four failure paths:
 setup-file error, telemetry error, a failed `createSetup`/`updateSetup` write, and
@@ -307,19 +309,30 @@ failures — cleanup must never turn a successful save into an error. The durabl
 backstop for everything else is `public.orphaned_setup_files()` (see §3.4).
 
 ### 4.2 `.vbo` telemetry uploads are rejected by the signature check
+
 `src/lib/file-validation.ts:1` classifies `.vbo` as text:
+
 ```ts
-const TEXT_EXTENSIONS = new Set([".json", ".ini", ".txt", ".xml", ".csv", ".vbo"]);
+const TEXT_EXTENSIONS = new Set([
+  ".json",
+  ".ini",
+  ".txt",
+  ".xml",
+  ".csv",
+  ".vbo",
+]);
 ```
+
 then rejects any file whose first 512 bytes contain NUL or don't decode as fatal UTF-8. VBOX `.vbo` is a **binary** datalogger format, so every legitimate one fails with "That file contains binary data and cannot be uploaded as text." This contradicts the function's own stated policy (opaque simulator formats are allowed through) and its own docstring in `src/lib/storage.ts` which advertises `.vbo` as a supported telemetry format. Same false-positive risk for UTF-16/BOM-saved `.ini`/`.txt`/`.csv`. **Fix:** remove `.vbo` from `TEXT_EXTENSIONS`, tolerate a leading BOM, and add a unit test asserting a binary-headed `.vbo` passes (`src/lib/file-validation.test.ts` currently has 3 tests and doesn't cover it).
 
 ### 4.3 Browse "load more" sends 500 more hydrated rows and reuses a stale cursor
-`getSetupsAfter()` (`src/lib/supabase/setups.ts:467-516`) uses `SETUPS_BROWSE_LIMIT` (500) as the *page size*, fully hydrates each row (viewer state + author join), and `handleLoadOlder` in `src/components/setups-browser.tsx:249-289` appends into a client index that then grows unbounded, re-running fuzzy matching + `useMemo` over it on every keystroke. It also keeps `remoteCursor` from the *unfiltered* index when the user has since changed filters, and while searching falls back to `created_at < cursor` only (dropping same-timestamp rows). **Fix:** page size = `SETUPS_CARD_PAGE_SIZE` multiples (24/48), reset `remoteCursor`/`additionalSetups` whenever any filter changes, and use the full composite cursor (the `or=` search expression and the cursor can share one `or(...)` with an `and(...)` group, or move search server-side per §5.4).
+
+`getSetupsAfter()` (`src/lib/supabase/setups.ts:467-516`) uses `SETUPS_BROWSE_LIMIT` (500) as the _page size_, fully hydrates each row (viewer state + author join), and `handleLoadOlder` in `src/components/setups-browser.tsx:249-289` appends into a client index that then grows unbounded, re-running fuzzy matching + `useMemo` over it on every keystroke. It also keeps `remoteCursor` from the _unfiltered_ index when the user has since changed filters, and while searching falls back to `created_at < cursor` only (dropping same-timestamp rows). **Fix:** page size = `SETUPS_CARD_PAGE_SIZE` multiples (24/48), reset `remoteCursor`/`additionalSetups` whenever any filter changes, and use the full composite cursor (the `or=` search expression and the cursor can share one `or(...)` with an `and(...)` group, or move search server-side per §5.4).
 
 **Status — fixed (2026-09-11), except the search-mode cursor edge.**
 `getSetupsAfter()` now pages with `SETUPS_BROWSE_PAGE_SIZE = SETUP_CARD_PAGE_SIZE * 4`
 (96 rows), defined at `src/lib/supabase/setups.ts:61`, while `SETUPS_BROWSE_LIMIT`
-stays as the *first-page index* size — the two are no longer the same constant. The
+stays as the _first-page index_ size — the two are no longer the same constant. The
 client-side leak is closed in `src/components/setups-browser.tsx:88`: a
 `filterSignature` over search/game/car/track/condition/rig plus the `setups` prop
 identity is compared during render, and on any change `additionalSetups`,
@@ -337,18 +350,23 @@ one `or` parameter and search already occupies it. Fixing that means moving brow
 search server-side (a `text-search` filter/RPC), which is §5.4 territory.
 
 ### 4.4 Root layout blocks first paint on two notification queries
+
 `src/app/layout.tsx:92` awaits `getNotifications(user.id, 10)` **and** `getUnreadNotificationCount(user.id)` before rendering `<main>` for every signed-in request, on top of the `getCurrentUser()` round trip — three serial-ish Supabase calls inside the shared layout, uncached by design. **Fix:** wrap the bell in its own `<Suspense>` (the segment already streams) or fetch it client-side in `NotificationBell`; keep `initialUser` server-side. This is a cheap, measurable TTFB win for the logged-in cohort.
 
 ### 4.5 `increment_downloads` is anonymous, `SECURITY DEFINER`, and unlimited
+
 `0004_setup_files.sql:59` (redefined with a positional `$1` in `0018:262`) leaves `EXECUTE` to `public`. Any anonymous caller with the public anon key can post to `/rest/v1/rpc/increment_downloads` in a loop and inflate any setup's download count — the site's main popularity signal next to upvotes. Upvotes are protected by row-scoped `setup_upvotes`; downloads have no such guard. **Fix:** revoke from `anon`/`public`, grant to `authenticated` only if the counter should require login, or keep it public but add a per-`(setup_id, auth.uid()|session-hash)` dedupe window in the function body plus the edge limit from `LAUNCH_CHECKLIST.md`.
 
 ### 4.6 Display-name impersonation is trivial
+
 `profiles.username` (`0001:13`) has a length check (`0018` `profiles_username_length_check`) but **no uniqueness, no normalization, no moderation flag**, and there is no profile-edit UI at all (no `.update()` on `profiles` anywhere in `src/` — the `0009` column grant exists for a feature that was never built). Two accounts can both render as "Coach Dave" on the leaderboard, in bylines, and in JSON-LD `Person` nodes. **Fix:** decide whether names are display names (then label them as such and add a stable `@handle` unique index + a report affordance) or handles (then `create unique index profiles_username_lower_uniq on profiles (lower(username))` in a new migration and enforce on signup).
 
 ### 4.7 Test coverage is thin exactly where the risk is
-1,545 LOC of unit tests against 14,207 LOC of app code. The tested surface is the pure helpers (parsers, filters, normalizers) plus two small action guards. **Untested:** `src/lib/actions/setups.ts` (614 LOC — ownership checks, `validateAttachment`, rate-limit error mapping, storage-cleanup ordering), `src/lib/supabase/setups.ts` (759 LOC — cursor math, cache-tag wiring, `mapRow` safety fallbacks), `updateSetup`'s "read row before touching Storage" invariant, and the upload form's file/telemetry resolution. There is also no test asserting the *negative* authorization cases (user B calling `updateSetup` on user A's id must fail) — the highest-value test in this repo and cheap to write with a mocked client. **Fix:** add action-level tests for ownership/attachment/rate-limit paths, and one `src/lib/supabase/setups.test.ts` for cursor + `nextCursor` semantics.
+
+1,545 LOC of unit tests against 14,207 LOC of app code. The tested surface is the pure helpers (parsers, filters, normalizers) plus two small action guards. **Untested:** `src/lib/actions/setups.ts` (614 LOC — ownership checks, `validateAttachment`, rate-limit error mapping, storage-cleanup ordering), `src/lib/supabase/setups.ts` (759 LOC — cursor math, cache-tag wiring, `mapRow` safety fallbacks), `updateSetup`'s "read row before touching Storage" invariant, and the upload form's file/telemetry resolution. There is also no test asserting the _negative_ authorization cases (user B calling `updateSetup` on user A's id must fail) — the highest-value test in this repo and cheap to write with a mocked client. **Fix:** add action-level tests for ownership/attachment/rate-limit paths, and one `src/lib/supabase/setups.test.ts` for cursor + `nextCursor` semantics.
 
 ### 4.8 Documentation drift
+
 `AGENTS.md:4` tells every future agent “This project runs a standard, published Next.js release (currently **15.x**” — `package.json` pins `next ^16.3.3` and the middleware file is `src/proxy.ts` (the Next 16 rename). `AUDIT_REPORT.md` (this file) previously asserted a clean `npm audit`. `README.md`'s "Pages" list is accurate; `LAUNCH_CHECKLIST.md` is dated 2026-08-28 and predates §2.1–§2.3. **Fix:** correct the Next version line, add the vulnerability-gate item, and re-date after each audit.
 
 ---
@@ -357,27 +375,27 @@ search server-side (a `text-search` filter/RPC), which is §5.4 territory.
 
 Verified, not assumed:
 
-* **Row + column privilege layering in SQL** (`0009`, `0011`, `0013`, `0017`, `0018`, `0021`, `0025`, `0026`) — the denormalized trust signals (`upvotes`, `pace`, `rating_count`, `downloads`, `follower_count`, `fulfilled_*`, `status`) are all unreachable by direct `authenticated` writes. `revoke … from authenticated` followed by explicit `grant insert (...)`/`grant update (…)` is the right shape and is applied consistently.
-* **`fulfill_setup_request` hardening** (`0016`) — cross-checks game/car/track, atomic compare-and-swap, self-notification excluded, `revoke … from public` + `grant to authenticated` in `0018`. Textbook.
-* **Query-injection resistance** — `buildBrowseSearchExpression` (`src/lib/browse-filters.ts:60-83`) strips everything outside `\p{L}\p{N}_-` before building a PostgREST `or=`, caps terms at 8; `normalizeBrowseFilters` validates against the canonical option lists; profile cursors are regex-validated before entering an `or()`. The `setup_search` view is `security_invoker`, so RLS still applies.
-* **CSP** — per-request nonce from `src/proxy.ts`, `'unsafe-eval'` dev-only, `frame-ancestors`/`form-action`/`base-uri`/`object-src` set, `X-Frame-Options: DENY`, HSTS production-only (verified on the wire, §2.1), `poweredByHeader: false`.
-* **No `dangerouslySetInnerHTML`** except `src/components/json-ld.tsx:14`, fed only by `serializeJsonLd()` which escapes `<`, `>`, `&`; live probe confirmed `?q=<script>alert(1)` renders as `&lt;script&gt;…` inside an attribute and nothing else reflects.
-* **Storage path ownership** enforced twice — `isOwnedStoragePath()` (`src/lib/storage.ts`) in `mapRow`/`downloadSetup`, and the DB CHECKs in `0018` — so a row can't point at another user's object.
-* **URL allow-lists** — `normalizeVideoUrl` (`src/lib/video-url.ts`) uses an exact hostname Set (no `includes("youtube.com")` trap), rejects credentials/ports, and `parseVideoEmbed` re-serializes into `youtube-nocookie.com` with a `[A-Za-z0-9_-]{6,64}` id gate; the DB constraint (`0018:186`) closes the direct-REST path.
-* **Viewer state never enters `unstable_cache`** (`public.ts` cookie-free client for cached reads; `hydrateSetupRows` uses the request-bound client) — the correctness hazard the previous audit fixed, still fixed.
-* **Graceful degradation** — every reader goes through `unwrapList/unwrapSingle/unwrapCount`, so an unreachable Supabase yields empty states instead of 500s (confirmed by the whole suite of e2e specs which are *written against* that condition), and `fetchWithTimeout` caps every call at 5 s.
-* **A11y baseline** — visible `:focus-visible` outline for `button`/`a`/`[role=button]` (`globals.css:157-161`), `prefers-reduced-motion` block plus `motion-reduce:animate-none` on the hero pulse, `role="group"`+`aria-label` star widgets, `aria-current="page"` breadcrumbs, labelled dropzone with keyboard handler, iframe `title`+`loading="lazy"`+referrer policy, one `<h1>` per route with `h2`-per-section structure.
-* No secrets committed (`git ls-files`: only `.env.local.example`); no PII in fixtures.
+- **Row + column privilege layering in SQL** (`0009`, `0011`, `0013`, `0017`, `0018`, `0021`, `0025`, `0026`) — the denormalized trust signals (`upvotes`, `pace`, `rating_count`, `downloads`, `follower_count`, `fulfilled_*`, `status`) are all unreachable by direct `authenticated` writes. `revoke … from authenticated` followed by explicit `grant insert (...)`/`grant update (…)` is the right shape and is applied consistently.
+- **`fulfill_setup_request` hardening** (`0016`) — cross-checks game/car/track, atomic compare-and-swap, self-notification excluded, `revoke … from public` + `grant to authenticated` in `0018`. Textbook.
+- **Query-injection resistance** — `buildBrowseSearchExpression` (`src/lib/browse-filters.ts:60-83`) strips everything outside `\p{L}\p{N}_-` before building a PostgREST `or=`, caps terms at 8; `normalizeBrowseFilters` validates against the canonical option lists; profile cursors are regex-validated before entering an `or()`. The `setup_search` view is `security_invoker`, so RLS still applies.
+- **CSP** — per-request nonce from `src/proxy.ts`, `'unsafe-eval'` dev-only, `frame-ancestors`/`form-action`/`base-uri`/`object-src` set, `X-Frame-Options: DENY`, HSTS production-only (verified on the wire, §2.1), `poweredByHeader: false`.
+- **No `dangerouslySetInnerHTML`** except `src/components/json-ld.tsx:14`, fed only by `serializeJsonLd()` which escapes `<`, `>`, `&`; live probe confirmed `?q=<script>alert(1)` renders as `&lt;script&gt;…` inside an attribute and nothing else reflects.
+- **Storage path ownership** enforced twice — `isOwnedStoragePath()` (`src/lib/storage.ts`) in `mapRow`/`downloadSetup`, and the DB CHECKs in `0018` — so a row can't point at another user's object.
+- **URL allow-lists** — `normalizeVideoUrl` (`src/lib/video-url.ts`) uses an exact hostname Set (no `includes("youtube.com")` trap), rejects credentials/ports, and `parseVideoEmbed` re-serializes into `youtube-nocookie.com` with a `[A-Za-z0-9_-]{6,64}` id gate; the DB constraint (`0018:186`) closes the direct-REST path.
+- **Viewer state never enters `unstable_cache`** (`public.ts` cookie-free client for cached reads; `hydrateSetupRows` uses the request-bound client) — the correctness hazard the previous audit fixed, still fixed.
+- **Graceful degradation** — every reader goes through `unwrapList/unwrapSingle/unwrapCount`, so an unreachable Supabase yields empty states instead of 500s (confirmed by the whole suite of e2e specs which are _written against_ that condition), and `fetchWithTimeout` caps every call at 5 s.
+- **A11y baseline** — visible `:focus-visible` outline for `button`/`a`/`[role=button]` (`globals.css:157-161`), `prefers-reduced-motion` block plus `motion-reduce:animate-none` on the hero pulse, `role="group"`+`aria-label` star widgets, `aria-current="page"` breadcrumbs, labelled dropzone with keyboard handler, iframe `title`+`loading="lazy"`+referrer policy, one `<h1>` per route with `h2`-per-section structure.
+- No secrets committed (`git ls-files`: only `.env.local.example`); no PII in fixtures.
 
 ---
 
 ## 6. Low-priority polish
 
 1. **OG image staleness:** `next.config.ts` serves `/setups/:id/opengraph-image` with `s-maxage=86400` but the URL carries no version token, so an edited setup keeps a stale card image for 24 h. Append `?v=<updated_at>` in the metadata `images` entries.
-2. **`/setups/compare`** sets `robots: { index: false, follow: false }` *and* `alternates.canonical` (`src/app/setups/compare/page.tsx:15-21`) — contradictory; drop the canonical on noindex routes.
+2. **`/setups/compare`** sets `robots: { index: false, follow: false }` _and_ `alternates.canonical` (`src/app/setups/compare/page.tsx:15-21`) — contradictory; drop the canonical on noindex routes.
 3. **`0018` constraints are `NOT VALID` and never `VALIDATE`d** — historical garbage rows are permanently exempt. Add a follow-up migration that `alter table … validate constraint …` once the rows are cleaned, otherwise the invariant is only half-enforced.
 4. **`getInitials`** exists twice (`src/lib/utils.ts` and `src/components/auth-nav.tsx:16`); the local copy shadows the shared one.
-5. **`supabase/seed.sql:15`** inserts `pace`/`predictability`/`upvotes` directly into `setups` with no `setup_ratings` rows, so `rating_count` is 0 and the first real community rating *overwrites* the seeded averages (`recompute_setup_rating` recomputes from scratch). Seed `setup_ratings` instead.
+5. **`supabase/seed.sql:15`** inserts `pace`/`predictability`/`upvotes` directly into `setups` with no `setup_ratings` rows, so `rating_count` is 0 and the first real community rating _overwrites_ the seeded averages (`recompute_setup_rating` recomputes from scratch). Seed `setup_ratings` instead.
 6. **`RelativeTime`** starts one 60 s `setInterval` per notification row (10 timers per open bell).
 7. **No `auth-code` CSRF/state assertion in `/auth/callback`** beyond Supabase's own PKCE cookie; `src/proxy.ts` deliberately forwards `?code=` from any path, so a caller can land a victim's browser on a code the victim then redeems. Worth a `state` check or, at minimum, documenting the accepted risk.
 8. **`AuthProvider`** initialises `isLoading = initialUser === null`, so a server-rendered session leaves `session: null` while `user` is set; harmless today (nothing reads `session`), fragile later.
@@ -388,27 +406,17 @@ Verified, not assumed:
 ## 7. Priority roadmap
 
 **Block 0 — before any public launch (all measurable today)**
+
 1. UUID-shape guard in `src/proxy.ts` + no `og:image`/canonical on not-found metadata → kills §2.1.
 2. `file_size_limit`/`allowed_mime_types` on the `setup-files` bucket + per-user upload rate limit + orphan sweeper → §2.2, §3.4, §4.1.
 3. `npm audit fix`, then a CI `npm audit --audit-level=high` step → §2.3.
 4. Apply and verify `0023`–`0026` in the real project; confirm the CI `db-migrations` job runs green on the release commit → §2.4.
 
-**Block 1 — first week**
-5. Split cache tags by mutation class (`setups-content` / `setups-counters` / `setups-sitemap`) → §3.1.
-6. `0027_most_wanted_view.sql` + open-first, cursor-paginated requests list → §3.2, §3.3.
-7. `.vbo` fix + `file-validation` tests; `increment_downloads` grant tightening → §4.2, §4.5.
-8. Stream `NotificationBell` out of the layout → §4.4.
+**Block 1 — first week** 5. Split cache tags by mutation class (`setups-content` / `setups-counters` / `setups-sitemap`) → §3.1. 6. `0027_most_wanted_view.sql` + open-first, cursor-paginated requests list → §3.2, §3.3. 7. `.vbo` fix + `file-validation` tests; `increment_downloads` grant tightening → §4.2, §4.5. 8. Stream `NotificationBell` out of the layout → §4.4.
 
-**Block 2 — month 1**
-9. Server-side search/RPC pagination replacing the 500-row client index (fixes §4.3 and the last Phase-3 item together).
-10. Action-level authorization tests for `actions/setups.ts`; cursor tests for `supabase/setups.ts` → §4.7.
-11. Handle/unique-name decision + migration → §4.6.
-12. Sitemap index split ahead of the 24,000-setup cap; `VALIDATE CONSTRAINT` follow-up.
+**Block 2 — month 1** 9. Server-side search/RPC pagination replacing the 500-row client index (fixes §4.3 and the last Phase-3 item together). 10. Action-level authorization tests for `actions/setups.ts`; cursor tests for `supabase/setups.ts` → §4.7. 11. Handle/unique-name decision + migration → §4.6. 12. Sitemap index split ahead of the 24,000-setup cap; `VALIDATE CONSTRAINT` follow-up.
 
-**Block 3 — continuous**
-13. Deploy-gated Lighthouse/PageSpeed runs recorded in release notes (the audit still has **no measured LCP/INP/CLS** — nothing in this report substitutes for that).
-14. Wire `npm run build:budget` into CI alongside `npm audit`.
-15. Moderation queue UI over `content_reports`, upload malware scanning/quarantine, monitored privacy contact.
+**Block 3 — continuous** 13. Deploy-gated Lighthouse/PageSpeed runs recorded in release notes (the audit still has **no measured LCP/INP/CLS** — nothing in this report substitutes for that). 14. Wire `npm run build:budget` into CI alongside `npm audit`. 15. Moderation queue UI over `content_reports`, upload malware scanning/quarantine, monitored privacy contact.
 
 ---
 
@@ -417,14 +425,14 @@ Verified, not assumed:
 Implemented in this pass — §3.1, §3.2, §3.3, §3.4, §4.1, §4.3. Not implemented —
 everything in §2 (Critical), and §4.2/§4.4–§4.8 plus all Low items.
 
-| Finding | Outcome | Key files |
-| --- | --- | --- |
-| 3.1 tag granularity | Fixed | `src/lib/cache-tags.ts`, `src/lib/supabase/setups.ts`, `leaderboard.ts`, `profiles.ts`, `src/lib/actions/setups.ts`, `follows.ts` |
-| 3.2 most-wanted window | Fixed | `supabase/migrations/0027_most_wanted_requests.sql`, `src/lib/supabase/setup-requests.ts`, `database.types.ts` |
-| 3.3 requests board | Fixed | `src/lib/supabase/setup-requests.ts`, `src/lib/actions/setup-requests.ts`, `src/components/setup-requests-list.tsx`, `src/app/requests/page.tsx` |
-| 3.4 files after deletion | Fixed (sweep scheduling open) | `supabase/migrations/0028_setup_files_gc.sql`, `OPERATIONS.md`, `supabase/testing/shim.sql` |
-| 4.1 orphaned failed uploads | Fixed | `src/lib/actions/setups.ts` (`discardUploadedFiles`), `src/components/upload-form.tsx` |
-| 4.3 browse paging | Fixed (search-mode cursor edge left) | `src/lib/supabase/setups.ts`, `src/components/setups-browser.tsx` |
+| Finding                     | Outcome                              | Key files                                                                                                                                        |
+| --------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 3.1 tag granularity         | Fixed                                | `src/lib/cache-tags.ts`, `src/lib/supabase/setups.ts`, `leaderboard.ts`, `profiles.ts`, `src/lib/actions/setups.ts`, `follows.ts`                |
+| 3.2 most-wanted window      | Fixed                                | `supabase/migrations/0027_most_wanted_requests.sql`, `src/lib/supabase/setup-requests.ts`, `database.types.ts`                                   |
+| 3.3 requests board          | Fixed                                | `src/lib/supabase/setup-requests.ts`, `src/lib/actions/setup-requests.ts`, `src/components/setup-requests-list.tsx`, `src/app/requests/page.tsx` |
+| 3.4 files after deletion    | Fixed (sweep scheduling open)        | `supabase/migrations/0028_setup_files_gc.sql`, `OPERATIONS.md`, `supabase/testing/shim.sql`                                                      |
+| 4.1 orphaned failed uploads | Fixed                                | `src/lib/actions/setups.ts` (`discardUploadedFiles`), `src/components/upload-form.tsx`                                                           |
+| 4.3 browse paging           | Fixed (search-mode cursor edge left) | `src/lib/supabase/setups.ts`, `src/components/setups-browser.tsx`                                                                                |
 
 New tests: `src/lib/cache-tags.test.ts` (6), `src/components/setups-browser.test.tsx` (2),
 `supabase/testing/zzzzzz_most_wanted.test.sql`, `supabase/testing/zzzzzzz_setup_files_gc.test.sql`.
@@ -439,18 +447,18 @@ for how, and for the two pre-existing failures that turned up (both now fixed, C
 
 Everything below was read from the live repo, not inferred from CI files.
 
-| Item | State |
-| --- | --- |
-| Default branch | `SetUpSheet` (not `main`) — every workflow trigger, docs link and PR base has to use that exact casing |
-| CI on `SetUpSheet` (`ff0920d`) | `lint-test-build` ✓ · `db-migrations` **✗** · `e2e` **✗** · `Supabase Preview` **✗** |
-| Run history (last 20) | 17 `failure`, 3 `success` — red has been the norm, which is why a red merge looks normal |
-| PRs | #1–#4 all merged, none open; **#4 merged with `db-migrations` and `e2e` failing** → no required-status check on the default branch |
-| Issues | 0 open |
-| Dependabot | **alerts disabled** → the §2.3 advisories are not tracked anywhere |
-| Code scanning | **not enabled** |
-| Environments | `Preview`, `Production` exist; deployment status is not readable with the agent token (`403`) |
-| Non-workflow checks | `Vercel Preview Comments` (App) succeeds; `Supabase Preview` (App) fails on the default branch and skips on branches — configured outside this repo, so it needs Settings → Environments/Integrations, not a PR |
-| Branch hygiene | merged `arena/01a044ba-setupsheet` still on the remote; no auto-delete after merge |
+| Item                           | State                                                                                                                                                                                                           |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Default branch                 | `SetUpSheet` (not `main`) — every workflow trigger, docs link and PR base has to use that exact casing                                                                                                          |
+| CI on `SetUpSheet` (`ff0920d`) | `lint-test-build` ✓ · `db-migrations` **✗** · `e2e` **✗** · `Supabase Preview` **✗**                                                                                                                            |
+| Run history (last 20)          | 17 `failure`, 3 `success` — red has been the norm, which is why a red merge looks normal                                                                                                                        |
+| PRs                            | #1–#4 all merged, none open; **#4 merged with `db-migrations` and `e2e` failing** → no required-status check on the default branch                                                                              |
+| Issues                         | 0 open                                                                                                                                                                                                          |
+| Dependabot                     | **alerts disabled** → the §2.3 advisories are not tracked anywhere                                                                                                                                              |
+| Code scanning                  | **not enabled**                                                                                                                                                                                                 |
+| Environments                   | `Preview`, `Production` exist; deployment status is not readable with the agent token (`403`)                                                                                                                   |
+| Non-workflow checks            | `Vercel Preview Comments` (App) succeeds; `Supabase Preview` (App) fails on the default branch and skips on branches — configured outside this repo, so it needs Settings → Environments/Integrations, not a PR |
+| Branch hygiene                 | merged `arena/01a044ba-setupsheet` still on the remote; no auto-delete after merge                                                                                                                              |
 
 ### The two red jobs, root-caused
 
@@ -458,7 +466,7 @@ Everything below was read from the live repo, not inferred from CI files.
 `supabase/testing/zz_setup_updated_at.test.sql` wrapped the insert, the edit and the
 comparison in one `do $$ … $$` block. `touch_setup_updated_at()` (0022) stamps `now()`,
 and `now()` is frozen for the whole transaction, so `after_edit <= before_edit` was true
-*whatever the trigger did* — `pg_sleep(0.02)` inside the same transaction cannot move it.
+_whatever the trigger did_ — `pg_sleep(0.02)` inside the same transaction cannot move it.
 Since a `do` block is a single psql statement, the assertion also never got the separate
 transactions it silently assumed. The file now uses one statement per transaction with a
 temp table to carry values, and both original assertions still bite (an edit must advance
@@ -466,7 +474,7 @@ temp table to carry values, and both original assertions still bite (an edit mus
 
 **`e2e` — the spec clicked the wrong combobox, fixed in `3ceef48`.**
 `e2e/setups-browse.spec.ts` used `getByRole("combobox").first()`, but `/setups` renders the
-header-search input with `role="combobox"` (for its suggestion listbox) *before* the filter
+header-search input with `role="combobox"` (for its suggestion listbox) _before_ the filter
 selects, so the click landed on search, whose options never populate with no reachable
 Supabase — `getByRole("option")` timed out for a reason unrelated to the filter controls the
 test claims to cover. It now targets `#filter-game`, the element its own `<label for>` points
@@ -474,7 +482,7 @@ at. This is the failure that survived PR #4's "audit hardening" (the search comb
 in the same round).
 
 **Also fixed here, self-inflicted:** the first `/requests` rewrite rendered an error card
-*instead of* the empty state, which broke `e2e/requests-board.spec.ts`'s documented
+_instead of_ the empty state, which broke `e2e/requests-board.spec.ts`'s documented
 graceful-degradation contract. The page now shows the empty state **plus** an inline
 `role="alert"` notice, and the spec asserts both — an outage no longer reads as a quiet
 board, and the repo's "degrade, don't error" convention holds.
@@ -497,11 +505,11 @@ site. Nothing below is inferred from files — `gh api` output or a local produc
 
 ### Branches
 
-| Branch | vs `SetUpSheet` | State |
-| --- | --- | --- |
-| `SetUpSheet` (default) | — | `ff0920d` = merge of PR #4; **CI red on `db-migrations`, `e2e`, and the `Supabase Preview` app check** |
-| `arena/01a08cdc-setupsheet` | +4 / −0 | This audit's remediation + the two CI fixes. **All three CI jobs green.** 0 behind ⇒ merges as a fast-forward, no conflicts possible |
-| `arena/01a044ba-setupsheet` | 0 / −1 | Fully merged (PR #4). Delete; it is only noise now |
+| Branch                      | vs `SetUpSheet` | State                                                                                                                                |
+| --------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `SetUpSheet` (default)      | —               | `ff0920d` = merge of PR #4; **CI red on `db-migrations`, `e2e`, and the `Supabase Preview` app check**                               |
+| `arena/01a08cdc-setupsheet` | +4 / −0         | This audit's remediation + the two CI fixes. **All three CI jobs green.** 0 behind ⇒ merges as a fast-forward, no conflicts possible |
+| `arena/01a044ba-setupsheet` | 0 / −1          | Fully merged (PR #4). Delete; it is only noise now                                                                                   |
 
 `gh pr list --state all`: #1–#4, all merged, **no PR has ever had a review decision**
 (`reviewDecision` empty on all four), #3 was merged by the agent app itself, and #4 (+7,451 /
@@ -510,10 +518,10 @@ so the live site has no version marker to compare against or roll back to.
 
 ### Live site (probed through the fetch proxy; direct TLS from this sandbox is blocked)
 
-* `https://setupsheet.app/setups` — healthy: "20 setups shared by the community", cards with
+- `https://setupsheet.app/setups` — healthy: "20 setups shared by the community", cards with
   verified lap times, ratings, report links ⇒ PR #4's features are deployed, so the code
   running in production is the commit whose CI was red.
-* `https://setupsheet.app/setups/not-a-uuid` — renders "Setup not found" ⇒ §2.1's soft-404 is
+- `https://setupsheet.app/setups/not-a-uuid` — renders "Setup not found" ⇒ §2.1's soft-404 is
   live today (the local probe confirms the same shape and shows what this branch changes).
 
 ### Things to do on the GitHub side, in order, for #5
@@ -526,19 +534,19 @@ so the live site has no version marker to compare against or roll back to.
    at a release.
 3. Tag the deployed commit (`git tag v0.5.0 && gh release create`) so the next audit can
    diff production against a named version instead of guessing from `pushed_at`.
-4. Settings, not code: enable Dependabot (alerts are currently *disabled*), enable code
+4. Settings, not code: enable Dependabot (alerts are currently _disabled_), enable code
    scanning or record the accepted gap, and mark `lint-test-build` / `e2e` / `db-migrations`
    as required for the default branch.
 5. Delete `arena/01a044ba-setupsheet`.
 
 ### What this branch changes that a reviewer should look at hardest
 
-* `supabase/testing/zz_setup_updated_at.test.sql` — the only file here whose *previous*
+- `supabase/testing/zz_setup_updated_at.test.sql` — the only file here whose _previous_
   version was asserting nothing (tautological failure inside a single `DO` block).
-* `src/proxy.ts` — new edge behaviour on every request that matches the OG path; it returns a
+- `src/proxy.ts` — new edge behaviour on every request that matches the OG path; it returns a
   bodyless 404 before the nonce/CSP pipeline runs, which is intentional (no page, no cache
   entry) but is the one place this PR touches all traffic.
-* `package.json` / `package-lock.json` — `overrides` for `browserslist` +
+- `package.json` / `package-lock.json` — `overrides` for `browserslist` +
   `baseline-browser-mapping`; production tree audits clean afterwards.
-* `src/app/layout.tsx` — removal of the inherited canonical, which affects every route that
+- `src/app/layout.tsx` — removal of the inherited canonical, which affects every route that
   does not declare one (`/_not-found`, `/auth/*`).

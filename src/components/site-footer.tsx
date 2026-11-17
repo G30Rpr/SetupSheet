@@ -36,7 +36,11 @@ export async function SiteFooter() {
 
         <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
           {navLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="hover:text-foreground ">
+            <Link
+              key={link.href}
+              href={link.href}
+              className="hover:text-foreground "
+            >
               {link.label}
             </Link>
           ))}
@@ -60,7 +64,8 @@ export async function SiteFooter() {
         </nav>
 
         <p className="text-xs text-muted-foreground">
-          © {new Date().getFullYear()} SetupSheet. Not affiliated with any sim title publisher.
+          © {new Date().getFullYear()} SetupSheet. Not affiliated with any sim
+          title publisher.
         </p>
       </div>
     </footer>

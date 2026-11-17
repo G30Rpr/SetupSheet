@@ -13,25 +13,31 @@ afterEach(cleanup);
 const summary: PublicFieldTestSummary = {
   error: false,
   reportCount: 1,
-  reports: [{
-    id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-    setupId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-    game: "Assetto Corsa Competizione",
-    condition: "Mixed",
-    validatedChanges: [{ parameter: "Rear wing", direction: "increase", amount: "1 click" }],
-    lapsRun: 1,
-    consistencyPct: null,
-    bestLapMs: 102350,
-    createdAt: "2026-09-20T10:45:00.000Z",
-    displayName: null,
-  }],
+  reports: [
+    {
+      id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      setupId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      game: "Assetto Corsa Competizione",
+      condition: "Mixed",
+      validatedChanges: [
+        { parameter: "Rear wing", direction: "increase", amount: "1 click" },
+      ],
+      lapsRun: 1,
+      consistencyPct: null,
+      bestLapMs: 102350,
+      createdAt: "2026-09-20T10:45:00.000Z",
+      displayName: null,
+    },
+  ],
 };
 
 describe("PublicFieldTestReports", () => {
   it("renders only the public derived projection and preserves anonymous attribution", () => {
     const { container } = render(<PublicFieldTestReports summary={summary} />);
 
-    expect(screen.getByRole("heading", { name: "Field tests" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Field tests" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Anonymous driver")).toBeInTheDocument();
     expect(screen.getByText("1:42.350")).toBeInTheDocument();
     expect(screen.getByText("One lap logged")).toBeInTheDocument();
@@ -44,13 +50,21 @@ describe("PublicFieldTestReports", () => {
 
   it("shows a Garage empty state for an empty feed and hides the module when the feed fails", () => {
     const { rerender, container } = render(
-      <PublicFieldTestReports summary={{ ...summary, reports: [], error: false, reportCount: 0 }} />
+      <PublicFieldTestReports
+        summary={{ ...summary, reports: [], error: false, reportCount: 0 }}
+      />,
     );
     expect(screen.getByText(/No field tests yet/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "open in Garage" })).toHaveAttribute("href", "/garage");
+    expect(
+      screen.getByRole("link", { name: "open in Garage" }),
+    ).toHaveAttribute("href", "/garage");
 
     // A failing feed renders nothing at all — never a public error card.
-    rerender(<PublicFieldTestReports summary={{ ...summary, reports: [], error: true, reportCount: 0 }} />);
+    rerender(
+      <PublicFieldTestReports
+        summary={{ ...summary, reports: [], error: true, reportCount: 0 }}
+      />,
+    );
     expect(container).toBeEmptyDOMElement();
   });
 });

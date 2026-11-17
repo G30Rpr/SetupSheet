@@ -2,8 +2,23 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { GitCompare, Search, SearchX, SlidersHorizontal, TriangleAlert, Upload, X } from "lucide-react";
+import {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import {
+  GitCompare,
+  Search,
+  SearchX,
+  SlidersHorizontal,
+  TriangleAlert,
+  Upload,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
@@ -18,7 +33,14 @@ import {
 } from "@/components/ui/select";
 import { SetupCard } from "@/components/setup-card";
 import { loadMoreSetups } from "@/lib/actions/setup-browse";
-import { conditions, games, getCarsForGame, getTracksForGame, rigProfiles, setupTags } from "@/lib/data";
+import {
+  conditions,
+  games,
+  getCarsForGame,
+  getTracksForGame,
+  rigProfiles,
+  setupTags,
+} from "@/lib/data";
 import {
   ALL,
   filterAndSortSetups,
@@ -93,10 +115,14 @@ export function SetupsBrowser({
 }) {
   const searchParams = useSearchParams();
   const [additionalSetups, setAdditionalSetups] = useState<Setup[]>([]);
-  const [additionalFieldTestCounts, setAdditionalFieldTestCounts] = useState<Record<string, number>>({});
+  const [additionalFieldTestCounts, setAdditionalFieldTestCounts] = useState<
+    Record<string, number>
+  >({});
   const [remoteCursor, setRemoteCursor] = useState<SetupCursor | null>(() => {
     const lastSetup = setups.at(-1);
-    return lastSetup ? { createdAt: lastSetup.uploadedAt, id: lastSetup.id } : null;
+    return lastSetup
+      ? { createdAt: lastSetup.uploadedAt, id: lastSetup.id }
+      : null;
   });
 
   const [remoteError, setRemoteError] = useState<string | null>(null);
@@ -109,10 +135,10 @@ export function SetupsBrowser({
   const requestGeneration = useRef(0);
   const loadedSetups = useMemo(
     () => [...(firstPage ?? setups), ...additionalSetups],
-    [firstPage, setups, additionalSetups]
+    [firstPage, setups, additionalSetups],
   );
   const hasMoreRemote = Boolean(
-    remoteCursor && (totalCount === null || loadedSetups.length < totalCount)
+    remoteCursor && (totalCount === null || loadedSetups.length < totalCount),
   );
 
   const [search, setSearch] = useState(initialFilters.search);
@@ -123,10 +149,26 @@ export function SetupsBrowser({
   const [rig, setRig] = useState<string>(initialFilters.rig);
   const [tag, setTag] = useState<string>(initialFilters.tag);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(() =>
-    [initialFilters.game, initialFilters.car, initialFilters.track, initialFilters.condition, initialFilters.rig, initialFilters.tag].some((value) => value !== ALL)
+    [
+      initialFilters.game,
+      initialFilters.car,
+      initialFilters.track,
+      initialFilters.condition,
+      initialFilters.rig,
+      initialFilters.tag,
+    ].some((value) => value !== ALL),
   );
-  const filterSignature = JSON.stringify([search, game, car, track, condition, rig, tag]);
-  const [prevFilterSignature, setPrevFilterSignature] = useState(filterSignature);
+  const filterSignature = JSON.stringify([
+    search,
+    game,
+    car,
+    track,
+    condition,
+    rig,
+    tag,
+  ]);
+  const [prevFilterSignature, setPrevFilterSignature] =
+    useState(filterSignature);
   if (prevFilterSignature !== filterSignature) {
     setPrevFilterSignature(filterSignature);
     setAdditionalSetups([]);
@@ -142,7 +184,15 @@ export function SetupsBrowser({
     if (!needsFirstPage) return;
     const timer = setTimeout(async () => {
       try {
-        const result = await loadMoreSetups(null, { search, game, car, track, condition, rig, tag });
+        const result = await loadMoreSetups(null, {
+          search,
+          game,
+          car,
+          track,
+          condition,
+          rig,
+          tag,
+        });
         if (requestGeneration.current !== generation) return;
         if (result.error) {
           setRemoteError(result.error);
@@ -152,7 +202,8 @@ export function SetupsBrowser({
         setAdditionalFieldTestCounts(result.fieldTestCounts ?? {});
         setRemoteCursor(result.nextCursor);
       } catch {
-        if (requestGeneration.current === generation) setRemoteError("Couldn't refresh setups right now.");
+        if (requestGeneration.current === generation)
+          setRemoteError("Couldn't refresh setups right now.");
       } finally {
         if (requestGeneration.current === generation) setIsRefreshing(false);
       }
@@ -161,11 +212,23 @@ export function SetupsBrowser({
       clearTimeout(timer);
       requestGeneration.current = generation + 1;
     };
-  }, [needsFirstPage, refreshAttempt, search, game, car, track, condition, rig, tag]);
+  }, [
+    needsFirstPage,
+    refreshAttempt,
+    search,
+    game,
+    car,
+    track,
+    condition,
+    rig,
+    tag,
+  ]);
 
   const [sort, setSort] = useState<SortOption>(() => {
     const fromUrl = searchParams.get("sort");
-    return (SORT_VALUES as string[]).includes(fromUrl ?? "") ? (fromUrl as SortOption) : "bestMatch";
+    return (SORT_VALUES as string[]).includes(fromUrl ?? "")
+      ? (fromUrl as SortOption)
+      : "bestMatch";
   });
   // The rig saved on this device (setupsheet:last-rig) seeds "Best match"
   // when no rig filter is selected. Read after mount: localStorage isn't
@@ -180,7 +243,9 @@ export function SetupsBrowser({
   // signed in, else the device memory. Drives "Best for my rig" ordering and
   // the "Matches your rig" chip -- hardware context only, never a rating.
   const [myRig, setMyRig] = useState<RigAxes | null>(null);
-  const [rigSaveState, setRigSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [rigSaveState, setRigSaveState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
   const [rigSaveError, setRigSaveError] = useState<string | null>(null);
   useEffect(() => {
     // Hydrating from the account row (server prop) or localStorage on mount.
@@ -219,7 +284,14 @@ export function SetupsBrowser({
   // unlike the header's which only renders at the xl breakpoint.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return;
+      if (
+        e.key !== "/" ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        isTypingTarget(e.target)
+      )
+        return;
       e.preventDefault();
       searchInputRef.current?.focus();
     }
@@ -264,11 +336,15 @@ export function SetupsBrowser({
       // up to 500 setups) on every debounce while the user types. Native
       // history integration updates the shareable URL without rerendering the
       // server page; a real navigation/refresh still reads the query normally.
-      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+      window.history.replaceState(
+        null,
+        "",
+        `${url.pathname}${url.search}${url.hash}`,
+      );
 
       localStorage.setItem(
         LAST_FILTERS_KEY,
-        JSON.stringify({ search, game, car, track, condition, rig, tag, sort })
+        JSON.stringify({ search, game, car, track, condition, rig, tag, sort }),
       );
     }, 300);
 
@@ -323,18 +399,18 @@ export function SetupsBrowser({
 
   const carOptions = useMemo(
     () => getCarsForGame(loadedSetups, game === ALL ? undefined : game),
-    [loadedSetups, game]
+    [loadedSetups, game],
   );
   const trackOptions = useMemo(
     () => getTracksForGame(loadedSetups, game === ALL ? undefined : game),
-    [loadedSetups, game]
+    [loadedSetups, game],
   );
 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const suggestions = useMemo(
     () => getSearchSuggestions(loadedSetups, search),
-    [loadedSetups, search]
+    [loadedSetups, search],
   );
 
   // Fuzzy matching includes bounded edit-distance work for every loaded
@@ -348,9 +424,21 @@ export function SetupsBrowser({
         { search: deferredSearch, game, car, track, condition, rig, tag },
         sort,
         savedRig,
-        myRig
+        myRig,
       ),
-    [loadedSetups, deferredSearch, game, car, track, condition, rig, tag, sort, savedRig, myRig]
+    [
+      loadedSetups,
+      deferredSearch,
+      game,
+      car,
+      track,
+      condition,
+      rig,
+      tag,
+      sort,
+      savedRig,
+      myRig,
+    ],
   );
 
   // Rig categories with setups that match everything EXCEPT the rig filter --
@@ -360,7 +448,7 @@ export function SetupsBrowser({
     const withoutRigFilter = filterAndSortSetups(
       loadedSetups,
       { search: deferredSearch, game, car, track, condition, rig: ALL, tag },
-      "newest"
+      "newest",
     );
     const names = new Set<string>();
     for (const setup of withoutRigFilter) {
@@ -372,7 +460,14 @@ export function SetupsBrowser({
   const visibleSetups = filtered.slice(0, page * SETUP_CARD_PAGE_SIZE);
   const hasMore = filtered.length > visibleSetups.length;
 
-  const activeSelectFilterCount = [game, car, track, condition, rig, tag].filter((value) => value !== ALL).length;
+  const activeSelectFilterCount = [
+    game,
+    car,
+    track,
+    condition,
+    rig,
+    tag,
+  ].filter((value) => value !== ALL).length;
 
   const hasActiveFilters =
     search !== "" ||
@@ -423,7 +518,9 @@ export function SetupsBrowser({
         }
 
         setAdditionalSetups((previous) => {
-          const knownIds = new Set([...(firstPage ?? setups), ...previous].map((setup) => setup.id));
+          const knownIds = new Set(
+            [...(firstPage ?? setups), ...previous].map((setup) => setup.id),
+          );
           return [
             ...previous,
             ...result.setups.filter((setup) => !knownIds.has(setup.id)),
@@ -436,12 +533,14 @@ export function SetupsBrowser({
         const nextCursor = result.nextCursor;
         setRemoteCursor(
           nextCursor &&
-            (nextCursor.id !== cursor.id || nextCursor.createdAt !== cursor.createdAt)
+            (nextCursor.id !== cursor.id ||
+              nextCursor.createdAt !== cursor.createdAt)
             ? nextCursor
-            : null
+            : null,
         );
       } catch {
-        if (requestGeneration.current === generation) setRemoteError("Couldn't load older setups right now.");
+        if (requestGeneration.current === generation)
+          setRemoteError("Couldn't load older setups right now.");
       }
     });
   }
@@ -467,12 +566,14 @@ export function SetupsBrowser({
               } else if (e.key === "ArrowDown" && suggestions.length > 0) {
                 e.preventDefault();
                 setShowSuggestions(true);
-                setActiveSuggestionIndex((index) => (index + 1) % suggestions.length);
+                setActiveSuggestionIndex(
+                  (index) => (index + 1) % suggestions.length,
+                );
               } else if (e.key === "ArrowUp" && suggestions.length > 0) {
                 e.preventDefault();
                 setShowSuggestions(true);
                 setActiveSuggestionIndex((index) =>
-                  index <= 0 ? suggestions.length - 1 : index - 1
+                  index <= 0 ? suggestions.length - 1 : index - 1,
                 );
               } else if (e.key === "Enter" && activeSuggestionIndex >= 0) {
                 e.preventDefault();
@@ -526,7 +627,7 @@ export function SetupsBrowser({
                     }}
                     className={cn(
                       "min-h-11 w-full truncate px-3 py-2 text-left text-sm text-foreground hover:bg-accent",
-                      activeSuggestionIndex === index && "bg-accent"
+                      activeSuggestionIndex === index && "bg-accent",
                     )}
                   >
                     {suggestion}
@@ -562,7 +663,10 @@ export function SetupsBrowser({
 
         <div
           id="browse-filter-fields"
-          className={cn("grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6", mobileFiltersOpen ? "grid" : "hidden md:grid")}
+          className={cn(
+            "grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6",
+            mobileFiltersOpen ? "grid" : "hidden md:grid",
+          )}
         >
           <FilterSelect
             label="Game"
@@ -609,29 +713,44 @@ export function SetupsBrowser({
         </div>
 
         {hasActiveFilters && (
-          <div className="mt-3 flex flex-wrap items-center gap-2" aria-label="Applied search filters">
+          <div
+            className="mt-3 flex flex-wrap items-center gap-2"
+            aria-label="Applied search filters"
+          >
             {[
               { label: "Search", value: search, clear: () => setSearch("") },
-              { label: "Game", value: game, clear: () => handleGameChange(ALL) },
+              {
+                label: "Game",
+                value: game,
+                clear: () => handleGameChange(ALL),
+              },
               { label: "Car", value: car, clear: () => setCar(ALL) },
               { label: "Track", value: track, clear: () => setTrack(ALL) },
-              { label: "Condition", value: condition, clear: () => setCondition(ALL) },
+              {
+                label: "Condition",
+                value: condition,
+                clear: () => setCondition(ALL),
+              },
               { label: "Uploader rig", value: rig, clear: () => setRig(ALL) },
               { label: "Tag", value: tag, clear: () => setTag(ALL) },
-            ].filter(({ value }) => Boolean(value) && value !== ALL).map(({ label, value, clear }) => (
-              <Button
-                key={label}
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={clear}
-                aria-label={`Remove ${label.toLowerCase()} filter: ${value}`}
-                className="h-9 max-w-full gap-1.5 rounded-full px-3 text-xs"
-              >
-                <span className="truncate">{label}: {value}</span>
-                <X className="size-3.5 shrink-0" aria-hidden="true" />
-              </Button>
-            ))}
+            ]
+              .filter(({ value }) => Boolean(value) && value !== ALL)
+              .map(({ label, value, clear }) => (
+                <Button
+                  key={label}
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={clear}
+                  aria-label={`Remove ${label.toLowerCase()} filter: ${value}`}
+                  className="h-9 max-w-full gap-1.5 rounded-full px-3 text-xs"
+                >
+                  <span className="truncate">
+                    {label}: {value}
+                  </span>
+                  <X className="size-3.5 shrink-0" aria-hidden="true" />
+                </Button>
+              ))}
           </div>
         )}
         {hasActiveFilters && (
@@ -656,7 +775,12 @@ export function SetupsBrowser({
           </p>
         )}
 
-        <div className={cn("flex flex-wrap items-center gap-2", loadFailed && "sm:ml-auto")}>
+        <div
+          className={cn(
+            "flex flex-wrap items-center gap-2",
+            loadFailed && "sm:ml-auto",
+          )}
+        >
           <Button
             variant={compareMode ? "default" : "outline"}
             size="sm"
@@ -668,10 +792,16 @@ export function SetupsBrowser({
             <GitCompare />
             Compare setups
           </Button>
-          <label htmlFor="sort" className="text-xs font-medium text-muted-foreground">
+          <label
+            htmlFor="sort"
+            className="text-xs font-medium text-muted-foreground"
+          >
             Sort by
           </label>
-          <Select value={sort} onValueChange={(value) => setSort(value as SortOption)}>
+          <Select
+            value={sort}
+            onValueChange={(value) => setSort(value as SortOption)}
+          >
             <SelectTrigger id="sort" size="sm" className="w-[175px]">
               <SelectValue />
             </SelectTrigger>
@@ -688,7 +818,10 @@ export function SetupsBrowser({
 
       <div className="flex flex-wrap items-end gap-x-4 gap-y-3 rounded-lg border border-border/80 bg-secondary/40 px-4 py-3">
         <div>
-          <span id="my-rig-label" className="text-xs font-medium text-muted-foreground">
+          <span
+            id="my-rig-label"
+            className="text-xs font-medium text-muted-foreground"
+          >
             My hardware
           </span>
           <div
@@ -703,11 +836,16 @@ export function SetupsBrowser({
                   // Gamepads have no pedal hardware of interest: brake axis
                   // goes null, matching rig_axes_for("Gamepad") in 0039.
                   inputDevice: value as NonNullable<RigAxes["inputDevice"]>,
-                  brakeType: value === "gamepad" ? null : (myRig?.brakeType ?? null),
+                  brakeType:
+                    value === "gamepad" ? null : (myRig?.brakeType ?? null),
                 })
               }
             >
-              <SelectTrigger size="sm" className="w-[140px]" aria-label="How you steer">
+              <SelectTrigger
+                size="sm"
+                className="w-[140px]"
+                aria-label="How you steer"
+              >
                 <SelectValue placeholder="Steering" />
               </SelectTrigger>
               <SelectContent>
@@ -735,7 +873,9 @@ export function SetupsBrowser({
               >
                 <SelectValue
                   placeholder={
-                    myRig?.inputDevice === "gamepad" ? "Not applicable" : "Brakes"
+                    myRig?.inputDevice === "gamepad"
+                      ? "Not applicable"
+                      : "Brakes"
                   }
                 />
               </SelectTrigger>
@@ -790,7 +930,8 @@ export function SetupsBrowser({
 
       {rig !== ALL && hiddenRigNames.length > 0 && (
         <p className="text-sm text-muted-foreground">
-          Hiding setups from other uploader rig categories ({joinRigNames(hiddenRigNames)}).{" "}
+          Hiding setups from other uploader rig categories (
+          {joinRigNames(hiddenRigNames)}).{" "}
           <button
             type="button"
             onClick={() => setRig(ALL)}
@@ -812,35 +953,59 @@ export function SetupsBrowser({
           </span>
           {compareIds.length === 2 && (
             <Button asChild size="sm">
-              <Link href={`/setups/compare?a=${compareIds[0]}&b=${compareIds[1]}`}>Compare selected</Link>
+              <Link
+                href={`/setups/compare?a=${compareIds[0]}&b=${compareIds[1]}`}
+              >
+                Compare selected
+              </Link>
             </Button>
           )}
         </div>
       )}
 
-      <h2 id="setup-results-heading" className="sr-only">Setup results</h2>
+      <h2 id="setup-results-heading" className="sr-only">
+        Setup results
+      </h2>
       {isRefreshing ? (
-        <p role="status" className="text-sm text-muted-foreground">Updating setups…</p>
+        <p role="status" className="text-sm text-muted-foreground">
+          Updating setups…
+        </p>
       ) : remoteError && !remoteCursor ? (
         <div className="space-y-2">
-          <p role="alert" className="text-sm text-destructive">{remoteError}</p>
-          <RetryButton label="Retry loading setups" onRetry={() => {
-            setRemoteError(null);
-            setIsRefreshing(true);
-            setRefreshAttempt((attempt) => attempt + 1);
-          }} />
+          <p role="alert" className="text-sm text-destructive">
+            {remoteError}
+          </p>
+          <RetryButton
+            label="Retry loading setups"
+            onRetry={() => {
+              setRemoteError(null);
+              setIsRefreshing(true);
+              setRefreshAttempt((attempt) => attempt + 1);
+            }}
+          />
         </div>
       ) : filtered.length > 0 ? (
         <>
-          <section aria-labelledby="setup-results-heading" aria-busy={deferredSearch !== search}>
+          <section
+            aria-labelledby="setup-results-heading"
+            aria-busy={deferredSearch !== search}
+          >
             <ul className="grid list-none grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {visibleSetups.map((setup) => (
                 <li key={setup.id} className="min-w-0">
                   <SetupCard
                     setup={setup}
-                    fieldTestCount={fieldTestCounts[setup.id] ?? additionalFieldTestCounts[setup.id] ?? 0}
+                    fieldTestCount={
+                      fieldTestCounts[setup.id] ??
+                      additionalFieldTestCounts[setup.id] ??
+                      0
+                    }
                     compareSelected={compareIds.includes(setup.id)}
-                    onToggleCompare={compareMode ? () => toggleCompareSelect(setup.id) : undefined}
+                    onToggleCompare={
+                      compareMode
+                        ? () => toggleCompareSelect(setup.id)
+                        : undefined
+                    }
                     rigMatch={myRig ? setupMatchesRigAxes(setup, myRig) : false}
                   />
                 </li>
@@ -851,7 +1016,12 @@ export function SetupsBrowser({
           {hasMore && (
             <div className="flex justify-center">
               <Button variant="outline" onClick={() => setPage((p) => p + 1)}>
-                Load {Math.min(SETUP_CARD_PAGE_SIZE, filtered.length - visibleSetups.length)} more
+                Load{" "}
+                {Math.min(
+                  SETUP_CARD_PAGE_SIZE,
+                  filtered.length - visibleSetups.length,
+                )}{" "}
+                more
               </Button>
             </div>
           )}
@@ -883,11 +1053,28 @@ export function SetupsBrowser({
         <EmptyState
           icon={SearchX}
           title="No setup for this combo yet."
-          description={describeEmptyCombo({ search, game, car, track, condition, rig, tag })}
+          description={describeEmptyCombo({
+            search,
+            game,
+            car,
+            track,
+            condition,
+            rig,
+            tag,
+          })}
           action={
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button asChild size="sm">
-                <Link href={requestHrefForCombo({ game, car, track, condition, rig, tag })}>
+                <Link
+                  href={requestHrefForCombo({
+                    game,
+                    car,
+                    track,
+                    condition,
+                    rig,
+                    tag,
+                  })}
+                >
                   Ask for this combo
                 </Link>
               </Button>
@@ -901,7 +1088,11 @@ export function SetupsBrowser({
 
       {hasMoreRemote && (
         <div className="flex flex-col items-center gap-2">
-          <Button variant="outline" onClick={handleLoadOlder} disabled={isLoadingOlder}>
+          <Button
+            variant="outline"
+            onClick={handleLoadOlder}
+            disabled={isLoadingOlder}
+          >
             {isLoadingOlder ? "Loading older setups..." : "Load older setups"}
           </Button>
           {remoteError && (
@@ -909,7 +1100,10 @@ export function SetupsBrowser({
               <p role="alert" className="text-sm text-destructive">
                 {remoteError}
               </p>
-              <RetryButton label="Retry loading older setups" onRetry={handleLoadOlder} />
+              <RetryButton
+                label="Retry loading older setups"
+                onRetry={handleLoadOlder}
+              />
             </div>
           )}
         </div>
@@ -968,7 +1162,9 @@ function FilterSelect({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-xs font-medium text-muted-foreground">{label}</label>
+      <label htmlFor={id} className="text-xs font-medium text-muted-foreground">
+        {label}
+      </label>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger id={id} className="w-full">
           <SelectValue placeholder={placeholder} />

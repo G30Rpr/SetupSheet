@@ -2,7 +2,10 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 
-import { tagsForContentMutation, tagsForCounterMutation } from "@/lib/cache-tags";
+import {
+  tagsForContentMutation,
+  tagsForCounterMutation,
+} from "@/lib/cache-tags";
 import { getActionError } from "@/lib/actions/action-errors";
 import { rigProfiles } from "@/lib/data";
 import { logger } from "@/lib/logger";
@@ -19,7 +22,11 @@ import {
   sanitizeFileName,
   SETUP_FILES_BUCKET,
 } from "@/lib/storage";
-import { describeUploadTarget, isUploadKind, type UploadKind } from "@/lib/upload-targets";
+import {
+  describeUploadTarget,
+  isUploadKind,
+  type UploadKind,
+} from "@/lib/upload-targets";
 import { normalizeSetupValues } from "@/lib/setup-values";
 import type { SetupValues } from "@/lib/types";
 import { validateSetupFields } from "@/lib/validate-setup-fields";
@@ -88,7 +95,7 @@ function validateAttachment(
   fileName: string | null | undefined,
   userId: string,
   allowedExtensions: readonly string[],
-  label: string
+  label: string,
 ): string | null {
   // Undefined for both fields means "leave the existing attachment alone"
   // in updateSetup. Null means explicitly clear it.
@@ -97,12 +104,18 @@ function validateAttachment(
     return `${label} path and filename must be supplied together.`;
   }
   if (path === null) {
-    return fileName === null ? null : `${label} filename must be cleared with its file.`;
+    return fileName === null
+      ? null
+      : `${label} filename must be cleared with its file.`;
   }
   if (!isOwnedStoragePath(path, userId)) {
     return `That ${label.toLowerCase()} file does not belong to your account.`;
   }
-  if (typeof fileName !== "string" || !fileName || fileName.length > MAX_STORED_FILE_NAME_LENGTH) {
+  if (
+    typeof fileName !== "string" ||
+    !fileName ||
+    fileName.length > MAX_STORED_FILE_NAME_LENGTH
+  ) {
     return `${label} filename is invalid.`;
   }
   if (/[\u0000-\u001f\u007f]/.test(fileName)) {
@@ -115,7 +128,12 @@ function validateAttachment(
 }
 
 function validateRating(value: unknown): boolean {
-  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 5;
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 1 &&
+    value <= 5
+  );
 }
 
 /**
@@ -127,7 +145,7 @@ function validateRating(value: unknown): boolean {
 export async function createUploadTarget(
   kind: UploadKind,
   fileName: string,
-  fileSize: number
+  fileSize: number,
 ): Promise<{
   path: string | null;
   fileName: string | null;
@@ -136,7 +154,8 @@ export async function createUploadTarget(
 }> {
   const empty = { path: null, fileName: null, token: null };
 
-  if (!isUploadKind(kind)) return { ...empty, error: "Unsupported upload type." };
+  if (!isUploadKind(kind))
+    return { ...empty, error: "Unsupported upload type." };
 
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
@@ -148,14 +167,19 @@ export async function createUploadTarget(
     };
   }
 
-  const { target, error } = describeUploadTarget(kind, fileName, fileSize, user.id);
+  const { target, error } = describeUploadTarget(
+    kind,
+    fileName,
+    fileSize,
+    user.id,
+  );
   if (!target) return { ...empty, error };
 
   // Database-backed so the quota is atomic and consistent across Vercel
   // instances. Fail closed if the limiter is unavailable: do not mint a URL
   // without checking the abuse-control boundary.
   const { data: allowed, error: limitError } = await supabase.rpc(
-    "consume_upload_target_rate_limit"
+    "consume_upload_target_rate_limit",
   );
   if (limitError) {
     logger.error("createUploadTarget: rate limit check failed", limitError);
@@ -177,7 +201,12 @@ export async function createUploadTarget(
     return { ...empty, error: "Couldn't start the upload. Please try again." };
   }
 
-  return { path: target.path, fileName: target.fileName, token: data.token, error: null };
+  return {
+    path: target.path,
+    fileName: target.fileName,
+    token: data.token,
+    error: null,
+  };
 }
 
 /**
@@ -195,11 +224,16 @@ export async function createUploadTarget(
 export async function verifyUploadedFile(
   kind: UploadKind,
   path: unknown,
-  fileName: unknown
-): Promise<{ path: string | null; fileName: string | null; error: string | null }> {
+  fileName: unknown,
+): Promise<{
+  path: string | null;
+  fileName: string | null;
+  error: string | null;
+}> {
   const empty = { path: null, fileName: null };
 
-  if (!isUploadKind(kind)) return { ...empty, error: "Unsupported upload type." };
+  if (!isUploadKind(kind))
+    return { ...empty, error: "Unsupported upload type." };
 
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
@@ -251,7 +285,9 @@ export async function verifyUploadedFile(
  * never turn a successful save into an error, and the sweeper in
  * 0028_setup_files_gc.sql is the durable backstop.
  */
-export async function discardUploadedFiles(paths: unknown): Promise<{ error: null }> {
+export async function discardUploadedFiles(
+  paths: unknown,
+): Promise<{ error: null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
   if (!user || !Array.isArray(paths)) return { error: null };
@@ -262,7 +298,9 @@ export async function discardUploadedFiles(paths: unknown): Promise<{ error: nul
     .slice(0, 4);
   if (owned.length === 0) return { error: null };
 
-  const { error } = await supabase.storage.from(SETUP_FILES_BUCKET).remove(owned);
+  const { error } = await supabase.storage
+    .from(SETUP_FILES_BUCKET)
+    .remove(owned);
   if (error) logger.warn("discardUploadedFiles: cleanup failed", error);
 
   return { error: null };
@@ -275,18 +313,22 @@ export async function discardUploadedFiles(paths: unknown): Promise<{ error: nul
  * the setup and rating all-or-nothing.
  */
 export async function createSetup(
-  input: CreateSetupInput
+  input: CreateSetupInput,
 ): Promise<{ error: string | null; setupId?: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
 
   if (!user) {
-    return { error: "You need to be logged in with Discord to upload a setup." };
+    return {
+      error: "You need to be logged in with Discord to upload a setup.",
+    };
   }
 
   // Uploads require the author note (P2); edits stay lenient so legacy
   // "File only" rows remain editable without one.
-  const validationError = validateSetupFields(input, { requireAuthorNote: true });
+  const validationError = validateSetupFields(input, {
+    requireAuthorNote: true,
+  });
   if (validationError) {
     return { error: validationError };
   }
@@ -299,7 +341,7 @@ export async function createSetup(
     input.fileName,
     user.id,
     ALLOWED_SETUP_FILE_EXTENSIONS,
-    "Setup"
+    "Setup",
   );
   if (fileError) return { error: fileError };
 
@@ -308,35 +350,42 @@ export async function createSetup(
     input.telemetryFileName,
     user.id,
     ALLOWED_TELEMETRY_FILE_EXTENSIONS,
-    "Telemetry"
+    "Telemetry",
   );
   if (telemetryError) return { error: telemetryError };
 
-  const { data: setupId, error } = await supabase.rpc("create_setup_with_rating", {
-    p_game: input.game,
-    p_car: input.car.trim(),
-    p_track: input.track.trim(),
-    p_condition: input.condition,
-    p_lap_time: (typeof input.lapTime === "string" ? input.lapTime.trim() : "") || null,
-    p_description: input.description,
-    p_tags: input.tags,
-    p_rig_profile: input.rigProfile,
-    p_setup_values: normalizeSetupValues(input.setupValues),
-    p_file_path: input.filePath ?? null,
-    p_file_name: input.fileName ?? null,
-    p_video_url: normalizeVideoUrl(input.videoUrl),
-    p_telemetry_file_path: input.telemetryFilePath ?? null,
-    p_telemetry_file_name: input.telemetryFileName ?? null,
-    p_game_version:
-      (typeof input.gameVersion === "string" ? input.gameVersion.trim() : "") ||
-      null,
-    // No uploader rating: a published setup starts Unrated until someone
-    // else runs it (0036_rating_trust.sql).
-  });
+  const { data: setupId, error } = await supabase.rpc(
+    "create_setup_with_rating",
+    {
+      p_game: input.game,
+      p_car: input.car.trim(),
+      p_track: input.track.trim(),
+      p_condition: input.condition,
+      p_lap_time:
+        (typeof input.lapTime === "string" ? input.lapTime.trim() : "") || null,
+      p_description: input.description,
+      p_tags: input.tags,
+      p_rig_profile: input.rigProfile,
+      p_setup_values: normalizeSetupValues(input.setupValues),
+      p_file_path: input.filePath ?? null,
+      p_file_name: input.fileName ?? null,
+      p_video_url: normalizeVideoUrl(input.videoUrl),
+      p_telemetry_file_path: input.telemetryFilePath ?? null,
+      p_telemetry_file_name: input.telemetryFileName ?? null,
+      p_game_version:
+        (typeof input.gameVersion === "string"
+          ? input.gameVersion.trim()
+          : "") || null,
+      // No uploader rating: a published setup starts Unrated until someone
+      // else runs it (0036_rating_trust.sql).
+    },
+  );
 
   if (error || !setupId) {
     logger.error("createSetup: atomic insert failed", error);
-    return { error: getActionError(error, "Couldn't publish the setup right now.") };
+    return {
+      error: getActionError(error, "Couldn't publish the setup right now."),
+    };
   }
 
   revalidateSetupContent();
@@ -347,7 +396,7 @@ export async function createSetup(
 
 export async function updateSetup(
   setupId: string,
-  input: UpdateSetupInput
+  input: UpdateSetupInput,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
@@ -374,7 +423,7 @@ export async function updateSetup(
     input.fileName,
     user.id,
     ALLOWED_SETUP_FILE_EXTENSIONS,
-    "Setup"
+    "Setup",
   );
   if (fileError) return { error: fileError };
 
@@ -383,7 +432,7 @@ export async function updateSetup(
     input.telemetryFileName,
     user.id,
     ALLOWED_TELEMETRY_FILE_EXTENSIONS,
-    "Telemetry"
+    "Telemetry",
   );
   if (telemetryError) return { error: telemetryError };
 
@@ -410,7 +459,8 @@ export async function updateSetup(
     car: input.car.trim(),
     track: input.track.trim(),
     condition: input.condition,
-    lap_time: (typeof input.lapTime === "string" ? input.lapTime.trim() : "") || null,
+    lap_time:
+      (typeof input.lapTime === "string" ? input.lapTime.trim() : "") || null,
     description: input.description,
     tags: input.tags,
     rig_profile: input.rigProfile,
@@ -447,7 +497,9 @@ export async function updateSetup(
 
   if (error) {
     logger.error("updateSetup: update failed", error);
-    return { error: getActionError(error, "Couldn't update the setup right now.") };
+    return {
+      error: getActionError(error, "Couldn't update the setup right now."),
+    };
   }
   if (!updated) {
     return { error: "Setup no longer exists or you don't own it." };
@@ -465,7 +517,8 @@ export async function updateSetup(
     const { error: removeError } = await supabase.storage
       .from(SETUP_FILES_BUCKET)
       .remove([existing.file_path]);
-    if (removeError) logger.warn("updateSetup: failed to remove old setup file", removeError);
+    if (removeError)
+      logger.warn("updateSetup: failed to remove old setup file", removeError);
   }
 
   if (
@@ -477,7 +530,11 @@ export async function updateSetup(
     const { error: removeError } = await supabase.storage
       .from(SETUP_FILES_BUCKET)
       .remove([existing.telemetry_file_path]);
-    if (removeError) logger.warn("updateSetup: failed to remove old telemetry file", removeError);
+    if (removeError)
+      logger.warn(
+        "updateSetup: failed to remove old telemetry file",
+        removeError,
+      );
   }
 
   revalidateSetupContent();
@@ -487,12 +544,16 @@ export async function updateSetup(
   return { error: null };
 }
 
-export async function deleteSetup(setupId: string): Promise<{ error: string | null }> {
+export async function deleteSetup(
+  setupId: string,
+): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
 
   if (!user) {
-    return { error: "You need to be logged in with Discord to delete a setup." };
+    return {
+      error: "You need to be logged in with Discord to delete a setup.",
+    };
   }
   if (!isUuid(setupId)) {
     return { error: "That setup id is invalid." };
@@ -526,20 +587,23 @@ export async function deleteSetup(setupId: string): Promise<{ error: string | nu
 
   if (error) {
     logger.error("deleteSetup: delete failed", error);
-    return { error: getActionError(error, "Couldn't delete the setup right now.") };
+    return {
+      error: getActionError(error, "Couldn't delete the setup right now."),
+    };
   }
   if (!deleted) {
     return { error: "Setup no longer exists or you don't own it." };
   }
 
   const paths = [existing.file_path, existing.telemetry_file_path].filter(
-    (path): path is string => isOwnedStoragePath(path, user.id)
+    (path): path is string => isOwnedStoragePath(path, user.id),
   );
   if (paths.length > 0) {
     const { error: removeError } = await supabase.storage
       .from(SETUP_FILES_BUCKET)
       .remove(paths);
-    if (removeError) logger.warn("deleteSetup: failed to remove attached files", removeError);
+    if (removeError)
+      logger.warn("deleteSetup: failed to remove attached files", removeError);
   }
 
   revalidateSetupContent();
@@ -552,7 +616,7 @@ export async function deleteSetup(setupId: string): Promise<{ error: string | nu
 
 export async function toggleUpvote(
   setupId: string,
-  isCurrentlyUpvoted: boolean
+  isCurrentlyUpvoted: boolean,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
@@ -582,11 +646,15 @@ export async function toggleUpvote(
         .delete()
         .eq("user_id", user.id)
         .eq("setup_id", setupId)
-    : await supabase.from("setup_upvotes").insert({ user_id: user.id, setup_id: setupId });
+    : await supabase
+        .from("setup_upvotes")
+        .insert({ user_id: user.id, setup_id: setupId });
 
   if (error) {
     logger.error("toggleUpvote: mutation failed", error);
-    return { error: getActionError(error, "Couldn't update the upvote right now.") };
+    return {
+      error: getActionError(error, "Couldn't update the upvote right now."),
+    };
   }
 
   revalidateSetupCounters();
@@ -600,7 +668,7 @@ export async function rateSetup(
   setupId: string,
   pace: number,
   predictability: number,
-  raterRig?: string | null
+  raterRig?: string | null,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
@@ -613,14 +681,17 @@ export async function rateSetup(
   }
 
   if (!validateRating(pace) || !validateRating(predictability)) {
-    return { error: "Pace and Predictability must be whole numbers from 1 to 5." };
+    return {
+      error: "Pace and Predictability must be whole numbers from 1 to 5.",
+    };
   }
 
   // The rater's rig is optional ("rig not shared" is a valid choice) but
   // when present it must be one of the real rig profiles — same vocabulary
   // as everything else, enforced again by the DB check in 0037.
   const normalizedRig =
-    typeof raterRig === "string" && rigProfiles.includes(raterRig as (typeof rigProfiles)[number])
+    typeof raterRig === "string" &&
+    rigProfiles.includes(raterRig as (typeof rigProfiles)[number])
       ? raterRig
       : null;
 
@@ -636,23 +707,23 @@ export async function rateSetup(
     return { error: "You can't rate your own setup." };
   }
 
-  const { error } = await supabase
-    .from("setup_ratings")
-    .upsert(
-      {
-        user_id: user.id,
-        setup_id: setupId,
-        pace,
-        predictability,
-        rater_rig: normalizedRig,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,setup_id" }
-    );
+  const { error } = await supabase.from("setup_ratings").upsert(
+    {
+      user_id: user.id,
+      setup_id: setupId,
+      pace,
+      predictability,
+      rater_rig: normalizedRig,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,setup_id" },
+  );
 
   if (error) {
     logger.error("rateSetup: upsert failed", error);
-    return { error: getActionError(error, "Couldn't save your rating right now.") };
+    return {
+      error: getActionError(error, "Couldn't save your rating right now."),
+    };
   }
 
   revalidateSetupCounters();
@@ -669,7 +740,7 @@ export async function rateSetup(
  */
 async function recordDownloadEvent(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  setupId: string
+  setupId: string,
 ): Promise<void> {
   try {
     const {
@@ -696,12 +767,17 @@ async function recordDownloadEvent(
 async function incrementDownloadCount(setupId: string): Promise<void> {
   const counter = createDownloadCounterClient();
   if (!counter) {
-    logger.warn("incrementDownloadCount: server counter credentials not configured");
+    logger.warn(
+      "incrementDownloadCount: server counter credentials not configured",
+    );
     return;
   }
   try {
-    const { error } = await counter.rpc("increment_downloads", { setup_id: setupId });
-    if (error) logger.error("incrementDownloadCount: counter RPC failed", error);
+    const { error } = await counter.rpc("increment_downloads", {
+      setup_id: setupId,
+    });
+    if (error)
+      logger.error("incrementDownloadCount: counter RPC failed", error);
   } catch (error) {
     logger.error("incrementDownloadCount: counter RPC threw", error);
   }
@@ -712,9 +788,11 @@ async function incrementDownloadCount(setupId: string): Promise<void> {
  * file. Deliberately doesn't require login -- setups are free downloads for
  * anyone, the same as browsing itself.
  */
-export async function downloadSetup(
-  setupId: string
-): Promise<{ url: string | null; fileName: string | null; error: string | null }> {
+export async function downloadSetup(setupId: string): Promise<{
+  url: string | null;
+  fileName: string | null;
+  error: string | null;
+}> {
   const supabase = await createClient();
 
   if (!isUuid(setupId)) {
@@ -727,8 +805,16 @@ export async function downloadSetup(
     .eq("id", setupId)
     .maybeSingle();
 
-  if (error || !setup?.file_path || !isOwnedStoragePath(setup.file_path, setup.user_id)) {
-    return { url: null, fileName: null, error: "No file attached to this setup." };
+  if (
+    error ||
+    !setup?.file_path ||
+    !isOwnedStoragePath(setup.file_path, setup.user_id)
+  ) {
+    return {
+      url: null,
+      fileName: null,
+      error: "No file attached to this setup.",
+    };
   }
 
   await incrementDownloadCount(setupId);
@@ -742,7 +828,11 @@ export async function downloadSetup(
   // invalidating whole browse/home pages for every anonymous click; download
   // counters are not cache-critical and the next normal render will refresh
   // them from Postgres.
-  return { url: publicUrl, fileName: sanitizeFileName(setup.file_name ?? "setup-file"), error: null };
+  return {
+    url: publicUrl,
+    fileName: sanitizeFileName(setup.file_name ?? "setup-file"),
+    error: null,
+  };
 }
 
 /**
@@ -750,7 +840,9 @@ export async function downloadSetup(
  * entered values with no uploaded file behind them). Same free-for-anyone
  * access as downloadSetup, just without a Storage object to look up.
  */
-export async function recordSetupExport(setupId: string): Promise<{ error: string | null }> {
+export async function recordSetupExport(
+  setupId: string,
+): Promise<{ error: string | null }> {
   const supabase = await createClient();
 
   if (!isUuid(setupId)) {

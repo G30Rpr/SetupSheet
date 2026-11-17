@@ -2,7 +2,11 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-function Card({ className, as: Comp = "div", ...props }: React.ComponentProps<"div"> & {
+function Card({
+  className,
+  as: Comp = "div",
+  ...props
+}: React.ComponentProps<"div"> & {
   as?: "div" | "article" | "section";
 }) {
   return (
@@ -10,7 +14,7 @@ function Card({ className, as: Comp = "div", ...props }: React.ComponentProps<"d
       data-slot="card"
       className={cn(
         "bg-card text-card-foreground flex flex-col gap-4 rounded-xl border py-5 shadow-card",
-        className
+        className,
       )}
       {...props}
     />

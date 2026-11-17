@@ -19,7 +19,7 @@ dark, sim-racing themed UI (carbon black, racing green, alert red).
   with a Follow button when you're viewing someone else's.
 - `/requests` — Setup requests board: a "Most wanted" section grouping open
   requests by (game, car, track), a post-a-request form, and the full open
-  + fulfilled request list.
+  - fulfilled request list.
 - `/setups/compare` — Side-by-side tuning-value diff for two setups of the
   same game, reached by turning on "Compare setups" on `/setups` and
   picking two cards.
@@ -189,6 +189,20 @@ verified from source alone. See [`OPERATIONS.md`](./OPERATIONS.md) for
 protected deletion/report review procedures. `npm run build:budget` also runs
 the production build and checks gzipped JS/CSS chunk budgets.
 
+## Formatting and code checks
+
+Prettier is pinned in devDependencies; use the lockfile install (`npm ci`).
+Run `npm run format` to format supported source, test, configuration and
+documentation files, then `npm run format:check` to verify. CI runs the check
+before ESLint. The existing pre-commit hook runs ESLint followed by Prettier
+for staged TypeScript files, and Prettier for other supported staged files.
+
+Rules are in `.prettierrc.json`; generated files, third-party source, public
+assets, and SQL/shell files are excluded in `.prettierignore`. SQL migration
+validation remains covered by `npm run test:db`. ESLint and TypeScript remain
+separate checks (`npm run lint` and `npm run typecheck`). This setup preserves
+import order and Tailwind class order.
+
 ## Performance and SEO notes
 
 - Primary public setup, profile, leaderboard, related-link, and sitemap reads use
@@ -341,7 +355,7 @@ everything under `supabase/migrations/` in order.)
   "Per-game setup fields" below) — a fixed set of columns can't represent
   that. `upvotes` is a denormalized counter, not a live count.
 - **`setup_upvotes`** — one row per `(user_id, setup_id)`; its existence
-  *is* the upvote. Two `security definer` triggers keep `setups.upvotes` in
+  _is_ the upvote. Two `security definer` triggers keep `setups.upvotes` in
   sync on insert/delete, so reading the browse page never needs a join +
   count over every setup's upvotes.
 
@@ -368,17 +382,17 @@ service container; CI run `36431167843` passed its migration job on feature comm
 
 **RLS policies**, scoped with `auth.uid()`:
 
-| Table | select | insert | update | delete |
-|---|---|---|---|---|
-| `setups` | anyone | owner only (`auth.uid() = user_id`) | owner only | owner only |
-| `setup_upvotes` | owner only (each user sees only their own upvotes) | as self only | — | as self only |
-| `setup_ratings` | owner only | as self only | own rating only | own rating only |
-| `follows` | owner only (own follows list) | as self only | — | as self only |
-| `notifications` | owner only | (via trigger only) | own rows, `read` column only | own rows only |
-| `profiles` | anyone | (via trigger only) | own row, `username`/`avatar_url` only | — |
+| Table           | select                                             | insert                              | update                                | delete          |
+| --------------- | -------------------------------------------------- | ----------------------------------- | ------------------------------------- | --------------- |
+| `setups`        | anyone                                             | owner only (`auth.uid() = user_id`) | owner only                            | owner only      |
+| `setup_upvotes` | owner only (each user sees only their own upvotes) | as self only                        | —                                     | as self only    |
+| `setup_ratings` | owner only                                         | as self only                        | own rating only                       | own rating only |
+| `follows`       | owner only (own follows list)                      | as self only                        | —                                     | as self only    |
+| `notifications` | owner only                                         | (via trigger only)                  | own rows, `read` column only          | own rows only   |
+| `profiles`      | anyone                                             | (via trigger only)                  | own row, `username`/`avatar_url` only | —               |
 
-Row-level policies only restrict *which row* a user can touch — nothing
-about *which column*. `0009` and `0011` close that gap for the
+Row-level policies only restrict _which row_ a user can touch — nothing
+about _which column_. `0009` and `0011` close that gap for the
 denormalized/trigger-owned columns (`setups.upvotes/downloads/pace/
 predictability/rating_count`, `profiles.follower_count`, `notifications.actor_id/setup_id/type`, and
 `setup_ratings.setup_id/created_at`) with an explicit
@@ -494,7 +508,7 @@ the schema changes — only `src/lib/setup-schemas.ts` and the seed data.
   fields, reusing the same tuning-value diff view as `/setups/compare`
   (`lib/diff-setup-values.ts`).
 - **Setup requests** — migration `0013` adds a `setup_requests` table.
-  Posting a request is a normal owner-scoped insert; *fulfilling* someone
+  Posting a request is a normal owner-scoped insert; _fulfilling_ someone
   else's request goes through a `fulfill_setup_request()` RPC instead of a
   plain update, since the fulfiller (not the requester) needs to write
   `fulfilled_setup_id`/`fulfilled_by` — the RPC checks the offered setup is
@@ -538,13 +552,13 @@ automatically, so no `vercel.json` or custom build settings are needed.
    command (`next build`) and output settings as default.
 
 2. **Add environment variables** in the Vercel project → **Settings →
-   Environment Variables** (add them for Production, Preview, *and*
+   Environment Variables** (add them for Production, Preview, _and_
    Development environments so preview deploys work too):
 
-   | Key | Value |
-   |---|---|
-   | `NEXT_PUBLIC_SUPABASE_URL` | `https://your-project-ref.supabase.co` |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | your anon/publishable key |
+   | Key                             | Value                                  |
+   | ------------------------------- | -------------------------------------- |
+   | `NEXT_PUBLIC_SUPABASE_URL`      | `https://your-project-ref.supabase.co` |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | your anon/publishable key              |
 
    The build itself succeeds even without these set (verified — every route
    that touches auth is dynamically rendered, so nothing reads them at build

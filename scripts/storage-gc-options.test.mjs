@@ -1,16 +1,32 @@
 import { describe, expect, it } from "vitest";
-import { parseStorageSweepArgs, validateCleanupPaths } from "./storage-gc-options.mjs";
+import {
+  parseStorageSweepArgs,
+  validateCleanupPaths,
+} from "./storage-gc-options.mjs";
 
 describe("Storage cleanup command safety", () => {
   it("defaults to the existing weekly 24h policy", () => {
     expect(parseStorageSweepArgs([])).toEqual({
-      dryRun: false, grace: "24 hours", targetUser: null, batchSize: 50,
+      dryRun: false,
+      grace: "24 hours",
+      targetUser: null,
+      batchSize: 50,
     });
   });
 
   it("supports safe dry run and bounded configuration", () => {
-    expect(parseStorageSweepArgs(["--dry-run", "--grace", "7 days", "--batch-size", "100"])).toMatchObject({
-      dryRun: true, grace: "7 days", batchSize: 100,
+    expect(
+      parseStorageSweepArgs([
+        "--dry-run",
+        "--grace",
+        "7 days",
+        "--batch-size",
+        "100",
+      ]),
+    ).toMatchObject({
+      dryRun: true,
+      grace: "7 days",
+      batchSize: 100,
     });
   });
 
@@ -32,10 +48,18 @@ describe("Storage cleanup command safety", () => {
 
   it("requires explicit user-deletion confirmation for destructive account cleanup", () => {
     const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-    expect(() => parseStorageSweepArgs(["--user", id])).toThrow(/--confirm-user-delete/);
-    expect(parseStorageSweepArgs(["--user", id, "--dry-run"]).dryRun).toBe(true);
-    expect(parseStorageSweepArgs(["--user", id, "--confirm-user-delete"]).targetUser).toBe(id);
-    expect(() => parseStorageSweepArgs(["--confirm-user-delete"])).toThrow(/requires --user/);
+    expect(() => parseStorageSweepArgs(["--user", id])).toThrow(
+      /--confirm-user-delete/,
+    );
+    expect(parseStorageSweepArgs(["--user", id, "--dry-run"]).dryRun).toBe(
+      true,
+    );
+    expect(
+      parseStorageSweepArgs(["--user", id, "--confirm-user-delete"]).targetUser,
+    ).toBe(id);
+    expect(() => parseStorageSweepArgs(["--confirm-user-delete"])).toThrow(
+      /requires --user/,
+    );
   });
 });
 
@@ -44,7 +68,9 @@ describe("Storage cleanup path validation", () => {
   const second = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
   it("keeps valid owner paths and drops duplicates", () => {
-    expect(validateCleanupPaths([`${id}/setup.sto`, `${id}/setup.sto`], id)).toEqual([`${id}/setup.sto`]);
+    expect(
+      validateCleanupPaths([`${id}/setup.sto`, `${id}/setup.sto`], id),
+    ).toEqual([`${id}/setup.sto`]);
   });
 
   it.each([

@@ -41,7 +41,11 @@ export function GroupedSelectField({
         <Select
           name={id}
           required
-          defaultValue={defaultValue && isKnownOption(groups, defaultValue) ? defaultValue : undefined}
+          defaultValue={
+            defaultValue && isKnownOption(groups, defaultValue)
+              ? defaultValue
+              : undefined
+          }
         >
           <SelectTrigger id={id} className="w-full">
             <SelectValue placeholder={selectPlaceholder} />

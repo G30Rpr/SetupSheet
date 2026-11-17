@@ -3,7 +3,13 @@
 import Link from "next/link";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type FormEvent,
+} from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -33,9 +39,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SetupValuesFields, type SetupValues } from "@/components/setup-values-fields";
+import {
+  SetupValuesFields,
+  type SetupValues,
+} from "@/components/setup-values-fields";
 import { Textarea } from "@/components/ui/textarea";
-import { createSetup, discardUploadedFiles, updateSetup } from "@/lib/actions/setups";
+import {
+  createSetup,
+  discardUploadedFiles,
+  updateSetup,
+} from "@/lib/actions/setups";
 import { fulfillSetupRequest } from "@/lib/actions/setup-requests";
 import { uploadFileDirectly } from "@/lib/upload-client";
 import { logger } from "@/lib/logger";
@@ -99,40 +112,64 @@ export function UploadForm({
   const { user, isLoading } = useAuth();
   const isEditing = Boolean(existingSetup);
   const answering = Boolean(requestContext) && !isEditing;
-  const [fulfillOutcome, setFulfillOutcome] = useState<"fulfilled" | "unfulfilled" | null>(null);
+  const [fulfillOutcome, setFulfillOutcome] = useState<
+    "fulfilled" | "unfulfilled" | null
+  >(null);
   // A file takes priority over setupValues when both are present -- that
   // only happens for an ACC setup whose file was auto-parsed for tuning
   // values (see handleFileChange), where the file is still the source of
   // truth the player actually imports, and the values are supplementary.
   const [entryMode, setEntryMode] = useState<EntryMode>(
-    existingSetup?.fileName ? "file" : existingSetup?.setupValues ? "manual" : "file"
+    existingSetup?.fileName
+      ? "file"
+      : existingSetup?.setupValues
+        ? "manual"
+        : "file",
   );
-  const [game, setGame] = useState<Game | "">(existingSetup?.game ?? requestContext?.game ?? "");
+  const [game, setGame] = useState<Game | "">(
+    existingSetup?.game ?? requestContext?.game ?? "",
+  );
   // Both are plain per-game data modules (not components, so next/dynamic
   // doesn't apply) -- loaded via dynamic import() below so their ~150+ lines
   // of car/track rosters ship in their own chunk instead of every /upload
   // page's initial bundle.
-  const [carLists, setCarLists] = useState<Partial<Record<Game, SelectOptionGroup[]>>>({});
-  const [trackLists, setTrackLists] = useState<Partial<Record<Game, SelectOptionGroup[]>>>({});
+  const [carLists, setCarLists] = useState<
+    Partial<Record<Game, SelectOptionGroup[]>>
+  >({});
+  const [trackLists, setTrackLists] = useState<
+    Partial<Record<Game, SelectOptionGroup[]>>
+  >({});
   const [useManualCarInput, setUseManualCarInput] = useState(false);
   const [useManualTrackInput, setUseManualTrackInput] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [detectedCar, setDetectedCar] = useState<string | null>(null);
-  const [detectedSetupValues, setDetectedSetupValues] = useState<SetupValues>({});
-  const [keepExistingFile, setKeepExistingFile] = useState(Boolean(existingSetup?.fileName));
-  const [setupValues, setSetupValues] = useState<SetupValues>(existingSetup?.setupValues ?? {});
+  const [detectedSetupValues, setDetectedSetupValues] = useState<SetupValues>(
+    {},
+  );
+  const [keepExistingFile, setKeepExistingFile] = useState(
+    Boolean(existingSetup?.fileName),
+  );
+  const [setupValues, setSetupValues] = useState<SetupValues>(
+    existingSetup?.setupValues ?? {},
+  );
   const [tags, setTags] = useState<SetupTag[]>(existingSetup?.tags ?? []);
   const [condition, setCondition] = useState(existingSetup?.condition ?? "");
   const [lapTime, setLapTime] = useState(existingSetup?.lapTime ?? "");
-  const [gameVersion, setGameVersion] = useState(existingSetup?.gameVersion ?? "");
+  const [gameVersion, setGameVersion] = useState(
+    existingSetup?.gameVersion ?? "",
+  );
   const [rig, setRig] = useState(existingSetup?.rigProfile ?? "");
-  const [description, setDescription] = useState(existingSetup?.description ?? "");
+  const [description, setDescription] = useState(
+    existingSetup?.description ?? "",
+  );
   const [videoUrl, setVideoUrl] = useState(existingSetup?.videoUrl ?? "");
   const [showProofFields, setShowProofFields] = useState(
-    Boolean(existingSetup?.videoUrl || existingSetup?.telemetryFileName)
+    Boolean(existingSetup?.videoUrl || existingSetup?.telemetryFileName),
   );
   const [telemetryFile, setTelemetryFile] = useState<File | null>(null);
-  const [keepExistingTelemetry, setKeepExistingTelemetry] = useState(Boolean(existingSetup?.telemetryFileName));
+  const [keepExistingTelemetry, setKeepExistingTelemetry] = useState(
+    Boolean(existingSetup?.telemetryFileName),
+  );
   const [error, setError] = useState<string | null>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
   const [status, setStatus] = useState<"idle" | "success">("idle");
@@ -158,15 +195,24 @@ export function UploadForm({
         setTrackLists(trackListsModule.trackLists);
         if (existingSetup) {
           setUseManualCarInput(
-            !isKnownOption(carListsModule.carLists[existingSetup.game], existingSetup.car)
+            !isKnownOption(
+              carListsModule.carLists[existingSetup.game],
+              existingSetup.car,
+            ),
           );
           setUseManualTrackInput(
-            !isKnownOption(trackListsModule.trackLists[existingSetup.game], existingSetup.track)
+            !isKnownOption(
+              trackListsModule.trackLists[existingSetup.game],
+              existingSetup.track,
+            ),
           );
         }
       })
       .catch(() => {
-        if (!cancelled) setError("Couldn't load the car and track lists. Manual entry is still available.");
+        if (!cancelled)
+          setError(
+            "Couldn't load the car and track lists. Manual entry is still available.",
+          );
       });
     return () => {
       cancelled = true;
@@ -197,13 +243,15 @@ export function UploadForm({
       if (draft.game) setGame(draft.game);
       if (draft.condition) setCondition(draft.condition);
       if (draft.lapTime) setLapTime(draft.lapTime);
-      if (typeof draft.gameVersion === "string") setGameVersion(draft.gameVersion);
+      if (typeof draft.gameVersion === "string")
+        setGameVersion(draft.gameVersion);
       if (draft.rig) setRig(draft.rig);
       if (draft.description) setDescription(draft.description);
       if (Array.isArray(draft.tags)) setTags(draft.tags);
       const restoredSetupValues = normalizeSetupValues(draft.setupValues);
       if (restoredSetupValues) setSetupValues(restoredSetupValues);
-      if (draft.entryMode === "file" || draft.entryMode === "manual") setEntryMode(draft.entryMode);
+      if (draft.entryMode === "file" || draft.entryMode === "manual")
+        setEntryMode(draft.entryMode);
 
       toast("Restored your unsaved draft", {
         action: {
@@ -226,15 +274,37 @@ export function UploadForm({
     const id = setTimeout(() => {
       localStorage.setItem(
         draftKey(user.id),
-        JSON.stringify({ game, condition, lapTime, gameVersion, rig, description, tags, setupValues, entryMode })
+        JSON.stringify({
+          game,
+          condition,
+          lapTime,
+          gameVersion,
+          rig,
+          description,
+          tags,
+          setupValues,
+          entryMode,
+        }),
       );
     }, 500);
     return () => clearTimeout(id);
-  }, [isEditing, user, game, condition, lapTime, gameVersion, rig, description, tags, setupValues, entryMode]);
+  }, [
+    isEditing,
+    user,
+    game,
+    condition,
+    lapTime,
+    gameVersion,
+    rig,
+    description,
+    tags,
+    setupValues,
+    entryMode,
+  ]);
 
   function toggleTag(tag: SetupTag) {
     setTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   }
 
@@ -295,7 +365,9 @@ export function UploadForm({
         setDetectedCar(result.car);
       }
     } catch {
-      setError("Couldn't read that setup file. You can still enter the values manually.");
+      setError(
+        "Couldn't read that setup file. You can still enter the values manually.",
+      );
     }
   }
 
@@ -317,7 +389,12 @@ export function UploadForm({
     }
 
     if (file) {
-      const result = await uploadFileDirectly("setup", file, user?.id ?? null, setUploadPercent);
+      const result = await uploadFileDirectly(
+        "setup",
+        file,
+        user?.id ?? null,
+        setUploadPercent,
+      );
       if (result.error || !result.path) {
         return { error: result.error ?? "Failed to upload file." };
       }
@@ -341,12 +418,15 @@ export function UploadForm({
         "telemetry",
         telemetryFile,
         user?.id ?? null,
-        setUploadPercent
+        setUploadPercent,
       );
       if (result.error || !result.path) {
         return { error: result.error ?? "Failed to upload telemetry file." };
       }
-      return { telemetryFilePath: result.path, telemetryFileName: result.fileName };
+      return {
+        telemetryFilePath: result.path,
+        telemetryFileName: result.fileName,
+      };
     }
 
     if (isEditing && keepExistingTelemetry) {
@@ -402,15 +482,19 @@ export function UploadForm({
         // attached to a saved row is handed back for cleanup below.
         uploadedPaths.push(
           ...[fileFields.filePath, telemetryFields.telemetryFilePath].filter(
-            (path): path is string => typeof path === "string"
-          )
+            (path): path is string => typeof path === "string",
+          ),
         );
 
         if (fileFields.error || telemetryFields.error) {
-          const message = fileFields.error ?? telemetryFields.error ?? "Failed to upload file.";
+          const message =
+            fileFields.error ??
+            telemetryFields.error ??
+            "Failed to upload file.";
           setError(message);
           toast.error(message);
-          if (uploadedPaths.length > 0) void discardUploadedFiles(uploadedPaths);
+          if (uploadedPaths.length > 0)
+            void discardUploadedFiles(uploadedPaths);
           return;
         }
 
@@ -436,7 +520,8 @@ export function UploadForm({
           if (result.error) {
             setError(result.error);
             toast.error(result.error);
-            if (uploadedPaths.length > 0) void discardUploadedFiles(uploadedPaths);
+            if (uploadedPaths.length > 0)
+              void discardUploadedFiles(uploadedPaths);
           } else {
             toast.success("Setup updated");
             router.push("/setups");
@@ -465,22 +550,29 @@ export function UploadForm({
         if (result.error) {
           setError(result.error);
           toast.error(result.error);
-          if (uploadedPaths.length > 0) void discardUploadedFiles(uploadedPaths);
+          if (uploadedPaths.length > 0)
+            void discardUploadedFiles(uploadedPaths);
         } else {
           // P2 item 4: an upload answering an open request marks it
           // fulfilled with this uploader credited. The setup is already
           // published either way — if the combo drifted from the request
           // (the RPC only accepts matching game/car/track), say so softly.
           if (requestContext && result.setupId) {
-            const fulfillResult = await fulfillSetupRequest(requestContext.id, result.setupId);
-            setFulfillOutcome(fulfillResult.error ? "unfulfilled" : "fulfilled");
+            const fulfillResult = await fulfillSetupRequest(
+              requestContext.id,
+              result.setupId,
+            );
+            setFulfillOutcome(
+              fulfillResult.error ? "unfulfilled" : "fulfilled",
+            );
           }
           if (user) localStorage.removeItem(draftKey(user.id));
           setPublishedSetupId(result.setupId ?? null);
           setStatus("success");
         }
       } catch (cause) {
-        const message = "Something went wrong while saving the setup. Please try again.";
+        const message =
+          "Something went wrong while saving the setup. Please try again.";
         setError(message);
         toast.error(message);
         // The uploads already succeeded but the row write threw, so the new
@@ -535,7 +627,8 @@ export function UploadForm({
         </span>
         <div>
           <h2 className="text-xl font-semibold">
-            Sign in with Discord to {isEditing ? "edit this setup" : "share a setup"}
+            Sign in with Discord to{" "}
+            {isEditing ? "edit this setup" : "share a setup"}
           </h2>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
             Browsing stays open to everyone. We use Discord when you upload so
@@ -556,8 +649,8 @@ export function UploadForm({
         <div>
           <h2 className="text-xl font-semibold">Setup submitted!</h2>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            Thanks for sharing with the community. Your setup will appear on
-            the Browse Setups page shortly.
+            Thanks for sharing with the community. Your setup will appear on the
+            Browse Setups page shortly.
           </p>
           {answering && requestContext && (
             <p
@@ -575,7 +668,9 @@ export function UploadForm({
         <div className="flex flex-wrap justify-center gap-3">
           {publishedSetupId && (
             <Button asChild>
-              <Link href={`/setups/${encodeURIComponent(publishedSetupId)}`}>View your published setup</Link>
+              <Link href={`/setups/${encodeURIComponent(publishedSetupId)}`}>
+                View your published setup
+              </Link>
             </Button>
           )}
           <Button asChild variant={publishedSetupId ? "outline" : "default"}>
@@ -590,14 +685,20 @@ export function UploadForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} aria-busy={isPending} className="flex flex-col gap-6">
+    <form
+      onSubmit={handleSubmit}
+      aria-busy={isPending}
+      className="flex flex-col gap-6"
+    >
       {answering && requestContext && (
         <Card className="gap-1.5 border-racing-coral/40 px-5 py-4">
           <p className="text-sm font-medium">
-            You&apos;re answering {requestContext.requesterUsername}&apos;s request
+            You&apos;re answering {requestContext.requesterUsername}&apos;s
+            request
           </p>
           <p className="text-sm text-muted-foreground">
-            {requestContext.game} · {requestContext.car} @ {requestContext.track}
+            {requestContext.game} · {requestContext.car} @{" "}
+            {requestContext.track}
             {requestContext.notes ? ` — “${requestContext.notes}”` : ""}
           </p>
           <p className="text-xs text-muted-foreground">
@@ -607,54 +708,96 @@ export function UploadForm({
         </Card>
       )}
       {error && (
-        <p ref={errorRef} tabIndex={-1} role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive focus:outline-none">
+        <p
+          ref={errorRef}
+          tabIndex={-1}
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive focus:outline-none"
+        >
           <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          <span>{error} Your entries are still here; correct the issue and try again.</span>
+          <span>
+            {error} Your entries are still here; correct the issue and try
+            again.
+          </span>
         </p>
       )}
       <Card className="px-5 py-6 sm:px-8 sm:py-8">
         <div className="flex flex-col gap-6">
-          <section aria-labelledby="upload-basics-heading" className="flex flex-col gap-4">
+          <section
+            aria-labelledby="upload-basics-heading"
+            className="flex flex-col gap-4"
+          >
             <div>
-              <h2 id="upload-basics-heading" className="text-base font-semibold">1. Simulator and conditions</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Start with the game and driving conditions. Fields marked Required must be filled before publishing.</p>
+              <h2
+                id="upload-basics-heading"
+                className="text-base font-semibold"
+              >
+                1. Simulator and conditions
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Start with the game and driving conditions. Fields marked
+                Required must be filled before publishing.
+              </p>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="game">Game <span className="text-xs font-normal text-muted-foreground">(Required)</span></Label>
-              <Select name="game" required value={game} onValueChange={handleGameChange}>
-                <SelectTrigger id="game" className="w-full">
-                  <SelectValue placeholder="Select a game" />
-                </SelectTrigger>
-                <SelectContent>
-                  {games.map((g) => (
-                    <SelectItem key={g} value={g}>
-                      {g}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="game">
+                  Game{" "}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    (Required)
+                  </span>
+                </Label>
+                <Select
+                  name="game"
+                  required
+                  value={game}
+                  onValueChange={handleGameChange}
+                >
+                  <SelectTrigger id="game" className="w-full">
+                    <SelectValue placeholder="Select a game" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {games.map((g) => (
+                      <SelectItem key={g} value={g}>
+                        {g}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="condition">Condition <span className="text-xs font-normal text-muted-foreground">(Required)</span></Label>
-              <Select name="condition" required value={condition} onValueChange={setCondition}>
-                <SelectTrigger id="condition" className="w-full">
-                  <SelectValue placeholder="Select condition" />
-                </SelectTrigger>
-                <SelectContent>
-                  {conditions.map((condition) => (
-                    <SelectItem key={condition} value={condition}>
-                      {condition}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="condition">
+                  Condition{" "}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    (Required)
+                  </span>
+                </Label>
+                <Select
+                  name="condition"
+                  required
+                  value={condition}
+                  onValueChange={setCondition}
+                >
+                  <SelectTrigger id="condition" className="w-full">
+                    <SelectValue placeholder="Select condition" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {conditions.map((condition) => (
+                      <SelectItem key={condition} value={condition}>
+                        {condition}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </section>
 
-          <section aria-labelledby="upload-data-heading" className="flex flex-col gap-4 border-t border-border/80 pt-6">
+          <section
+            aria-labelledby="upload-data-heading"
+            className="flex flex-col gap-4 border-t border-border/80 pt-6"
+          >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 id="upload-data-heading" className="text-base font-semibold">
                 2. Setup data
@@ -689,7 +832,9 @@ export function UploadForm({
                   <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/40 px-3 py-2 text-sm">
                     <div className="flex min-w-0 items-center gap-2">
                       <FileIcon className="size-4 shrink-0 text-muted-foreground" />
-                      <span className="truncate">{existingSetup?.fileName}</span>
+                      <span className="truncate">
+                        {existingSetup?.fileName}
+                      </span>
                       <span className="shrink-0 text-xs text-muted-foreground">
                         current file
                       </span>
@@ -714,104 +859,157 @@ export function UploadForm({
                 </p>
 
                 {detectedCar || Object.keys(detectedSetupValues).length > 0 ? (
-                  <div role="status" className="flex items-start gap-2 rounded-md border border-border/80 bg-secondary/30 px-3 py-2.5 text-sm text-muted-foreground">
+                  <div
+                    role="status"
+                    className="flex items-start gap-2 rounded-md border border-border/80 bg-secondary/30 px-3 py-2.5 text-sm text-muted-foreground"
+                  >
                     <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-racing-green" />
                     <span>
-                      {detectedCar && "Detected " + detectedCar + " — car field pre-filled below. "}
+                      {detectedCar &&
+                        "Detected " +
+                          detectedCar +
+                          " — car field pre-filled below. "}
                       {Object.keys(detectedSetupValues).length > 0 &&
                         `${Object.keys(detectedSetupValues).length} tuning value${
-                          Object.keys(detectedSetupValues).length === 1 ? "" : "s"
+                          Object.keys(detectedSetupValues).length === 1
+                            ? ""
+                            : "s"
                         } extracted for the Setup values panel and comparison tool.`}
                     </span>
                   </div>
                 ) : null}
               </div>
             ) : game ? (
-              <SetupValuesFields game={game} values={setupValues} onChange={updateSetupValue} />
+              <SetupValuesFields
+                game={game}
+                values={setupValues}
+                onChange={updateSetupValue}
+              />
             ) : (
               <p className="rounded-md border border-dashed border-border/80 px-4 py-6 text-center text-sm text-muted-foreground">
-                Select a game above first — the fields here match that game&apos;s own setup screen.
+                Select a game above first — the fields here match that
+                game&apos;s own setup screen.
               </p>
             )}
           </section>
 
-          <section aria-labelledby="upload-context-heading" className="flex flex-col gap-4 border-t border-border/80 pt-6">
+          <section
+            aria-labelledby="upload-context-heading"
+            className="flex flex-col gap-4 border-t border-border/80 pt-6"
+          >
             <div>
-              <h2 id="upload-context-heading" className="text-base font-semibold">3. Car, track and hardware</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Identify where this setup was tested and the hardware used by its uploader.</p>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5" key={`car-${game}-${detectedCar ?? "none"}`}>
-              <Label htmlFor="car">Car <span className="text-xs font-normal text-muted-foreground">(Required)</span></Label>
-              <GroupedSelectField
-                id="car"
-                groups={game ? carLists[game] : undefined}
-                useManual={useManualCarInput}
-                onToggleManual={setUseManualCarInput}
-                defaultValue={existingSetup?.car ?? requestContext?.car ?? detectedCar ?? undefined}
-                selectPlaceholder="Select a car"
-                inputPlaceholder="e.g. Porsche 992 GT3 Cup"
-                maxLength={MAX_CAR_LENGTH}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5" key={`track-${game}`}>
-              <Label htmlFor="track">Track <span className="text-xs font-normal text-muted-foreground">(Required)</span></Label>
-              <GroupedSelectField
-                id="track"
-                groups={game ? trackLists[game] : undefined}
-                useManual={useManualTrackInput}
-                onToggleManual={setUseManualTrackInput}
-                defaultValue={existingSetup?.track ?? requestContext?.track ?? undefined}
-                selectPlaceholder="Select a track"
-                inputPlaceholder="e.g. Spa-Francorchamps"
-                maxLength={MAX_TRACK_LENGTH}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lapTime">Lap time (optional)</Label>
-              <Input
-                id="lapTime"
-                name="lapTime"
-                placeholder="e.g. 2:16.482"
-                maxLength={MAX_LAP_TIME_LENGTH}
-                value={lapTime}
-                onChange={(e) => setLapTime(e.target.value)}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="gameVersion">Game version (optional)</Label>
-              <Input
-                id="gameVersion"
-                name="gameVersion"
-                placeholder="e.g. 1.6"
-                maxLength={MAX_GAME_VERSION_LENGTH}
-                value={gameVersion}
-                onChange={(e) => setGameVersion(e.target.value)}
-                aria-describedby="gameVersion-hint"
-              />
-              <p id="gameVersion-hint" className="text-xs text-muted-foreground">
-                The patch you built it on. We&apos;ll flag it if the game updates.
+              <h2
+                id="upload-context-heading"
+                className="text-base font-semibold"
+              >
+                3. Car, track and hardware
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Identify where this setup was tested and the hardware used by
+                its uploader.
               </p>
             </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div
+                className="flex flex-col gap-1.5"
+                key={`car-${game}-${detectedCar ?? "none"}`}
+              >
+                <Label htmlFor="car">
+                  Car{" "}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    (Required)
+                  </span>
+                </Label>
+                <GroupedSelectField
+                  id="car"
+                  groups={game ? carLists[game] : undefined}
+                  useManual={useManualCarInput}
+                  onToggleManual={setUseManualCarInput}
+                  defaultValue={
+                    existingSetup?.car ??
+                    requestContext?.car ??
+                    detectedCar ??
+                    undefined
+                  }
+                  selectPlaceholder="Select a car"
+                  inputPlaceholder="e.g. Porsche 992 GT3 Cup"
+                  maxLength={MAX_CAR_LENGTH}
+                />
+              </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="rig">Uploader rig <span className="text-xs font-normal text-muted-foreground">(Required)</span></Label>
-              <Select name="rig" required value={rig} onValueChange={setRig}>
-                <SelectTrigger id="rig" className="w-full">
-                  <SelectValue placeholder="Select uploader hardware" />
-                </SelectTrigger>
-                <SelectContent>
-                  {rigProfiles.map((profile) => (
-                    <SelectItem key={profile} value={profile}>
-                      {profile}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="flex flex-col gap-1.5" key={`track-${game}`}>
+                <Label htmlFor="track">
+                  Track{" "}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    (Required)
+                  </span>
+                </Label>
+                <GroupedSelectField
+                  id="track"
+                  groups={game ? trackLists[game] : undefined}
+                  useManual={useManualTrackInput}
+                  onToggleManual={setUseManualTrackInput}
+                  defaultValue={
+                    existingSetup?.track ?? requestContext?.track ?? undefined
+                  }
+                  selectPlaceholder="Select a track"
+                  inputPlaceholder="e.g. Spa-Francorchamps"
+                  maxLength={MAX_TRACK_LENGTH}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="lapTime">Lap time (optional)</Label>
+                <Input
+                  id="lapTime"
+                  name="lapTime"
+                  placeholder="e.g. 2:16.482"
+                  maxLength={MAX_LAP_TIME_LENGTH}
+                  value={lapTime}
+                  onChange={(e) => setLapTime(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="gameVersion">Game version (optional)</Label>
+                <Input
+                  id="gameVersion"
+                  name="gameVersion"
+                  placeholder="e.g. 1.6"
+                  maxLength={MAX_GAME_VERSION_LENGTH}
+                  value={gameVersion}
+                  onChange={(e) => setGameVersion(e.target.value)}
+                  aria-describedby="gameVersion-hint"
+                />
+                <p
+                  id="gameVersion-hint"
+                  className="text-xs text-muted-foreground"
+                >
+                  The patch you built it on. We&apos;ll flag it if the game
+                  updates.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="rig">
+                  Uploader rig{" "}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    (Required)
+                  </span>
+                </Label>
+                <Select name="rig" required value={rig} onValueChange={setRig}>
+                  <SelectTrigger id="rig" className="w-full">
+                    <SelectValue placeholder="Select uploader hardware" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rigProfiles.map((profile) => (
+                      <SelectItem key={profile} value={profile}>
+                        {profile}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </section>
 
@@ -831,14 +1029,22 @@ export function UploadForm({
           {!isEditing && (
             <p className="text-xs text-muted-foreground">
               Your setup starts Unrated. Other drivers score Pace and
-              Predictability after they&apos;ve run it — authors can&apos;t
-              rate their own setups.
+              Predictability after they&apos;ve run it — authors can&apos;t rate
+              their own setups.
             </p>
           )}
 
-          <section aria-labelledby="upload-tags-heading" className="flex flex-col gap-3 border-t border-border/80 pt-6">
-            <h2 id="upload-tags-heading" className="text-base font-semibold">4. Driving style and notes</h2>
-            <p className="text-sm text-muted-foreground">Help other drivers decide whether this setup fits their driving style. Tags are optional.</p>
+          <section
+            aria-labelledby="upload-tags-heading"
+            className="flex flex-col gap-3 border-t border-border/80 pt-6"
+          >
+            <h2 id="upload-tags-heading" className="text-base font-semibold">
+              4. Driving style and notes
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Help other drivers decide whether this setup fits their driving
+              style. Tags are optional.
+            </p>
             <Label>Tags (optional)</Label>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {setupTags.map((tag) => (
@@ -880,10 +1086,25 @@ export function UploadForm({
       </Card>
 
       {isPending && (
-        <div role="status" aria-live="polite" className="rounded-lg border border-border/80 bg-secondary/30 p-4">
-          <p className="text-sm font-medium">{uploadPercent === null ? "Saving your setup…" : uploadPercent >= 100 ? "Upload complete. Finishing publication…" : `Uploading files: ${Math.round(uploadPercent)}%`}</p>
+        <div
+          role="status"
+          aria-live="polite"
+          className="rounded-lg border border-border/80 bg-secondary/30 p-4"
+        >
+          <p className="text-sm font-medium">
+            {uploadPercent === null
+              ? "Saving your setup…"
+              : uploadPercent >= 100
+                ? "Upload complete. Finishing publication…"
+                : `Uploading files: ${Math.round(uploadPercent)}%`}
+          </p>
           {uploadPercent !== null && (
-            <progress value={uploadPercent} max={100} aria-label="File upload progress" className="mt-2 h-2 w-full accent-primary" />
+            <progress
+              value={uploadPercent}
+              max={100}
+              aria-label="File upload progress"
+              className="mt-2 h-2 w-full accent-primary"
+            />
           )}
         </div>
       )}

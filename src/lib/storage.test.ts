@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  isOwnedStoragePath,
-  sanitizeFileName,
-} from "@/lib/storage";
+import { isOwnedStoragePath, sanitizeFileName } from "@/lib/storage";
 
 const userId = "11111111-1111-4111-8111-111111111111";
 
@@ -12,7 +9,9 @@ describe("Storage path and filename guards", () => {
     expect(isOwnedStoragePath(`${userId}/object.json`, userId)).toBe(true);
     expect(isOwnedStoragePath(`other-user/object.json`, userId)).toBe(false);
     expect(isOwnedStoragePath(`${userId}/../object.json`, userId)).toBe(false);
-    expect(isOwnedStoragePath(`${userId}/nested/object.json`, userId)).toBe(false);
+    expect(isOwnedStoragePath(`${userId}/nested/object.json`, userId)).toBe(
+      false,
+    );
   });
 
   it("removes path/control characters and keeps long-file extensions", () => {

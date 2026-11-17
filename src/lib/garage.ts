@@ -4,7 +4,11 @@ import {
   conditions,
   rigProfiles,
 } from "@/lib/data";
-import { ENGINEER_GAMES, type EngineerDirection, type EngineerGame } from "@/lib/engineer-types";
+import {
+  ENGINEER_GAMES,
+  type EngineerDirection,
+  type EngineerGame,
+} from "@/lib/engineer-types";
 import { normalizeSetupValues } from "@/lib/setup-values";
 import { setupSchemas } from "@/lib/setup-schemas";
 import { isUuid } from "@/lib/utils";
@@ -118,7 +122,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function normalizeValuesForGame(game: EngineerGame, value: unknown): SetupValues | null {
+function normalizeValuesForGame(
+  game: EngineerGame,
+  value: unknown,
+): SetupValues | null {
   const schema = setupSchemas[game];
   if (!schema) return null;
 
@@ -126,7 +133,7 @@ function normalizeValuesForGame(game: EngineerGame, value: unknown): SetupValues
   if (!values) return null;
 
   const allowedKeys = new Set(
-    schema.flatMap((group) => group.fields.map((field) => field.key))
+    schema.flatMap((group) => group.fields.map((field) => field.key)),
   );
   if (Object.keys(values).some((key) => !allowedKeys.has(key))) return null;
 
@@ -135,12 +142,17 @@ function normalizeValuesForGame(game: EngineerGame, value: unknown): SetupValues
 }
 
 /** Pick only fields that belong to the Garage schema for a source setup's game. */
-export function getGarageCompatibleSetupValues(game: EngineerGame, value: unknown): SetupValues {
+export function getGarageCompatibleSetupValues(
+  game: EngineerGame,
+  value: unknown,
+): SetupValues {
   const schema = setupSchemas[game];
   const values = normalizeSetupValues(value);
   if (!schema || !values) return {};
 
-  const allowedKeys = new Set(schema.flatMap((group) => group.fields.map((field) => field.key)));
+  const allowedKeys = new Set(
+    schema.flatMap((group) => group.fields.map((field) => field.key)),
+  );
   const compatible: SetupValues = {};
   for (const [key, item] of Object.entries(values)) {
     if (allowedKeys.has(key)) compatible[key] = item;
@@ -148,45 +160,75 @@ export function getGarageCompatibleSetupValues(game: EngineerGame, value: unknow
   return compatible;
 }
 
-export function countGarageSetupValues(game: EngineerGame, value: unknown): number {
-  return Object.values(getGarageCompatibleSetupValues(game, value))
-    .filter((item) => item.trim().length > 0).length;
+export function countGarageSetupValues(
+  game: EngineerGame,
+  value: unknown,
+): number {
+  return Object.values(getGarageCompatibleSetupValues(game, value)).filter(
+    (item) => item.trim().length > 0,
+  ).length;
 }
 
-export function parseCreateGarageSessionInput(
-  input: unknown
-): { value: CreateGarageSessionInput | null; error: string | null } {
-  if (!isRecord(input)) return { value: null, error: "Invalid garage session fields." };
+export function parseCreateGarageSessionInput(input: unknown): {
+  value: CreateGarageSessionInput | null;
+  error: string | null;
+} {
+  if (!isRecord(input))
+    return { value: null, error: "Invalid garage session fields." };
 
   const { game, car, track, condition, rig, setupValues, baselineNote } = input;
-  if (typeof game !== "string" || !ENGINEER_GAMES.includes(game as EngineerGame)) {
+  if (
+    typeof game !== "string" ||
+    !ENGINEER_GAMES.includes(game as EngineerGame)
+  ) {
     return { value: null, error: "Choose a supported game." };
   }
   if (typeof car !== "string" || !car.trim()) {
     return { value: null, error: "Car is required." };
   }
   if (car.length > MAX_CAR_LENGTH) {
-    return { value: null, error: `Car name is too long — max ${MAX_CAR_LENGTH} characters.` };
+    return {
+      value: null,
+      error: `Car name is too long — max ${MAX_CAR_LENGTH} characters.`,
+    };
   }
   if (typeof track !== "string" || !track.trim()) {
     return { value: null, error: "Track is required." };
   }
   if (track.length > MAX_TRACK_LENGTH) {
-    return { value: null, error: `Track name is too long — max ${MAX_TRACK_LENGTH} characters.` };
+    return {
+      value: null,
+      error: `Track name is too long — max ${MAX_TRACK_LENGTH} characters.`,
+    };
   }
-  if (typeof condition !== "string" || !conditions.includes(condition as Condition)) {
+  if (
+    typeof condition !== "string" ||
+    !conditions.includes(condition as Condition)
+  ) {
     return { value: null, error: "Choose a valid track condition." };
   }
-  if (rig !== null && (typeof rig !== "string" || !rigProfiles.includes(rig as RigProfile))) {
+  if (
+    rig !== null &&
+    (typeof rig !== "string" || !rigProfiles.includes(rig as RigProfile))
+  ) {
     return { value: null, error: "Choose a valid rig profile." };
   }
-  if (typeof baselineNote !== "string" || baselineNote.length > MAX_GARAGE_NOTE_LENGTH) {
+  if (
+    typeof baselineNote !== "string" ||
+    baselineNote.length > MAX_GARAGE_NOTE_LENGTH
+  ) {
     return { value: null, error: "Baseline note is too long." };
   }
 
-  const normalizedValues = normalizeValuesForGame(game as EngineerGame, setupValues);
+  const normalizedValues = normalizeValuesForGame(
+    game as EngineerGame,
+    setupValues,
+  );
   if (!normalizedValues) {
-    return { value: null, error: "Baseline setup values are invalid for this game." };
+    return {
+      value: null,
+      error: "Baseline setup values are invalid for this game.",
+    };
   }
 
   return {
@@ -205,20 +247,31 @@ export function parseCreateGarageSessionInput(
 
 export function parseCreateGarageRevisionInput(
   input: unknown,
-  game: EngineerGame
+  game: EngineerGame,
 ): { value: CreateGarageRevisionInput | null; error: string | null } {
   if (!ENGINEER_GAMES.includes(game)) {
     return { value: null, error: "This session uses an unsupported game." };
   }
-  if (!isRecord(input) || typeof input.sessionId !== "string" || !isUuid(input.sessionId)) {
+  if (
+    !isRecord(input) ||
+    typeof input.sessionId !== "string" ||
+    !isUuid(input.sessionId)
+  ) {
     return { value: null, error: "That garage session is invalid." };
   }
-  if (typeof input.note !== "string" || input.note.length > MAX_GARAGE_NOTE_LENGTH) {
+  if (
+    typeof input.note !== "string" ||
+    input.note.length > MAX_GARAGE_NOTE_LENGTH
+  ) {
     return { value: null, error: "Revision note is too long." };
   }
 
   const setupValues = normalizeValuesForGame(game, input.setupValues);
-  if (!setupValues) return { value: null, error: "Revision setup values are invalid for this game." };
+  if (!setupValues)
+    return {
+      value: null,
+      error: "Revision setup values are invalid for this game.",
+    };
 
   return {
     value: { sessionId: input.sessionId, setupValues, note: input.note.trim() },
@@ -226,10 +279,12 @@ export function parseCreateGarageRevisionInput(
   };
 }
 
-export function parseCreateGarageRunPlanItemInput(
-  input: unknown
-): { value: CreateGarageRunPlanItemInput | null; error: string | null } {
-  if (!isRecord(input)) return { value: null, error: "Invalid run-plan fields." };
+export function parseCreateGarageRunPlanItemInput(input: unknown): {
+  value: CreateGarageRunPlanItemInput | null;
+  error: string | null;
+} {
+  if (!isRecord(input))
+    return { value: null, error: "Invalid run-plan fields." };
   if (typeof input.sessionId !== "string" || !isUuid(input.sessionId)) {
     return { value: null, error: "That garage session is invalid." };
   }
@@ -242,17 +297,24 @@ export function parseCreateGarageRunPlanItemInput(
   if (input.parameter.length > MAX_GARAGE_PARAMETER_LENGTH) {
     return { value: null, error: "Parameter name is too long." };
   }
-  if (!isGarageDirection(input.direction)) return { value: null, error: "Choose a valid change direction." };
+  if (!isGarageDirection(input.direction))
+    return { value: null, error: "Choose a valid change direction." };
   if (typeof input.amount !== "string" || !input.amount.trim()) {
     return { value: null, error: "Suggested amount is required." };
   }
   if (input.amount.length > MAX_GARAGE_AMOUNT_LENGTH) {
     return { value: null, error: "Suggested amount is too long." };
   }
-  if (typeof input.verdict !== "string" || !GARAGE_VERDICTS.includes(input.verdict as GarageVerdict)) {
+  if (
+    typeof input.verdict !== "string" ||
+    !GARAGE_VERDICTS.includes(input.verdict as GarageVerdict)
+  ) {
     return { value: null, error: "Choose a valid test verdict." };
   }
-  if (typeof input.note !== "string" || input.note.length > MAX_GARAGE_NOTE_LENGTH) {
+  if (
+    typeof input.note !== "string" ||
+    input.note.length > MAX_GARAGE_NOTE_LENGTH
+  ) {
     return { value: null, error: "Run-plan note is too long." };
   }
 
@@ -270,9 +332,10 @@ export function parseCreateGarageRunPlanItemInput(
   };
 }
 
-export function parseCreateGarageLapInput(
-  input: unknown
-): { value: (CreateGarageLapInput & { lapTimeMs: number }) | null; error: string | null } {
+export function parseCreateGarageLapInput(input: unknown): {
+  value: (CreateGarageLapInput & { lapTimeMs: number }) | null;
+  error: string | null;
+} {
   if (!isRecord(input)) return { value: null, error: "Invalid lap fields." };
   if (typeof input.sessionId !== "string" || !isUuid(input.sessionId)) {
     return { value: null, error: "That garage session is invalid." };
@@ -280,13 +343,20 @@ export function parseCreateGarageLapInput(
   if (typeof input.revisionId !== "string" || !isUuid(input.revisionId)) {
     return { value: null, error: "Choose a valid revision." };
   }
-  if (typeof input.condition !== "string" || !conditions.includes(input.condition as Condition)) {
+  if (
+    typeof input.condition !== "string" ||
+    !conditions.includes(input.condition as Condition)
+  ) {
     return { value: null, error: "Choose a valid lap condition." };
   }
-  if (typeof input.note !== "string" || input.note.length > MAX_GARAGE_NOTE_LENGTH) {
+  if (
+    typeof input.note !== "string" ||
+    input.note.length > MAX_GARAGE_NOTE_LENGTH
+  ) {
     return { value: null, error: "Lap note is too long." };
   }
-  if (typeof input.lapTime !== "string") return { value: null, error: "Enter a valid lap time." };
+  if (typeof input.lapTime !== "string")
+    return { value: null, error: "Enter a valid lap time." };
 
   const lapTimeMs = parseLapTimeToMilliseconds(input.lapTime);
   if (lapTimeMs === null) {
@@ -322,10 +392,16 @@ export function parseLapTimeToMilliseconds(value: string): number | null {
   if (hasMinutes && seconds >= 60) return null;
 
   const total = minutes * 60_000 + seconds * 1_000 + milliseconds;
-  if (total < MIN_GARAGE_LAP_TIME_MS || total > MAX_GARAGE_LAP_TIME_MS) return null;
+  if (total < MIN_GARAGE_LAP_TIME_MS || total > MAX_GARAGE_LAP_TIME_MS)
+    return null;
   return total;
 }
 
 function isGarageDirection(value: unknown): value is GarageDirection {
-  return value === "increase" || value === "decrease" || value === "soften" || value === "stiffen";
+  return (
+    value === "increase" ||
+    value === "decrease" ||
+    value === "soften" ||
+    value === "stiffen"
+  );
 }

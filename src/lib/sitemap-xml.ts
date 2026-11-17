@@ -22,8 +22,10 @@ export function serializeSitemap(entries: MetadataRoute.Sitemap): string {
       const lastModified = isoDate(entry.lastModified);
       if (lastModified) fields.push(`<lastmod>${lastModified}</lastmod>`);
     }
-    if (entry.changeFrequency) fields.push(`<changefreq>${entry.changeFrequency}</changefreq>`);
-    if (entry.priority !== undefined) fields.push(`<priority>${entry.priority}</priority>`);
+    if (entry.changeFrequency)
+      fields.push(`<changefreq>${entry.changeFrequency}</changefreq>`);
+    if (entry.priority !== undefined)
+      fields.push(`<priority>${entry.priority}</priority>`);
     return `<url>${fields.join("")}</url>`;
   });
 

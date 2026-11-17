@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { buildInstallReadme, buildZip, type BundledFile } from "@/lib/install-bundle";
+import {
+  buildInstallReadme,
+  buildZip,
+  type BundledFile,
+} from "@/lib/install-bundle";
 import { resolveInstallGuide } from "@/lib/install-guides";
-import { buildSetupExportText, buildSetupExportFilename } from "@/lib/setup-export";
+import {
+  buildSetupExportText,
+  buildSetupExportFilename,
+} from "@/lib/setup-export";
 import { sanitizeFileName } from "@/lib/storage";
 import { getSetupById } from "@/lib/supabase/setups";
 import { logger } from "@/lib/logger";
@@ -16,13 +23,22 @@ const MAX_BUNDLE_FILE_BYTES = 10 * 1024 * 1024;
 async function downloadSetupFile(url: string): Promise<Uint8Array> {
   const controller = new AbortController();
   const timeout = setTimeout(() => {
-    controller.abort(new DOMException("Setup file download timed out", "TimeoutError"));
+    controller.abort(
+      new DOMException("Setup file download timed out", "TimeoutError"),
+    );
   }, FILE_DOWNLOAD_TIMEOUT_MS);
 
   try {
-    const response = await fetch(url, { cache: "no-store", signal: controller.signal });
+    const response = await fetch(url, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
     const contentLength = Number(response.headers.get("content-length"));
-    if (!response.ok || !response.body || contentLength > MAX_BUNDLE_FILE_BYTES) {
+    if (
+      !response.ok ||
+      !response.body ||
+      contentLength > MAX_BUNDLE_FILE_BYTES
+    ) {
       void response.body?.cancel().catch(() => {});
       throw new Error("Setup file is unavailable or too large");
     }
@@ -32,7 +48,9 @@ async function downloadSetupFile(url: string): Promise<Uint8Array> {
     let total = 0;
     // Cancel even a stalled body read when the deadline expires. Fetch's signal
     // bounds the headers request too; this listener keeps body cleanup explicit.
-    const cancel = () => { void reader.cancel().catch(() => {}); };
+    const cancel = () => {
+      void reader.cancel().catch(() => {});
+    };
     controller.signal.addEventListener("abort", cancel, { once: true });
     try {
       while (true) {
@@ -41,7 +59,8 @@ async function downloadSetupFile(url: string): Promise<Uint8Array> {
         controller.signal.throwIfAborted();
         if (done) break;
         total += value.byteLength;
-        if (total > MAX_BUNDLE_FILE_BYTES) throw new Error("Setup file is too large");
+        if (total > MAX_BUNDLE_FILE_BYTES)
+          throw new Error("Setup file is too large");
         chunks.push(value);
       }
     } finally {
@@ -81,12 +100,15 @@ async function downloadSetupFile(url: string): Promise<Uint8Array> {
  */
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
 
   if (!isUuid(id)) {
-    return NextResponse.json({ error: "That setup id is invalid." }, { status: 400 });
+    return NextResponse.json(
+      { error: "That setup id is invalid." },
+      { status: 400 },
+    );
   }
 
   const setup = await getSetupById(id);
@@ -95,11 +117,13 @@ export async function GET(
   }
 
   const guide = resolveInstallGuide(setup.game, setup);
-  const hasValues = Boolean(setup.setupValues && Object.keys(setup.setupValues).length > 0);
+  const hasValues = Boolean(
+    setup.setupValues && Object.keys(setup.setupValues).length > 0,
+  );
   if (!setup.fileUrl && !hasValues) {
     return NextResponse.json(
       { error: "This setup has no file or values to bundle." },
-      { status: 404 }
+      { status: 404 },
     );
   }
 
@@ -110,15 +134,24 @@ export async function GET(
 
   if (setup.fileUrl) {
     try {
-      files.push({ name: setupFileName, content: await downloadSetupFile(setup.fileUrl) });
+      files.push({
+        name: setupFileName,
+        content: await downloadSetupFile(setup.fileUrl),
+      });
     } catch (error) {
-      const timedOut = error instanceof DOMException && error.name === "TimeoutError";
+      const timedOut =
+        error instanceof DOMException && error.name === "TimeoutError";
       logger.error("install bundle: attachment unavailable", { id, timedOut });
       return NextResponse.json(
-        { error: timedOut
-          ? "The setup file took too long to download. Please try again."
-          : "The setup file is unavailable. Please try again." },
-        { status: timedOut ? 504 : 502, headers: { "Cache-Control": "no-store" } }
+        {
+          error: timedOut
+            ? "The setup file took too long to download. Please try again."
+            : "The setup file is unavailable. Please try again.",
+        },
+        {
+          status: timedOut ? 504 : 502,
+          headers: { "Cache-Control": "no-store" },
+        },
       );
     }
   }
@@ -149,13 +182,16 @@ export async function GET(
       fileExtension: guide.fileExtension,
       steps: guide.steps,
     },
-    exportedValues
+    exportedValues,
   );
-  files.unshift({ name: "README.txt", content: new TextEncoder().encode(readme) });
+  files.unshift({
+    name: "README.txt",
+    content: new TextEncoder().encode(readme),
+  });
 
   const archive = buildZip(files);
   const archiveName = sanitizeFileName(
-    `${setup.car} @ ${setup.track} — SetupSheet.zip`.replace(/[—]/g, "-")
+    `${setup.car} @ ${setup.track} — SetupSheet.zip`.replace(/[—]/g, "-"),
   );
 
   return new NextResponse(new Uint8Array(archive), {

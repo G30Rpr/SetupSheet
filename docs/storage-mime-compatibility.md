@@ -6,9 +6,9 @@ The production `setup-files` bucket has a 10 MiB size ceiling and owner-folder R
 
 Current application-declared extensions:
 
-| Usage | Extensions |
-|---|---|
-| Setup | `.sto`, `.json`, `.ini`, `.svm`, `.sav`, `.txt`, `.xml`, `.csv` |
+| Usage     | Extensions                                                                  |
+| --------- | --------------------------------------------------------------------------- |
+| Setup     | `.sto`, `.json`, `.ini`, `.svm`, `.sav`, `.txt`, `.xml`, `.csv`             |
 | Telemetry | `.ld`, `.ldx`, `.ibt`, `.vbo`, `.drf`, `.csv`, `.zip`, `.zvp`, `.telemetry` |
 
 - The application validates extension, file size and a minimal signature for some text, JSON, XML and ZIP types. Opaque game formats cannot be certified with this check alone.

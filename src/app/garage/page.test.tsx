@@ -53,7 +53,10 @@ function getDashboardProps(element: unknown): Record<string, unknown> {
   return (element as ReactElement<Record<string, unknown>>).props;
 }
 
-function findElementOfType(element: unknown, targetType: ElementType): ReactElement<Record<string, unknown>> | null {
+function findElementOfType(
+  element: unknown,
+  targetType: ElementType,
+): ReactElement<Record<string, unknown>> | null {
   if (Array.isArray(element)) {
     for (const child of element) {
       const match = findElementOfType(child, targetType);
@@ -75,14 +78,19 @@ describe("GaragePage start-from-setup source", () => {
     createClientMock.mockResolvedValue({});
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     getGarageSessionsMock.mockResolvedValue({ sessions: [], error: false });
-    getGarageSessionDetailMock.mockResolvedValue({ detail: null, error: false });
+    getGarageSessionDetailMock.mockResolvedValue({
+      detail: null,
+      error: false,
+    });
     getSetupByIdMock.mockResolvedValue(sourceSetup);
   });
 
   it("preserves a validated source setup through Discord sign-in", async () => {
     getCurrentUserMock.mockResolvedValue(null);
 
-    const element = await GaragePage({ searchParams: Promise.resolve({ from: SOURCE_SETUP_ID }) });
+    const element = await GaragePage({
+      searchParams: Promise.resolve({ from: SOURCE_SETUP_ID }),
+    });
     const loginButton = findElementOfType(element, DiscordLoginButton);
 
     expect(loginButton?.props.nextPath).toBe(`/garage?from=${SOURCE_SETUP_ID}`);
@@ -92,14 +100,18 @@ describe("GaragePage start-from-setup source", () => {
   it("does not carry an invalid source ID into the sign-in return path", async () => {
     getCurrentUserMock.mockResolvedValue(null);
 
-    const element = await GaragePage({ searchParams: Promise.resolve({ from: "not-a-uuid" }) });
+    const element = await GaragePage({
+      searchParams: Promise.resolve({ from: "not-a-uuid" }),
+    });
     const loginButton = findElementOfType(element, DiscordLoginButton);
 
     expect(loginButton?.props.nextPath).toBe("/garage");
   });
 
   it("validates and reads a public setup through the normal reader, passing only server-derived metadata", async () => {
-    const element = await GaragePage({ searchParams: Promise.resolve({ from: SOURCE_SETUP_ID }) });
+    const element = await GaragePage({
+      searchParams: Promise.resolve({ from: SOURCE_SETUP_ID }),
+    });
     const props = getDashboardProps(element);
 
     expect(getSetupByIdMock).toHaveBeenCalledWith(SOURCE_SETUP_ID);
@@ -117,7 +129,9 @@ describe("GaragePage start-from-setup source", () => {
   });
 
   it("does not query malformed setup IDs", async () => {
-    const element = await GaragePage({ searchParams: Promise.resolve({ from: "not-a-uuid" }) });
+    const element = await GaragePage({
+      searchParams: Promise.resolve({ from: "not-a-uuid" }),
+    });
     const props = getDashboardProps(element);
 
     expect(getSetupByIdMock).not.toHaveBeenCalled();
@@ -128,7 +142,9 @@ describe("GaragePage start-from-setup source", () => {
   it("does not read public setup data before authentication", async () => {
     getCurrentUserMock.mockResolvedValue(null);
 
-    await GaragePage({ searchParams: Promise.resolve({ from: SOURCE_SETUP_ID }) });
+    await GaragePage({
+      searchParams: Promise.resolve({ from: SOURCE_SETUP_ID }),
+    });
 
     expect(getSetupByIdMock).not.toHaveBeenCalled();
     expect(getGarageSessionsMock).not.toHaveBeenCalled();

@@ -25,11 +25,15 @@ import { navLinks } from "@/lib/nav-links";
 import { getUserDisplayName } from "@/lib/user-display";
 import type { NotificationItem } from "@/lib/supabase/notifications";
 
-const desktopNavLinks = navLinks.filter(({ href }) => href !== "/" && href !== "/upload");
+const desktopNavLinks = navLinks.filter(
+  ({ href }) => href !== "/" && href !== "/upload",
+);
 const menuNavLinks = navLinks.filter(({ href }) => href !== "/upload");
 
 function isActiveNavLink(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+  return href === "/"
+    ? pathname === "/"
+    : pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export function SiteHeader({
@@ -51,7 +55,9 @@ export function SiteHeader({
   function handleSearchSubmit(e: FormEvent) {
     e.preventDefault();
     const trimmed = query.trim();
-    router.push(trimmed ? `/setups?q=${encodeURIComponent(trimmed)}` : "/setups");
+    router.push(
+      trimmed ? `/setups?q=${encodeURIComponent(trimmed)}` : "/setups",
+    );
     setOpen(false);
   }
 
@@ -72,7 +78,14 @@ export function SiteHeader({
   // as GitHub/Slack -- skipped while already typing somewhere else.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return;
+      if (
+        e.key !== "/" ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        isTypingTarget(e.target)
+      )
+        return;
       e.preventDefault();
       focusSearch();
     }
@@ -96,7 +109,10 @@ export function SiteHeader({
           </span>
         </Link>
 
-        <nav aria-label="Primary navigation" className="hidden shrink-0 items-center gap-3 lg:flex">
+        <nav
+          aria-label="Primary navigation"
+          className="hidden shrink-0 items-center gap-3 lg:flex"
+        >
           {desktopNavLinks.map((link) => {
             const isCurrent = isActiveNavLink(pathname, link.href);
             return (
@@ -112,7 +128,10 @@ export function SiteHeader({
           })}
         </nav>
 
-        <form onSubmit={handleSearchSubmit} className="relative hidden min-w-0 flex-1 max-w-sm lg:block 2xl:max-w-56">
+        <form
+          onSubmit={handleSearchSubmit}
+          className="relative hidden min-w-0 flex-1 max-w-sm lg:block 2xl:max-w-56"
+        >
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             ref={searchInputRef}
@@ -177,7 +196,10 @@ export function SiteHeader({
                     />
                   </div>
                 </form>
-                <nav aria-label="Primary navigation" className="flex flex-col gap-1 px-4">
+                <nav
+                  aria-label="Primary navigation"
+                  className="flex flex-col gap-1 px-4"
+                >
                   {menuNavLinks.map((link) => {
                     const isCurrent = isActiveNavLink(pathname, link.href);
                     return (
@@ -232,7 +254,9 @@ function MobileAuthRow({
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="h-11 w-full animate-pulse rounded-md bg-secondary" />;
+    return (
+      <div className="h-11 w-full animate-pulse rounded-md bg-secondary" />
+    );
   }
 
   if (user) {

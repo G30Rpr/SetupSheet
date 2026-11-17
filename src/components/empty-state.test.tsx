@@ -13,7 +13,7 @@ describe("EmptyState", () => {
         icon={TriangleAlert}
         title="No requests yet"
         description="Be the first to ask the community for a setup."
-      />
+      />,
     );
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -29,11 +29,13 @@ describe("EmptyState", () => {
         title="Couldn't load the requests board"
         description="The board isn't responding right now."
         action={<button type="button">Try again</button>}
-      />
+      />,
     );
 
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("Couldn't load the requests board");
-    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Try again" }),
+    ).toBeInTheDocument();
   });
 });

@@ -23,18 +23,26 @@ function getCreateFieldTestError(error: unknown): string {
   if (candidate?.code === "23505") {
     return "You already submitted a field test for this setup today (UTC).";
   }
-  return getActionError(error, "Couldn't submit that field test right now.", FIELD_TEST_CREATE_MESSAGES);
+  return getActionError(
+    error,
+    "Couldn't submit that field test right now.",
+    FIELD_TEST_CREATE_MESSAGES,
+  );
 }
 
 export async function createFieldTestReport(
-  input: unknown
+  input: unknown,
 ): Promise<{ reportId: string | null; error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
   if (!user) return { reportId: null, error: "Log in to submit a field test." };
 
   const parsed = parseCreateFieldTestReportInput(input);
-  if (!parsed.value) return { reportId: null, error: parsed.error ?? "Field-test details are invalid." };
+  if (!parsed.value)
+    return {
+      reportId: null,
+      error: parsed.error ?? "Field-test details are invalid.",
+    };
 
   const { value } = parsed;
   const { data, error } = await supabase.rpc("create_field_test_report", {
@@ -56,25 +64,34 @@ export async function createFieldTestReport(
 }
 
 export async function setFieldTestReportAttribution(
-  input: unknown
+  input: unknown,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
   if (!user) return { error: "Log in to change field-test attribution." };
 
   const parsed = parseSetFieldTestAttributionInput(input);
-  if (!parsed.value) return { error: parsed.error ?? "Attribution preference is invalid." };
+  if (!parsed.value)
+    return { error: parsed.error ?? "Attribution preference is invalid." };
 
-  const { data, error } = await supabase.rpc("set_field_test_report_attribution", {
-    p_report_id: parsed.value.reportId,
-    p_show_name: parsed.value.showName,
-  });
+  const { data, error } = await supabase.rpc(
+    "set_field_test_report_attribution",
+    {
+      p_report_id: parsed.value.reportId,
+      p_show_name: parsed.value.showName,
+    },
+  );
   if (error || typeof data !== "string") {
-    logger.error("setFieldTestReportAttribution: update failed", error ?? new Error("RPC returned no setup ID"));
+    logger.error(
+      "setFieldTestReportAttribution: update failed",
+      error ?? new Error("RPC returned no setup ID"),
+    );
     return {
-      error: getActionError(error, "Couldn't update that report's attribution right now.", [
-        "Field-test report not found",
-      ]),
+      error: getActionError(
+        error,
+        "Couldn't update that report's attribution right now.",
+        ["Field-test report not found"],
+      ),
     };
   }
 

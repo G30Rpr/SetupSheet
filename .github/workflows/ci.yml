@@ -25,6 +25,7 @@ jobs:
           node-version: "24"
           cache: npm
       - run: npm ci
+      - run: npm run format:check
       - run: npm run lint
       # `next build` type-checks too, but only when it can resolve TypeScript and
       # it reports the first error after a long build; a separate step names the

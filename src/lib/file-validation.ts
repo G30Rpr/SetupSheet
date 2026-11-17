@@ -1,4 +1,11 @@
-const TEXT_EXTENSIONS = new Set([".json", ".ini", ".txt", ".xml", ".csv", ".vbo"]);
+const TEXT_EXTENSIONS = new Set([
+  ".json",
+  ".ini",
+  ".txt",
+  ".xml",
+  ".csv",
+  ".vbo",
+]);
 const ZIP_SIGNATURE = [0x50, 0x4b, 0x03, 0x04];
 const MAX_SIGNATURE_BYTES = 512;
 
@@ -14,10 +21,10 @@ function startsWithBytes(bytes: Uint8Array, signature: number[]) {
  */
 export async function validateFileSignature(
   file: Blob,
-  extension: string
+  extension: string,
 ): Promise<string | null> {
   const bytes = new Uint8Array(
-    await file.slice(0, MAX_SIGNATURE_BYTES).arrayBuffer()
+    await file.slice(0, MAX_SIGNATURE_BYTES).arrayBuffer(),
   );
 
   if (extension === ".zip") {

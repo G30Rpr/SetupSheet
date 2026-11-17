@@ -1,4 +1,5 @@
 <!-- BEGIN:nextjs-agent-rules -->
+
 # Next.js version note
 
 This project runs a standard, published Next.js release — `next ^16.3.3`

@@ -65,8 +65,12 @@ describe("SetupCard trust labels", () => {
   it("never labels a setup 'Verified' just because a file is attached", () => {
     render(
       <SetupCard
-        setup={{ ...baseSetup, fileUrl: "https://example.com/x.json", fileName: "x.json" }}
-      />
+        setup={{
+          ...baseSetup,
+          fileUrl: "https://example.com/x.json",
+          fileName: "x.json",
+        }}
+      />,
     );
 
     expect(screen.queryByText("Verified")).not.toBeInTheDocument();
@@ -76,12 +80,19 @@ describe("SetupCard trust labels", () => {
   it("keeps 'Lap evidence attached' for attached evidence and defines it in place", () => {
     render(
       <SetupCard
-        setup={{ ...baseSetup, isVerifiedLap: true, videoUrl: "https://youtu.be/abc" }}
-      />
+        setup={{
+          ...baseSetup,
+          isVerifiedLap: true,
+          videoUrl: "https://youtu.be/abc",
+        }}
+      />,
     );
 
     const badge = screen.getByText("Lap evidence attached");
-    expect(badge).toHaveAttribute("title", expect.stringContaining("not a site verification"));
+    expect(badge).toHaveAttribute(
+      "title",
+      expect.stringContaining("not a site verification"),
+    );
   });
 
   it("does not advertise a zero download count", () => {
@@ -89,8 +100,13 @@ describe("SetupCard trust labels", () => {
     // "0 downloads" nor "Be the first" bait (P3: honest score treatment).
     render(
       <SetupCard
-        setup={{ ...baseSetup, fileUrl: "https://example.com/x.json", fileName: "x.json", downloads: 0 }}
-      />
+        setup={{
+          ...baseSetup,
+          fileUrl: "https://example.com/x.json",
+          fileName: "x.json",
+          downloads: 0,
+        }}
+      />,
     );
 
     expect(screen.queryByText("0 downloads")).not.toBeInTheDocument();
@@ -101,28 +117,43 @@ describe("SetupCard trust labels", () => {
     render(
       <SetupCard
         variant="detail"
-        setup={{ ...baseSetup, fileUrl: "https://example.com/x.json", fileName: "x.json" }}
-      />
+        setup={{
+          ...baseSetup,
+          fileUrl: "https://example.com/x.json",
+          fileName: "x.json",
+        }}
+      />,
     );
     expect(screen.getByText("Get this setup")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /download setup/i })).toBeInTheDocument();
-    expect(screen.getByText(/Free download · No account required/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /download setup/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Free download · No account required/),
+    ).toBeInTheDocument();
   });
 
   it("shows the download count once it is real", () => {
     render(
       <SetupCard
-        setup={{ ...baseSetup, fileUrl: "https://example.com/x.json", fileName: "x.json", downloads: 2 }}
-      />
+        setup={{
+          ...baseSetup,
+          fileUrl: "https://example.com/x.json",
+          fileName: "x.json",
+          downloads: 2,
+        }}
+      />,
     );
 
     expect(
-      screen.getByRole("button", { name: /download setup/i })
+      screen.getByRole("button", { name: /download setup/i }),
     ).toHaveTextContent("2 downloads");
   });
 
   it("shows a field-test badge only when the server supplies a positive public count", () => {
-    const { rerender } = render(<SetupCard setup={baseSetup} fieldTestCount={0} />);
+    const { rerender } = render(
+      <SetupCard setup={baseSetup} fieldTestCount={0} />,
+    );
     expect(screen.queryByText("0 field tests")).not.toBeInTheDocument();
 
     rerender(<SetupCard setup={baseSetup} fieldTestCount={3} />);
@@ -135,8 +166,12 @@ describe("SetupCard actions", () => {
   it("keeps report and share behind one overflow menu instead of on every card face", () => {
     render(<SetupCard setup={baseSetup} />);
 
-    expect(screen.getByRole("button", { name: /more actions/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /more actions/i }),
+    ).toBeInTheDocument();
     // Radix unmounts closed menu content, so the report link is one tap in.
-    expect(screen.queryByRole("link", { name: /report setup/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /report setup/i }),
+    ).not.toBeInTheDocument();
   });
 });

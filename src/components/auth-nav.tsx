@@ -42,10 +42,7 @@ export function DiscordLoginButton({
     <Button
       onClick={() => void signInWithDiscord(nextPath)}
       size="sm"
-      className={cn(
-        "bg-discord text-white hover:bg-discord-hover",
-        className
-      )}
+      className={cn("bg-discord text-white hover:bg-discord-hover", className)}
     >
       <DiscordIcon className="size-4" />
       Login with Discord
@@ -119,7 +116,13 @@ export function AuthNav() {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div role="status" aria-label="Loading account" className="size-11 animate-pulse rounded-full bg-secondary" />;
+    return (
+      <div
+        role="status"
+        aria-label="Loading account"
+        className="size-11 animate-pulse rounded-full bg-secondary"
+      />
+    );
   }
 
   return user ? <UserMenu /> : <DiscordLoginButton />;

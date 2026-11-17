@@ -5,7 +5,9 @@ test("requests board reports an unreachable database instead of an empty board",
 }) => {
   await page.goto("/requests");
 
-  await expect(page.getByRole("heading", { name: "Setup Requests" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Setup Requests" }),
+  ).toBeVisible();
 
   // No live Supabase project is reachable here, so getSetupRequestsPage() and
   // getMostWantedRequests() both fail.
@@ -16,7 +18,9 @@ test("requests board reports an unreachable database instead of an empty board",
   // state and offers a retry, so the two assertions below are what keeps that
   // regression from coming back: the outage copy must be present, and the
   // empty-board copy must not.
-  await expect(page.getByText("Couldn't load the requests board")).toBeVisible();
+  await expect(
+    page.getByText("Couldn't load the requests board"),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
   await expect(page.getByText("No requests yet")).toHaveCount(0);
 
@@ -27,5 +31,7 @@ test("requests board reports an unreachable database instead of an empty board",
 
 test("nav includes a link to the requests board", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("link", { name: "Requests" }).first()).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Requests" }).first(),
+  ).toBeVisible();
 });

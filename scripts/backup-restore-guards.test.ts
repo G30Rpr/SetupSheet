@@ -22,6 +22,8 @@ describe("operator-controlled backup and restore scripts", () => {
       timeout: 3000,
     });
     expect(result.status).not.toBe(0);
-    expect(result.stdout).not.toMatch(/Restore completed|Encrypted backup saved/);
+    expect(result.stdout).not.toMatch(
+      /Restore completed|Encrypted backup saved/,
+    );
   });
 });

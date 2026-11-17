@@ -21,7 +21,8 @@ export function getUserDisplayName(user: UserLike): string {
     user.email,
   ];
   const displayName = candidates.find(
-    (value): value is string => typeof value === "string" && value.trim().length > 0
+    (value): value is string =>
+      typeof value === "string" && value.trim().length > 0,
   );
   return sanitizeDisplayName(displayName);
 }

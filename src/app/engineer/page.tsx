@@ -7,7 +7,8 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const title = "Setup Engineer";
 const socialTitle = fullPageTitle(title);
-const description = "Describe a sim-racing setup symptom and get a ranked, static test plan for ACC and Le Mans Ultimate.";
+const description =
+  "Describe a sim-racing setup symptom and get a ranked, static test plan for ACC and Le Mans Ultimate.";
 
 export const metadata: Metadata = {
   title,

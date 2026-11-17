@@ -12,7 +12,7 @@ import { isUuid } from "@/lib/utils";
 /** Follows or unfollows targetUserId as the current user. */
 export async function toggleFollow(
   targetUserId: string,
-  isCurrentlyFollowing: boolean
+  isCurrentlyFollowing: boolean,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
@@ -34,11 +34,15 @@ export async function toggleFollow(
         .delete()
         .eq("follower_id", user.id)
         .eq("followed_id", targetUserId)
-    : await supabase.from("follows").insert({ follower_id: user.id, followed_id: targetUserId });
+    : await supabase
+        .from("follows")
+        .insert({ follower_id: user.id, followed_id: targetUserId });
 
   if (error) {
     logger.error("toggleFollow: mutation failed", error);
-    return { error: getActionError(error, "Couldn't update your follow status.") };
+    return {
+      error: getActionError(error, "Couldn't update your follow status."),
+    };
   }
 
   for (const tag of tagsForProfileMutation()) revalidateTag(tag, "max");

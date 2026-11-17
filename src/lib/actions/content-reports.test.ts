@@ -33,10 +33,13 @@ describe("submitContentReport", () => {
 
   it("rejects malformed targets and reasons before touching Supabase", async () => {
     await expect(
-      submitContentReport({ ...validInput, targetId: "not-a-uuid" })
+      submitContentReport({ ...validInput, targetId: "not-a-uuid" }),
     ).resolves.toEqual({ error: "Invalid report." });
     await expect(
-      submitContentReport({ ...validInput, reason: "unknown" as ContentReportInput["reason"] })
+      submitContentReport({
+        ...validInput,
+        reason: "unknown" as ContentReportInput["reason"],
+      }),
     ).resolves.toEqual({ error: "Invalid report." });
     expect(createClientMock).not.toHaveBeenCalled();
   });
@@ -46,7 +49,9 @@ describe("submitContentReport", () => {
     createClientMock.mockResolvedValue(supabase);
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
 
-    await expect(submitContentReport(validInput)).resolves.toEqual({ error: null });
+    await expect(submitContentReport(validInput)).resolves.toEqual({
+      error: null,
+    });
     expect(supabase.insert).toHaveBeenCalledWith({
       reporter_id: "user-1",
       target_type: "setup",

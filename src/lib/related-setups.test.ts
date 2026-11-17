@@ -8,7 +8,9 @@ const self: RelatedCandidate = {
   tags: ["Race", "Quali"],
 };
 
-function candidate(overrides: Partial<RelatedCandidate> & { id: string }): RelatedCandidate {
+function candidate(
+  overrides: Partial<RelatedCandidate> & { id: string },
+): RelatedCandidate {
   return {
     rigProfile: "Direct Drive + Load Cell",
     tags: ["Race", "Quali"],
@@ -23,7 +25,7 @@ describe("pickRelatedSetups", () => {
         candidate({ id: "other-rig", rigProfile: "Wheel + 3 Pedals" }),
         candidate({ id: "other-style", tags: ["Safe", "Beginner"] }),
       ],
-      self
+      self,
     );
 
     expect(picked.map((c) => c.id)).toEqual(["other-rig", "other-style"]);
@@ -36,10 +38,14 @@ describe("pickRelatedSetups", () => {
         candidate({ id: "rig-first", rigProfile: "Gamepad" }),
         candidate({ id: "style-only-2", tags: ["Aggressive"] }),
       ],
-      self
+      self,
     );
 
-    expect(picked.map((c) => c.id)).toEqual(["rig-first", "style-only", "style-only-2"]);
+    expect(picked.map((c) => c.id)).toEqual([
+      "rig-first",
+      "style-only",
+      "style-only-2",
+    ]);
   });
 
   it("never returns the setup being viewed or identical duplicates", () => {
@@ -48,7 +54,7 @@ describe("pickRelatedSetups", () => {
         self,
         candidate({ id: "duplicate" }), // same rig + same tags
       ],
-      self
+      self,
     );
 
     expect(picked).toEqual([]);
@@ -56,9 +62,11 @@ describe("pickRelatedSetups", () => {
 
   it("respects the limit after filtering", () => {
     const picked = pickRelatedSetups(
-      Array.from({ length: 8 }, (_, i) => candidate({ id: `c${i}`, rigProfile: `Rig ${i}` })),
+      Array.from({ length: 8 }, (_, i) =>
+        candidate({ id: `c${i}`, rigProfile: `Rig ${i}` }),
+      ),
       self,
-      3
+      3,
     );
 
     expect(picked).toHaveLength(3);
@@ -71,7 +79,7 @@ describe("pickRelatedSetups", () => {
         candidate({ id: "fewer-tags", tags: ["Race"] }),
         candidate({ id: "more-tags", tags: ["Race", "Quali", "Beginner"] }),
       ],
-      self
+      self,
     );
 
     expect(picked.map((c) => c.id)).toEqual(["fewer-tags", "more-tags"]);

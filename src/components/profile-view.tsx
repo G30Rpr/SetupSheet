@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { Bookmark, Calendar, Flag, Star, TrendingUp, Upload, Users } from "lucide-react";
+import {
+  Bookmark,
+  Calendar,
+  Flag,
+  Star,
+  TrendingUp,
+  Upload,
+  Users,
+} from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -7,7 +15,10 @@ import { Card } from "@/components/ui/card";
 import { ContributorBadge } from "@/components/contributor-badge";
 import { EmptyState } from "@/components/empty-state";
 import { FollowButton } from "@/components/follow-button";
-import { ProfileSetupsGrid, type ProfilePagination } from "@/components/profile-setups-grid";
+import {
+  ProfileSetupsGrid,
+  type ProfilePagination,
+} from "@/components/profile-setups-grid";
 import { getInitials } from "@/lib/utils";
 import type { ProfileSetupStats } from "@/lib/supabase/setups";
 import type { Setup } from "@/lib/types";
@@ -59,8 +70,10 @@ export function ProfileView({
   favoritedSetups?: Setup[];
 }) {
   const setupCount = stats?.setupCount ?? setups.length;
-  const totalUpvotes = stats?.totalUpvotes ?? setups.reduce((sum, s) => sum + s.upvotes, 0);
-  const totalRatings = stats?.totalRatings ?? setups.reduce((sum, s) => sum + s.ratingCount, 0);
+  const totalUpvotes =
+    stats?.totalUpvotes ?? setups.reduce((sum, s) => sum + s.upvotes, 0);
+  const totalRatings =
+    stats?.totalRatings ?? setups.reduce((sum, s) => sum + s.ratingCount, 0);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -87,7 +100,10 @@ export function ProfileView({
 
         {follow && (
           <div className="flex items-center gap-3">
-            <FollowButton targetUserId={follow.targetUserId} initialIsFollowing={follow.initialIsFollowing} />
+            <FollowButton
+              targetUserId={follow.targetUserId}
+              initialIsFollowing={follow.initialIsFollowing}
+            />
             <Link
               href={`/report?type=profile&id=${encodeURIComponent(follow.targetUserId)}`}
               className="inline-flex min-h-11 items-center gap-1 px-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
@@ -100,7 +116,9 @@ export function ProfileView({
 
         <div className="flex w-full flex-wrap items-center justify-around gap-4 sm:w-auto sm:justify-start sm:gap-5">
           <div className="flex flex-col items-center">
-            <span className="font-mono text-lg font-semibold tabular-nums">{setupCount}</span>
+            <span className="font-mono text-lg font-semibold tabular-nums">
+              {setupCount}
+            </span>
             <span className="text-xs text-muted-foreground">Setups</span>
           </div>
           <div className="flex flex-col items-center">
@@ -163,7 +181,9 @@ export function ProfileView({
         <EmptyState
           icon={Upload}
           title={
-            isOwnProfile ? "You haven't shared any setups yet" : `${displayName} hasn't shared any setups yet`
+            isOwnProfile
+              ? "You haven't shared any setups yet"
+              : `${displayName} hasn't shared any setups yet`
           }
           description={
             isOwnProfile
@@ -186,7 +206,10 @@ export function ProfileView({
             <Bookmark className="size-4.5 fill-current text-muted-foreground" />
             Saved Setups
           </h2>
-          <ProfileSetupsGrid key={favoritedSetups[0]?.id ?? "no-saved-setups"} setups={favoritedSetups} />
+          <ProfileSetupsGrid
+            key={favoritedSetups[0]?.id ?? "no-saved-setups"}
+            setups={favoritedSetups}
+          />
         </div>
       )}
     </div>
