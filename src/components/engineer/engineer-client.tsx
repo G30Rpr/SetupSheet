@@ -2,7 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, CloudRain, Info, ShieldCheck, Sun, TriangleAlert } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  CloudRain,
+  Info,
+  ShieldCheck,
+  Sun,
+  TriangleAlert,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,7 +70,10 @@ const noCalibrationFactors: EngineerCalibrationFactor[] = [];
 
 function formatAmount(amount: number | string, unit?: string): string {
   if (!unit) return String(amount);
-  const renderedUnit = unit.replace("(s)", typeof amount === "number" && amount === 1 ? "" : "s");
+  const renderedUnit = unit.replace(
+    "(s)",
+    typeof amount === "number" && amount === 1 ? "" : "s",
+  );
   return `${amount} ${renderedUnit}`;
 }
 
@@ -86,7 +97,9 @@ export function EngineerClient({
   setups?: Setup[];
 } = {}) {
   const [game, setGame] = useState<EngineerGame>(ENGINEER_GAMES[0]);
-  const [symptomId, setSymptomId] = useState<EngineerSymptomId>(ENGINEER_SYMPTOMS[0].id);
+  const [symptomId, setSymptomId] = useState<EngineerSymptomId>(
+    ENGINEER_SYMPTOMS[0].id,
+  );
   const [severity, setSeverity] = useState<EngineerSeverity>("moderate");
   const [condition, setCondition] = useState<EngineerCondition>("dry");
   const [calibrationState, setCalibrationState] = useState<CalibrationUiState>({
@@ -104,7 +117,13 @@ export function EngineerClient({
         if (isCurrent) setCalibrationState({ game, condition, ...queryResult });
       })
       .catch(() => {
-        if (isCurrent) setCalibrationState({ game, condition, status: "unavailable", factors: [] });
+        if (isCurrent)
+          setCalibrationState({
+            game,
+            condition,
+            status: "unavailable",
+            factors: [],
+          });
       });
 
     return () => {
@@ -114,38 +133,45 @@ export function EngineerClient({
 
   const calibrationMatchesSelection =
     calibrationState.game === game && calibrationState.condition === condition;
-  const calibrationFactors = calibrationMatchesSelection && calibrationState.status === "available"
-    ? calibrationState.factors
-    : noCalibrationFactors;
+  const calibrationFactors =
+    calibrationMatchesSelection && calibrationState.status === "available"
+      ? calibrationState.factors
+      : noCalibrationFactors;
   const staticResult = useMemo(
     () => getEngineerRecommendations({ game, symptomId, severity, condition }),
-    [condition, game, severity, symptomId]
+    [condition, game, severity, symptomId],
   );
   const result = useMemo(
-    () => applyPublicEngineerCalibration(
-      staticResult,
-      { game, symptomId, severity, condition },
-      calibrationFactors
-    ),
-    [calibrationFactors, condition, game, severity, staticResult, symptomId]
+    () =>
+      applyPublicEngineerCalibration(
+        staticResult,
+        { game, symptomId, severity, condition },
+        calibrationFactors,
+      ),
+    [calibrationFactors, condition, game, severity, staticResult, symptomId],
   );
-  const hasAppliedEvidence = result.recommendations.some((recommendation) => recommendation.publicEvidence);
-  const selectedSymptom = ENGINEER_SYMPTOMS.find((symptom) => symptom.id === symptomId);
+  const hasAppliedEvidence = result.recommendations.some(
+    (recommendation) => recommendation.publicEvidence,
+  );
+  const selectedSymptom = ENGINEER_SYMPTOMS.find(
+    (symptom) => symptom.id === symptomId,
+  );
   // Engineer loop: deterministic symptom -> setups matching (option A table).
   const wet = condition === "wet";
   const symptomMapping = mappingForSymptom(symptomId, wet);
   const symptomMatches = useMemo(
     () => setupsForSymptom(setups, symptomId, wet, { game }),
-    [setups, symptomId, wet, game]
+    [setups, symptomId, wet, game],
   );
   const browseLink = browseLinkForSymptom(symptomId, wet);
-  const calibrationMessage = !calibrationMatchesSelection || calibrationState.status === "loading"
-    ? "Static recommendations are ready immediately; public evidence may adjust ranking when available."
-    : calibrationState.status === "unavailable"
-      ? "Public evidence could not be loaded. The static fallback remains active."
-      : hasAppliedEvidence
-        ? "Recent public field-test evidence adjusted ranking only. Suggested amounts and wet rules remain unchanged."
-        : "No eligible recent evidence matched these exact parameters and directions. Static ranking remains in use.";
+  const calibrationMessage =
+    !calibrationMatchesSelection || calibrationState.status === "loading"
+      ? "Static recommendations are ready immediately; public evidence may adjust ranking when available."
+      : calibrationState.status === "unavailable"
+        ? "Public evidence could not be loaded. The static fallback remains active."
+        : hasAppliedEvidence
+          ? "Recent public field-test evidence adjusted ranking only. Suggested amounts and wet rules remain unchanged."
+          : "No eligible recent evidence matched these exact parameters and directions. Static ranking remains in use.";
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -155,36 +181,59 @@ export function EngineerClient({
             <ShieldCheck aria-hidden="true" />
             Static Engineer · No account required
           </Badge>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Find a calmer next setup change</h1>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Find a calmer next setup change
+          </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-            Describe what the car is doing and get a short, ranked test plan for ACC or Le Mans Ultimate.
-            Advice is available immediately from a local knowledge base; it does not depend on live data.
+            Describe what the car is doing and get a short, ranked test plan for
+            ACC or Le Mans Ultimate. Advice is available immediately from a
+            local knowledge base; it does not depend on live data.
           </p>
         </div>
         <p className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
-          <span className="size-2 rounded-full bg-muted-foreground" aria-hidden="true" />
+          <span
+            className="size-2 rounded-full bg-muted-foreground"
+            aria-hidden="true"
+          />
           Static recommendations ready
         </p>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
-        <section aria-labelledby="engineer-input-heading" className="rounded-xl border border-border/80 bg-card p-5 shadow-card sm:p-7">
+        <section
+          aria-labelledby="engineer-input-heading"
+          className="rounded-xl border border-border/80 bg-card p-5 shadow-card sm:p-7"
+        >
           <div className="mb-6">
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">01 / Describe</p>
-            <h2 id="engineer-input-heading" className="mt-2 text-xl font-semibold">What are you feeling?</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Start with one repeatable symptom.</p>
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              01 / Describe
+            </p>
+            <h2
+              id="engineer-input-heading"
+              className="mt-2 text-xl font-semibold"
+            >
+              What are you feeling?
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Start with one repeatable symptom.
+            </p>
           </div>
 
           <div className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="engineer-game">Game</Label>
-              <Select value={game} onValueChange={(value) => setGame(value as EngineerGame)}>
+              <Select
+                value={game}
+                onValueChange={(value) => setGame(value as EngineerGame)}
+              >
                 <SelectTrigger id="engineer-game" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {ENGINEER_GAMES.map((option) => (
-                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -192,7 +241,12 @@ export function EngineerClient({
 
             <div className="space-y-2">
               <Label htmlFor="engineer-symptom">Symptom</Label>
-              <Select value={symptomId} onValueChange={(value) => setSymptomId(value as EngineerSymptomId)}>
+              <Select
+                value={symptomId}
+                onValueChange={(value) =>
+                  setSymptomId(value as EngineerSymptomId)
+                }
+              >
                 <SelectTrigger id="engineer-symptom" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
@@ -204,12 +258,20 @@ export function EngineerClient({
                   ))}
                 </SelectContent>
               </Select>
-              {selectedSymptom && <p className="text-xs leading-5 text-muted-foreground">{selectedSymptom.description}</p>}
+              {selectedSymptom && (
+                <p className="text-xs leading-5 text-muted-foreground">
+                  {selectedSymptom.description}
+                </p>
+              )}
             </div>
 
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium">Severity</legend>
-              <div className="grid grid-cols-3 gap-2" role="group" aria-label="Symptom severity">
+              <div
+                className="grid grid-cols-3 gap-2"
+                role="group"
+                aria-label="Symptom severity"
+              >
                 {ENGINEER_SEVERITIES.map((option) => (
                   <Button
                     key={option}
@@ -228,7 +290,11 @@ export function EngineerClient({
 
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium">Track condition</legend>
-              <div className="grid grid-cols-2 gap-2" role="group" aria-label="Track condition">
+              <div
+                className="grid grid-cols-2 gap-2"
+                role="group"
+                aria-label="Track condition"
+              >
                 <Button
                   type="button"
                   size="sm"
@@ -256,41 +322,77 @@ export function EngineerClient({
           </div>
 
           <div className="mt-7 flex gap-3 rounded-lg border border-border/80 bg-secondary/35 p-3.5 text-xs leading-5 text-muted-foreground">
-            <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            <p>Make one change at a time, repeat the same test, and revert if the car gets worse. Suggested amounts are small starting points, not universal targets.</p>
+            <Info
+              aria-hidden="true"
+              className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+            />
+            <p>
+              Make one change at a time, repeat the same test, and revert if the
+              car gets worse. Suggested amounts are small starting points, not
+              universal targets.
+            </p>
           </div>
         </section>
 
-        <section aria-labelledby="engineer-results-heading" aria-live="polite" className="rounded-xl border border-border/80 bg-card p-5 shadow-card sm:p-7">
+        <section
+          aria-labelledby="engineer-results-heading"
+          aria-live="polite"
+          className="rounded-xl border border-border/80 bg-card p-5 shadow-card sm:p-7"
+        >
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">02 / Test plan</p>
-              <h2 id="engineer-results-heading" className="mt-2 text-xl font-semibold">Recommended changes</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Ranked starting points for {game}.</p>
+              <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                02 / Test plan
+              </p>
+              <h2
+                id="engineer-results-heading"
+                className="mt-2 text-xl font-semibold"
+              >
+                Recommended changes
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Ranked starting points for {game}.
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {hasAppliedEvidence && <Badge variant="secondary">Public evidence · rank only</Badge>}
+              {hasAppliedEvidence && (
+                <Badge variant="secondary">Public evidence · rank only</Badge>
+              )}
               <Badge variant="secondary" className="gap-1.5">
-                {condition === "wet" ? <CloudRain aria-hidden="true" /> : <Sun aria-hidden="true" />}
+                {condition === "wet" ? (
+                  <CloudRain aria-hidden="true" />
+                ) : (
+                  <Sun aria-hidden="true" />
+                )}
                 {condition === "wet" ? "Wet rules applied" : "Dry baseline"}
               </Badge>
             </div>
           </div>
 
           {result.notices.map((notice) => (
-            <div key={notice} role="status" className="mb-4 rounded-lg border border-border/80 bg-secondary/30 px-3.5 py-3 text-sm text-muted-foreground">
-              <span className="font-medium text-racing-amber">Note: </span>{notice}
+            <div
+              key={notice}
+              role="status"
+              className="mb-4 rounded-lg border border-border/80 bg-secondary/30 px-3.5 py-3 text-sm text-muted-foreground"
+            >
+              <span className="font-medium text-racing-amber">Note: </span>
+              {notice}
             </div>
           ))}
 
           {result.conflicts.length > 0 && (
-            <div role="alert" className="mb-4 rounded-lg border border-border/80 bg-secondary/30 p-3.5">
+            <div
+              role="alert"
+              className="mb-4 rounded-lg border border-border/80 bg-secondary/30 p-3.5"
+            >
               <div className="flex gap-2 text-sm font-medium text-destructive">
                 <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
                 Conflicting directions found
               </div>
               <ul className="mt-2 list-disc space-y-1 pl-6 text-xs text-muted-foreground">
-                {result.conflicts.map((conflict) => <li key={conflict.parameter}>{conflict.message}</li>)}
+                {result.conflicts.map((conflict) => (
+                  <li key={conflict.parameter}>{conflict.message}</li>
+                ))}
               </ul>
             </div>
           )}
@@ -300,21 +402,31 @@ export function EngineerClient({
               {result.recommendations.map((recommendation, index) => {
                 const isPrimary = index === 0;
                 return (
-                  <li key={`${recommendation.parameter}-${recommendation.direction}`} className="rounded-lg border border-border/80 bg-background/45 p-4 sm:p-5">
+                  <li
+                    key={`${recommendation.parameter}-${recommendation.direction}`}
+                    className="rounded-lg border border-border/80 bg-background/45 p-4 sm:p-5"
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
                         <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary font-mono text-xs font-bold text-muted-foreground">
                           {String(index + 1).padStart(2, "0")}
                         </span>
                         <div className="min-w-0">
-                          {isPrimary && <p className="mb-0.5 font-mono text-xs uppercase tracking-[0.15em] text-muted-foreground">First test</p>}
-                          <h3 className="font-semibold">{recommendation.parameter}</h3>
+                          {isPrimary && (
+                            <p className="mb-0.5 font-mono text-xs uppercase tracking-[0.15em] text-muted-foreground">
+                              First test
+                            </p>
+                          )}
+                          <h3 className="font-semibold">
+                            {recommendation.parameter}
+                          </h3>
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         {recommendation.publicEvidence && (
                           <Badge variant="secondary" className="shrink-0">
-                            {recommendation.publicEvidence.sampleCount} public setups
+                            {recommendation.publicEvidence.sampleCount} public
+                            setups
                           </Badge>
                         )}
                         <Badge variant="outline" className="shrink-0 gap-1.5">
@@ -325,34 +437,58 @@ export function EngineerClient({
                     </div>
 
                     <p className="mt-4 font-mono text-sm">
-                      <span className="text-muted-foreground">Suggested change: </span>
-                      <strong className="text-foreground">{formatAmount(recommendation.amount, recommendation.unit)}</strong>
+                      <span className="text-muted-foreground">
+                        Suggested change:{" "}
+                      </span>
+                      <strong className="text-foreground">
+                        {formatAmount(
+                          recommendation.amount,
+                          recommendation.unit,
+                        )}
+                      </strong>
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{recommendation.explanation}</p>
-                    {recommendation.warnings && recommendation.warnings.length > 0 && (
-                      <ul className="mt-3 space-y-1.5 border-t border-border/70 pt-3">
-                        {recommendation.warnings.map((warning) => (
-                          <li key={warning} className="flex gap-2 text-xs leading-5 text-racing-amber">
-                            <TriangleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-                            <span>{warning}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      {recommendation.explanation}
+                    </p>
+                    {recommendation.warnings &&
+                      recommendation.warnings.length > 0 && (
+                        <ul className="mt-3 space-y-1.5 border-t border-border/70 pt-3">
+                          {recommendation.warnings.map((warning) => (
+                            <li
+                              key={warning}
+                              className="flex gap-2 text-xs leading-5 text-racing-amber"
+                            >
+                              <TriangleAlert
+                                aria-hidden="true"
+                                className="mt-0.5 size-3.5 shrink-0"
+                              />
+                              <span>{warning}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                   </li>
                 );
               })}
             </ol>
           ) : (
             <div className="rounded-lg border border-dashed border-border p-6 text-center">
-              <p className="font-medium">No safe static change is available yet</p>
-              <p className="mt-1 text-sm text-muted-foreground">Pressure advice is only shown for reviewed game mappings.</p>
+              <p className="font-medium">
+                No safe static change is available yet
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Pressure advice is only shown for reviewed game mappings.
+              </p>
             </div>
           )}
 
           <div className="mt-6 flex items-start gap-2 border-t border-border/80 pt-4 text-xs leading-5 text-muted-foreground">
             <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-            <p>These are conservative first-pass recommendations, not a replacement for your car&apos;s setup guide or a controlled test. {calibrationMessage}</p>
+            <p>
+              These are conservative first-pass recommendations, not a
+              replacement for your car&apos;s setup guide or a controlled test.{" "}
+              {calibrationMessage}
+            </p>
           </div>
         </section>
 
@@ -361,7 +497,10 @@ export function EngineerClient({
             never invented rows. Hidden entirely when the browse index is
             unavailable. */}
         {setups.length > 0 && (
-          <section aria-labelledby="engineer-matches-heading" className="rounded-xl border border-border/80 bg-card p-5 shadow-card sm:p-7">
+          <section
+            aria-labelledby="engineer-matches-heading"
+            className="rounded-xl border border-border/80 bg-card p-5 shadow-card sm:p-7"
+          >
             <h2 id="engineer-matches-heading" className="text-xl font-semibold">
               Community setups worth a look
             </h2>

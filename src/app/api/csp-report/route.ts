@@ -13,12 +13,15 @@ import { isSameOriginRequest } from "@/lib/request-origin";
 const MAX_BODY_BYTES = 16 * 1024;
 const MAX_FIELD_LENGTH = 500;
 const MAX_REPORTS_PER_REQUEST = 20;
-const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
+const UUID =
+  /[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
 
 function truncate(value: unknown): string {
   if (typeof value !== "string") return "";
   const safe = value.replace(/[\u0000-\u001f\u007f]/g, " ");
-  return safe.length > MAX_FIELD_LENGTH ? `${safe.slice(0, MAX_FIELD_LENGTH)}…` : safe;
+  return safe.length > MAX_FIELD_LENGTH
+    ? `${safe.slice(0, MAX_FIELD_LENGTH)}…`
+    : safe;
 }
 
 /** Keep same-origin path context, but never log query strings, fragments or raw external paths. */
@@ -26,14 +29,19 @@ function sanitizeUri(value: unknown, requestUrl: string): string {
   if (typeof value !== "string" || value.length > 4096) return "";
   const raw = value.trim();
   if (!raw) return "";
-  if (/^(?:'self'|'none'|'inline'|'eval'|self|none|inline|eval|data:|blob:|about:blank)$/i.test(raw)) {
+  if (
+    /^(?:'self'|'none'|'inline'|'eval'|self|none|inline|eval|data:|blob:|about:blank)$/i.test(
+      raw,
+    )
+  ) {
     return truncate(raw);
   }
 
   try {
     const base = new URL(requestUrl);
     const url = new URL(raw, base);
-    if (url.protocol !== "http:" && url.protocol !== "https:") return `${url.protocol}`;
+    if (url.protocol !== "http:" && url.protocol !== "https:")
+      return `${url.protocol}`;
     if (url.origin !== base.origin) return url.origin;
     const path = url.pathname.replace(UUID, ":id");
     return truncate(`${url.origin}${path}`);
@@ -119,11 +127,24 @@ export async function POST(request: Request) {
 
   for (const report of reports.slice(0, MAX_REPORTS_PER_REQUEST)) {
     logger.warn("CSP violation", {
-      blockedURI: sanitizeUri(report["blocked-uri"] ?? report["blockedURI"], request.url),
-      violatedDirective: truncate(report["violated-directive"] ?? report["effectiveDirective"]),
-      documentURI: sanitizeUri(report["document-uri"] ?? report["documentURL"], request.url),
-      sourceFile: sanitizeUri(report["source-file"] ?? report["sourceFile"], request.url),
-      lineNumber: truncate(String(report["line-number"] ?? report["lineNumber"] ?? "")),
+      blockedURI: sanitizeUri(
+        report["blocked-uri"] ?? report["blockedURI"],
+        request.url,
+      ),
+      violatedDirective: truncate(
+        report["violated-directive"] ?? report["effectiveDirective"],
+      ),
+      documentURI: sanitizeUri(
+        report["document-uri"] ?? report["documentURL"],
+        request.url,
+      ),
+      sourceFile: sanitizeUri(
+        report["source-file"] ?? report["sourceFile"],
+        request.url,
+      ),
+      lineNumber: truncate(
+        String(report["line-number"] ?? report["lineNumber"] ?? ""),
+      ),
     });
   }
 

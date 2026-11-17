@@ -23,7 +23,10 @@ export async function requestAccountDeletion(): Promise<AccountDeletionActionRes
   const user = await getCurrentUser(supabase);
 
   if (!user) {
-    return { request: null, error: "You need to be logged in to request account deletion." };
+    return {
+      request: null,
+      error: "You need to be logged in to request account deletion.",
+    };
   }
 
   const { data, error } = await supabase
@@ -34,10 +37,16 @@ export async function requestAccountDeletion(): Promise<AccountDeletionActionRes
 
   if (error) {
     if (error.code === "23505") {
-      return { request: null, error: "You already have an active deletion request." };
+      return {
+        request: null,
+        error: "You already have an active deletion request.",
+      };
     }
     logger.error("requestAccountDeletion: insert failed", error);
-    return { request: null, error: getActionError(error, "Couldn't submit the deletion request.") };
+    return {
+      request: null,
+      error: getActionError(error, "Couldn't submit the deletion request."),
+    };
   }
 
   revalidatePath("/account/data-deletion");
@@ -53,7 +62,7 @@ export async function requestAccountDeletion(): Promise<AccountDeletionActionRes
 
 /** Cancels a request only while it is still pending. */
 export async function cancelAccountDeletionRequest(
-  requestId: string
+  requestId: string,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
@@ -72,9 +81,12 @@ export async function cancelAccountDeletionRequest(
 
   if (error) {
     logger.error("cancelAccountDeletionRequest: delete failed", error);
-    return { error: getActionError(error, "Couldn't cancel the deletion request.") };
+    return {
+      error: getActionError(error, "Couldn't cancel the deletion request."),
+    };
   }
-  if (!data) return { error: "Deletion request not found or no longer pending." };
+  if (!data)
+    return { error: "Deletion request not found or no longer pending." };
 
   revalidatePath("/account/data-deletion");
   return { error: null };

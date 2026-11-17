@@ -5,7 +5,9 @@ test("browse page reports an unreachable database instead of an empty library", 
 }) => {
   await page.goto("/setups");
 
-  await expect(page.getByRole("heading", { name: "Browse Setups" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Browse Setups" }),
+  ).toBeVisible();
 
   // No live Supabase project is reachable here. getSetups() now reports the
   // failure rather than collapsing it into [], because an empty grid that

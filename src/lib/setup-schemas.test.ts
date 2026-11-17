@@ -7,11 +7,13 @@ describe("getEmptySetupValues", () => {
   it("returns one empty-string entry per field, for every game", () => {
     for (const game of games) {
       const expectedKeys = setupSchemas[game].flatMap((group) =>
-        group.fields.map((field) => field.key)
+        group.fields.map((field) => field.key),
       );
       const values = getEmptySetupValues(game);
 
-      expect(Object.keys(values).sort()).toEqual([...new Set(expectedKeys)].sort());
+      expect(Object.keys(values).sort()).toEqual(
+        [...new Set(expectedKeys)].sort(),
+      );
       for (const key of expectedKeys) {
         expect(values[key]).toBe("");
       }

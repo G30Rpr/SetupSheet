@@ -38,7 +38,7 @@ const baseSetup: Setup = {
 function renderFooter(
   setup: Partial<Setup>,
   upvotes: number,
-  options: { showRigSubScores?: boolean } = {}
+  options: { showRigSubScores?: boolean } = {},
 ) {
   const onUpvote = vi.fn();
   render(
@@ -54,7 +54,7 @@ function renderFooter(
       onUpvote={onUpvote}
       onRate={vi.fn()}
       showRigSubScores={options.showRigSubScores}
-    />
+    />,
   );
   return { onUpvote };
 }
@@ -100,14 +100,18 @@ describe("SetupCardFooter upvote counter", () => {
     renderFooter({}, 12);
 
     // WCAG label-in-name: the visible count is part of the accessible name.
-    const button = screen.getByRole("button", { name: /12 upvotes.*upvote this setup/i });
+    const button = screen.getByRole("button", {
+      name: /12 upvotes.*upvote this setup/i,
+    });
     expect(button).toHaveTextContent("12 upvotes");
   });
 
   it("shows the action name when nothing has been upvoted yet", () => {
     renderFooter({}, 0);
 
-    const button = screen.getByRole("button", { name: /^upvote.*upvote this setup/i });
+    const button = screen.getByRole("button", {
+      name: /^upvote.*upvote this setup/i,
+    });
     expect(button).toHaveTextContent("Upvote");
     expect(button).not.toHaveTextContent("0");
   });
@@ -121,12 +125,18 @@ describe("SetupCardFooter similar-rig split", () => {
         pace: 4.0,
         predictability: 3.7,
         ratingSplits: [
-          { rigProfile: "Wheel + 3 Pedals", paceSum: 12, paceN: 3, predSum: 11, predN: 3 },
+          {
+            rigProfile: "Wheel + 3 Pedals",
+            paceSum: 12,
+            paceN: 3,
+            predSum: 11,
+            predN: 3,
+          },
           { rigProfile: "Gamepad", paceSum: 4, paceN: 1, predSum: 2, predN: 1 },
           { rigProfile: null, paceSum: 5, paceN: 1, predSum: 4, predN: 1 },
         ],
       },
-      0
+      0,
     );
 
     expect(screen.getByText("On a similar rig")).toBeInTheDocument();
@@ -145,15 +155,20 @@ describe("SetupCardFooter similar-rig split", () => {
         ratingCount: 1,
         pace: 4.0,
         predictability: 4.0,
-        ratingSplits: [{ rigProfile: "Gamepad", paceSum: 4, paceN: 1, predSum: 4, predN: 1 }],
+        ratingSplits: [
+          { rigProfile: "Gamepad", paceSum: 4, paceN: 1, predSum: 4, predN: 1 },
+        ],
       },
-      0
+      0,
     );
     // Similar (Wheel + 3 Pedals) has nothing — both cells read Unrated.
     expect(screen.getAllByText("Unrated").length).toBeGreaterThanOrEqual(2);
     cleanup();
 
-    renderFooter({ ratingCount: 0, pace: 0, predictability: 0, ratingSplits: [] }, 0);
+    renderFooter(
+      { ratingCount: 0, pace: 0, predictability: 0, ratingSplits: [] },
+      0,
+    );
     expect(screen.queryByText("On a similar rig")).not.toBeInTheDocument();
     expect(screen.queryByText("Everyone else")).not.toBeInTheDocument();
   });
@@ -164,9 +179,21 @@ describe("SetupCardFooter per-rig-type sub-scores (2c)", () => {
     // Established on both scores (n >= 3).
     { rigProfile: "Gamepad", paceSum: 12, paceN: 3, predSum: 10.8, predN: 3 },
     // Established on pace only; predictability withheld (n = 2).
-    { rigProfile: "Wheel + 3 Pedals", paceSum: 13.2, paceN: 3, predSum: 8, predN: 2 },
+    {
+      rigProfile: "Wheel + 3 Pedals",
+      paceSum: 13.2,
+      paceN: 3,
+      predSum: 8,
+      predN: 2,
+    },
     // Below the floor on both: row omitted entirely.
-    { rigProfile: "Direct Drive + Load Cell", paceSum: 5, paceN: 1, predSum: 4, predN: 1 },
+    {
+      rigProfile: "Direct Drive + Load Cell",
+      paceSum: 5,
+      paceN: 1,
+      predSum: 4,
+      predN: 1,
+    },
     // Not a rig type: omitted.
     { rigProfile: null, paceSum: 5, paceN: 1, predSum: 4, predN: 1 },
   ];
@@ -181,7 +208,7 @@ describe("SetupCardFooter per-rig-type sub-scores (2c)", () => {
         ratingSplits: splits,
       },
       0,
-      { showRigSubScores: true }
+      { showRigSubScores: true },
     );
 
     expect(screen.getByText("By rig type (3+ ratings)")).toBeInTheDocument();
@@ -199,8 +226,13 @@ describe("SetupCardFooter per-rig-type sub-scores (2c)", () => {
   });
 
   it("stays hidden on browse cards (slim) and when no rig type clears the floor", () => {
-    renderFooter({ ratingCount: 7, pace: 4, predictability: 3.8, ratingSplits: splits }, 0);
-    expect(screen.queryByText("By rig type (3+ ratings)")).not.toBeInTheDocument();
+    renderFooter(
+      { ratingCount: 7, pace: 4, predictability: 3.8, ratingSplits: splits },
+      0,
+    );
+    expect(
+      screen.queryByText("By rig type (3+ ratings)"),
+    ).not.toBeInTheDocument();
     cleanup();
 
     renderFooter(
@@ -208,12 +240,18 @@ describe("SetupCardFooter per-rig-type sub-scores (2c)", () => {
         ratingCount: 1,
         pace: 4,
         predictability: 4,
-        ratingSplits: [{ rigProfile: "Gamepad", paceSum: 4, paceN: 1, predSum: 4, predN: 1 }],
+        ratingSplits: [
+          { rigProfile: "Gamepad", paceSum: 4, paceN: 1, predSum: 4, predN: 1 },
+        ],
       },
       0,
-      { showRigSubScores: true }
+      { showRigSubScores: true },
     );
-    expect(screen.queryByText("By rig type (3+ ratings)")).not.toBeInTheDocument();
-    expect(screen.queryByTitle(/fewer than 3 ratings/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("By rig type (3+ ratings)"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTitle(/fewer than 3 ratings/i),
+    ).not.toBeInTheDocument();
   });
 });

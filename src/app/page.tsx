@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ComboFinder } from "@/components/combo-finder";
 import { StartingPoints } from "@/components/starting-points";
-import { getFinderCombos, getStartingPointCandidates } from "@/lib/supabase/setups";
+import {
+  getFinderCombos,
+  getStartingPointCandidates,
+} from "@/lib/supabase/setups";
 import { getPublicFieldTestCounts } from "@/lib/supabase/field-tests";
 import { getPendingRatingPrompts } from "@/lib/supabase/rating-prompts";
 import { RatingPrompt } from "@/components/rating-prompt";
@@ -30,7 +33,9 @@ export default async function Home() {
     createClient(),
   ]);
   const user = await getCurrentUser(supabase);
-  const fieldTestCounts = await getPublicFieldTestCounts(candidates.map((setup) => setup.id));
+  const fieldTestCounts = await getPublicFieldTestCounts(
+    candidates.map((setup) => setup.id),
+  );
   const fieldTestCountRecord = Object.fromEntries(fieldTestCounts);
   // 24h post-download prompts (signed-in only; never for your own setups).
   const ratingPrompts = user ? await getPendingRatingPrompts() : [];
@@ -44,7 +49,10 @@ export default async function Home() {
             variant="outline"
             className="gap-2 border-border/80 bg-secondary/50 px-3 py-1 text-xs text-muted-foreground"
           >
-            <span aria-hidden="true" className="size-2 rounded-full bg-muted-foreground" />
+            <span
+              aria-hidden="true"
+              className="size-2 rounded-full bg-muted-foreground"
+            />
             100% free · No account to browse
           </Badge>
 
@@ -53,24 +61,32 @@ export default async function Home() {
           </h1>
 
           <p className="max-w-xl text-balance text-base text-muted-foreground sm:text-lg">
-            Find a community setup for your car, track, and hardware. Rated
-            for pace, and for how predictable it feels when you are not an
-            alien.
+            Find a community setup for your car, track, and hardware. Rated for
+            pace, and for how predictable it feels when you are not an alien.
           </p>
 
           <ComboFinder combos={combos} />
 
           <ul className="flex w-full max-w-3xl list-none flex-col gap-2 text-left text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
-              <span aria-hidden="true" className="mt-2 size-1.5 shrink-0 rounded-full bg-racing-cyan" />
+              <span
+                aria-hidden="true"
+                className="mt-2 size-1.5 shrink-0 rounded-full bg-racing-cyan"
+              />
               Pace and Predictability, unrated until someone has run it
             </li>
             <li className="flex items-start gap-2">
-              <span aria-hidden="true" className="mt-2 size-1.5 shrink-0 rounded-full bg-racing-cyan" />
+              <span
+                aria-hidden="true"
+                className="mt-2 size-1.5 shrink-0 rounded-full bg-racing-cyan"
+              />
               Filtered for your rig, not just the meta lap
             </li>
             <li className="flex items-start gap-2">
-              <span aria-hidden="true" className="mt-2 size-1.5 shrink-0 rounded-full bg-racing-cyan" />
+              <span
+                aria-hidden="true"
+                className="mt-2 size-1.5 shrink-0 rounded-full bg-racing-cyan"
+              />
               Free to browse and download. No subscription
             </li>
           </ul>
@@ -78,12 +94,18 @@ export default async function Home() {
       </section>
 
       {/* Starting points — omitted entirely when nothing real qualifies */}
-      <StartingPoints candidates={candidates} fieldTestCounts={fieldTestCountRecord} />
+      <StartingPoints
+        candidates={candidates}
+        fieldTestCounts={fieldTestCountRecord}
+      />
 
       {/* 24h post-download prompts — only when this signed-in visitor has
           downloads awaiting a take; omitted entirely otherwise. */}
       {ratingPrompts.length > 0 && (
-        <section aria-labelledby="rating-prompts-heading" className="mx-auto max-w-6xl px-4 pb-4 sm:px-6">
+        <section
+          aria-labelledby="rating-prompts-heading"
+          className="mx-auto max-w-6xl px-4 pb-4 sm:px-6"
+        >
           <h2 id="rating-prompts-heading" className="text-lg font-semibold">
             How did they feel?
           </h2>
@@ -112,7 +134,12 @@ export default async function Home() {
                 <ArrowRight />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="w-full sm:w-auto"
+            >
               <Link href="/upload">
                 <Upload />
                 Upload a setup

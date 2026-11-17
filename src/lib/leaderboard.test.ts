@@ -8,13 +8,13 @@ describe("leaderboardMode", () => {
       leaderboardMode([
         { lapsDrivenByOthers: 0, fieldTestedSetupCount: 0 },
         { lapsDrivenByOthers: 3, fieldTestedSetupCount: 0 },
-      ])
+      ]),
     ).toBe("impact");
     expect(
       leaderboardMode([
         { lapsDrivenByOthers: 0, fieldTestedSetupCount: 1 },
         { lapsDrivenByOthers: 0, fieldTestedSetupCount: 0 },
-      ])
+      ]),
     ).toBe("impact");
   });
 
@@ -23,7 +23,7 @@ describe("leaderboardMode", () => {
       leaderboardMode([
         { lapsDrivenByOthers: 0, fieldTestedSetupCount: 0 },
         { lapsDrivenByOthers: 0, fieldTestedSetupCount: 0 },
-      ])
+      ]),
     ).toBe("upvotes");
     expect(leaderboardMode([])).toBe("upvotes");
   });

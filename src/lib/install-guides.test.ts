@@ -12,10 +12,12 @@ describe("resolveInstallGuide", () => {
     });
 
     expect(guide.folderPath).toBe(
-      String.raw`Documents\Assetto Corsa Competizione\Setups\Ford Mustang GT3\Zandvoort`
+      String.raw`Documents\Assetto Corsa Competizione\Setups\Ford Mustang GT3\Zandvoort`,
     );
     expect(guide.folderIncomplete).toBe(false);
-    expect(guide.steps.join(" ")).toContain(String.raw`Setups\Ford Mustang GT3\Zandvoort`);
+    expect(guide.steps.join(" ")).toContain(
+      String.raw`Setups\Ford Mustang GT3\Zandvoort`,
+    );
     // No angle-bracket placeholders left once the values are known.
     expect(guide.steps.join(" ")).not.toMatch(/<car|<track/);
   });
@@ -34,14 +36,21 @@ describe("resolveInstallGuide", () => {
   });
 
   it("reports the extension the game actually imports", () => {
-    expect(resolveInstallGuide("iRacing", { car: "X", track: "Y" }).fileExtension).toBe(".sto");
-    expect(resolveInstallGuide("Le Mans Ultimate", { car: "X", track: "Y" }).fileExtension).toBe(
-      ".svm"
-    );
+    expect(
+      resolveInstallGuide("iRacing", { car: "X", track: "Y" }).fileExtension,
+    ).toBe(".sto");
+    expect(
+      resolveInstallGuide("Le Mans Ultimate", { car: "X", track: "Y" })
+        .fileExtension,
+    ).toBe(".svm");
   });
 
   it("offers no folder for games that can't import a file", () => {
-    for (const game of ["Gran Turismo 7", "F1 25", "Assetto Corsa EVO"] as Game[]) {
+    for (const game of [
+      "Gran Turismo 7",
+      "F1 25",
+      "Assetto Corsa EVO",
+    ] as Game[]) {
       const guide = resolveInstallGuide(game, { car: "X", track: "Y" });
       expect(guide.supportsFileImport).toBe(false);
       expect(guide.folderPath).toBeNull();
@@ -52,7 +61,10 @@ describe("resolveInstallGuide", () => {
   it("covers every supported game", () => {
     for (const game of games) {
       expect(installGuides[game]).toBeDefined();
-      const resolved = resolveInstallGuide(game, { car: "Car", track: "Track" });
+      const resolved = resolveInstallGuide(game, {
+        car: "Car",
+        track: "Track",
+      });
       expect(resolved.steps.length).toBeGreaterThan(0);
       // A guide that claims file import must say where the file goes.
       if (resolved.supportsFileImport) {

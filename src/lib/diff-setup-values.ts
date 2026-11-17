@@ -54,7 +54,7 @@ export function isComparisonKey(key: string): boolean {
 export function buildComparisonDiff(
   game: Game,
   valuesA: SetupValues | null | undefined,
-  valuesB: SetupValues | null | undefined
+  valuesB: SetupValues | null | undefined,
 ): SetupValueDiffGroup[] {
   return diffSetupValues(game, valuesA, valuesB)
     .map((group) => ({
@@ -74,7 +74,7 @@ export function buildComparisonDiff(
 export function diffSetupValues(
   game: Game,
   valuesA: SetupValues | null | undefined,
-  valuesB: SetupValues | null | undefined
+  valuesB: SetupValues | null | undefined,
 ): SetupValueDiffGroup[] {
   const a = valuesA ?? {};
   const b = valuesB ?? {};
@@ -86,7 +86,13 @@ export function diffSetupValues(
         .map((field): SetupValueDiffRow => {
           const valueA = a[field.key] ?? null;
           const valueB = b[field.key] ?? null;
-          return { key: field.key, label: field.label, valueA, valueB, differs: valueA !== valueB };
+          return {
+            key: field.key,
+            label: field.label,
+            valueA,
+            valueB,
+            differs: valueA !== valueB,
+          };
         });
       return { title: group.title, rows };
     })
@@ -110,7 +116,10 @@ interface TopLevelFields {
 }
 
 /** Which of a setup's non-tuning fields changed between two snapshots -- used to render the "what changed" list in the version-history panel. */
-export function diffTopLevelFields(before: TopLevelFields, after: TopLevelFields): TopLevelFieldChange[] {
+export function diffTopLevelFields(
+  before: TopLevelFields,
+  after: TopLevelFields,
+): TopLevelFieldChange[] {
   const changes: TopLevelFieldChange[] = [];
   const push = (label: string, valueBefore: string, valueAfter: string) => {
     if (valueBefore !== valueAfter) {

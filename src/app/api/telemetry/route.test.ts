@@ -19,13 +19,21 @@ function request(body: unknown, headers: Record<string, string> = {}) {
 
 describe("POST /api/telemetry", () => {
   it("logs only validated metrics and normalized paths", async () => {
-    const response = await POST(request({
-      events: [
-        { kind: "metric", name: "LCP", value: 1800, rating: "good", path: "/setups/123e4567-e89b-42d3-a456-426614174000" },
-        { kind: "pageview", name: "pageview", path: "/setups/:id" },
-        { kind: "pageview", name: "pageview", path: "/setups?q=private" },
-      ],
-    }));
+    const response = await POST(
+      request({
+        events: [
+          {
+            kind: "metric",
+            name: "LCP",
+            value: 1800,
+            rating: "good",
+            path: "/setups/123e4567-e89b-42d3-a456-426614174000",
+          },
+          { kind: "pageview", name: "pageview", path: "/setups/:id" },
+          { kind: "pageview", name: "pageview", path: "/setups?q=private" },
+        ],
+      }),
+    );
 
     expect(response.status).toBe(204);
     expect(response.headers.get("cache-control")).toBe("no-store");
@@ -37,10 +45,23 @@ describe("POST /api/telemetry", () => {
   });
 
   it("drops unrecognized routes and never persists raw error details", async () => {
-    const response = await POST(request({ events: [
-      { kind: "pageview", name: "pageview", path: "/profile/some-private-name" },
-      { kind: "error", name: "window.error", path: "/", detail: "secret-token" },
-    ] }));
+    const response = await POST(
+      request({
+        events: [
+          {
+            kind: "pageview",
+            name: "pageview",
+            path: "/profile/some-private-name",
+          },
+          {
+            kind: "error",
+            name: "window.error",
+            path: "/",
+            detail: "secret-token",
+          },
+        ],
+      }),
+    );
 
     expect(response.status).toBe(204);
     expect(loggerInfo).toHaveBeenCalledOnce();
@@ -51,31 +72,37 @@ describe("POST /api/telemetry", () => {
   });
 
   it("rejects cross-origin reports", async () => {
-    const response = await POST(request(
-      { events: [{ kind: "pageview", name: "pageview", path: "/" }] },
-      { origin: "https://attacker.example" }
-    ));
+    const response = await POST(
+      request(
+        { events: [{ kind: "pageview", name: "pageview", path: "/" }] },
+        { origin: "https://attacker.example" },
+      ),
+    );
 
     expect(response.status).toBe(403);
     expect(loggerInfo).not.toHaveBeenCalled();
   });
 
   it("rejects oversized request bodies", async () => {
-    const response = await POST(new Request("https://setupsheet.app/api/telemetry", {
-      method: "POST",
-      headers: { "content-length": "9000" },
-      body: "x".repeat(9000),
-    }));
+    const response = await POST(
+      new Request("https://setupsheet.app/api/telemetry", {
+        method: "POST",
+        headers: { "content-length": "9000" },
+        body: "x".repeat(9000),
+      }),
+    );
 
     expect(response.status).toBe(413);
     expect(loggerInfo).not.toHaveBeenCalled();
   });
 
   it("rejects malformed JSON", async () => {
-    const response = await POST(new Request("https://setupsheet.app/api/telemetry", {
-      method: "POST",
-      body: "not-json",
-    }));
+    const response = await POST(
+      new Request("https://setupsheet.app/api/telemetry", {
+        method: "POST",
+        body: "not-json",
+      }),
+    );
 
     expect(response.status).toBe(400);
   });

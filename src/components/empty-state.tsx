@@ -32,7 +32,11 @@ export function EmptyState({
         <Icon className="size-6" />
       </span>
       <div className="flex flex-col gap-1">
-        <p className={cn("text-lg font-semibold", isError && "text-destructive")}>{title}</p>
+        <p
+          className={cn("text-lg font-semibold", isError && "text-destructive")}
+        >
+          {title}
+        </p>
         <p className="max-w-sm text-sm text-muted-foreground">{description}</p>
       </div>
       {action}

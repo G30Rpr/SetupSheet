@@ -10,7 +10,7 @@ import {
 
 function recommendation(
   parameter: string,
-  direction: EngineerRecommendation["direction"]
+  direction: EngineerRecommendation["direction"],
 ): EngineerRecommendation {
   return {
     parameter,
@@ -33,19 +33,23 @@ describe("static Engineer recommendations", () => {
         });
 
         expect(result.status, `${game}: ${symptom.id}`).toBe("ready");
-        expect(result.recommendations.length, `${game}: ${symptom.id}`).toBeGreaterThan(0);
+        expect(
+          result.recommendations.length,
+          `${game}: ${symptom.id}`,
+        ).toBeGreaterThan(0);
       }
     }
   });
 
   it("changes suggested amount with severity", () => {
-    const amounts = (["slight", "moderate", "severe"] as const).map((severity) =>
-      getEngineerRecommendations({
-        game: "Assetto Corsa Competizione",
-        symptomId: "hot-tyre-pressure-high",
-        severity,
-        condition: "dry",
-      }).recommendations[0].amount
+    const amounts = (["slight", "moderate", "severe"] as const).map(
+      (severity) =>
+        getEngineerRecommendations({
+          game: "Assetto Corsa Competizione",
+          symptomId: "hot-tyre-pressure-high",
+          severity,
+          condition: "dry",
+        }).recommendations[0].amount,
     );
 
     expect(amounts).toEqual([0.2, 0.4, 0.6]);
@@ -79,16 +83,25 @@ describe("static Engineer recommendations", () => {
     const dryBefore = getEngineerRecommendations(input).recommendations;
     const frozenSnapshot = JSON.stringify(dryBefore);
 
-    const wetWheelspin = getEngineerRecommendations({ ...input, condition: "wet" });
+    const wetWheelspin = getEngineerRecommendations({
+      ...input,
+      condition: "wet",
+    });
     const dryAfter = getEngineerRecommendations(input).recommendations;
-    const dryDiff = dryBefore.find((item) => item.parameter === "Differential preload");
-    const wetDiff = wetWheelspin.recommendations.find((item) => item.parameter === "Differential preload");
+    const dryDiff = dryBefore.find(
+      (item) => item.parameter === "Differential preload",
+    );
+    const wetDiff = wetWheelspin.recommendations.find(
+      (item) => item.parameter === "Differential preload",
+    );
 
     expect(JSON.stringify(dryBefore)).toBe(frozenSnapshot);
     expect(dryAfter).toEqual(dryBefore);
     expect(dryDiff?.direction).toBe("increase");
     expect(wetDiff?.direction).toBe("decrease");
-    expect(wetDiff?.warnings?.some((warning) => /wet differential/i.test(warning))).toBe(true);
+    expect(
+      wetDiff?.warnings?.some((warning) => /wet differential/i.test(warning)),
+    ).toBe(true);
     expect(wetWheelspin.recommendations).not.toBe(dryBefore);
 
     const wetPressure = getEngineerRecommendations({
@@ -106,7 +119,11 @@ describe("static Engineer recommendations", () => {
       condition: "wet",
     });
     expect(wetWing.recommendations[0].amount).toBe(3);
-    expect(wetWing.recommendations[0].warnings?.some((warning) => /rear-wing step/i.test(warning))).toBe(true);
+    expect(
+      wetWing.recommendations[0].warnings?.some((warning) =>
+        /rear-wing step/i.test(warning),
+      ),
+    ).toBe(true);
 
     const wetBraking = getEngineerRecommendations({
       game: "Assetto Corsa Competizione",
@@ -114,9 +131,19 @@ describe("static Engineer recommendations", () => {
       severity: "moderate",
       condition: "wet",
     });
-    expect(wetBraking.recommendations.some((item) => item.parameter === "Brake bias")).toBe(false);
-    expect(wetBraking.recommendations.some((item) => item.parameter === "ABS")).toBe(true);
-    expect(wetBraking.recommendations[0].warnings?.some((warning) => /withheld/i.test(warning))).toBe(true);
+    expect(
+      wetBraking.recommendations.some(
+        (item) => item.parameter === "Brake bias",
+      ),
+    ).toBe(false);
+    expect(
+      wetBraking.recommendations.some((item) => item.parameter === "ABS"),
+    ).toBe(true);
+    expect(
+      wetBraking.recommendations[0].warnings?.some((warning) =>
+        /withheld/i.test(warning),
+      ),
+    ).toBe(true);
   });
 
   it("suppresses pressure advice for GT7 until a reviewed mapping exists", () => {
@@ -127,7 +154,11 @@ describe("static Engineer recommendations", () => {
       condition: "dry",
     });
 
-    expect(result.recommendations.some((item) => item.parameter.toLowerCase().includes("pressure"))).toBe(false);
+    expect(
+      result.recommendations.some((item) =>
+        item.parameter.toLowerCase().includes("pressure"),
+      ),
+    ).toBe(false);
     expect(result.notices.join(" ")).toMatch(/pressure advice is unavailable/i);
   });
 

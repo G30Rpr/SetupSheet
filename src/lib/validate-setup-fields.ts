@@ -44,7 +44,7 @@ export const AUTHOR_NOTE_REQUIRED_ERROR =
  */
 export function validateSetupFields(
   input: unknown,
-  options?: { requireAuthorNote?: boolean }
+  options?: { requireAuthorNote?: boolean },
 ): string | null {
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
     return "Invalid setup fields.";
@@ -72,7 +72,10 @@ export function validateSetupFields(
   ) {
     return "Invalid setup fields.";
   }
-  if (!Array.isArray(fields.tags) || !fields.tags.every((tag) => typeof tag === "string")) {
+  if (
+    !Array.isArray(fields.tags) ||
+    !fields.tags.every((tag) => typeof tag === "string")
+  ) {
     return "Tags must be a list of valid values.";
   }
 
@@ -97,7 +100,9 @@ export function validateSetupFields(
   if (tags.length > setupTags.length) {
     return "Too many tags.";
   }
-  if (!tags.every((tag) => setupTags.includes(tag as (typeof setupTags)[number]))) {
+  if (
+    !tags.every((tag) => setupTags.includes(tag as (typeof setupTags)[number]))
+  ) {
     return "Unknown tag.";
   }
   if (new Set(tags).size !== tags.length) {
@@ -129,7 +134,10 @@ export function validateSetupFields(
   if (options?.requireAuthorNote && !description.trim()) {
     return AUTHOR_NOTE_REQUIRED_ERROR;
   }
-  if (fields.setupValues !== undefined && !isValidSetupValues(fields.setupValues)) {
+  if (
+    fields.setupValues !== undefined &&
+    !isValidSetupValues(fields.setupValues)
+  ) {
     return "Setup values are invalid or too large.";
   }
   return null;

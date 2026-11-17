@@ -8,17 +8,21 @@ const hoursAgo = (h: number) => new Date(NOW - h * 3600_000).toISOString();
 const event = (
   setupId: string,
   createdAt: string,
-  promptDismissedAt: string | null = null
+  promptDismissedAt: string | null = null,
 ) => ({ setupId, createdAt, promptDismissedAt });
 
 describe("pickPendingPrompts (24h post-download prompt)", () => {
   it("prompts only about downloads at least 24h old", () => {
     const picked = pickPendingPrompts(
-      [event("a", hoursAgo(25)), event("b", hoursAgo(23)), event("c", hoursAgo(1))],
+      [
+        event("a", hoursAgo(25)),
+        event("b", hoursAgo(23)),
+        event("c", hoursAgo(1)),
+      ],
       new Set(),
       new Set(),
       3,
-      NOW
+      NOW,
     );
     expect(picked.map((p) => p.setupId)).toEqual(["a"]);
   });
@@ -35,7 +39,7 @@ describe("pickPendingPrompts (24h post-download prompt)", () => {
       new Set(["rated"]),
       new Set(["own"]),
       3,
-      NOW
+      NOW,
     );
     expect(picked.map((p) => p.setupId)).toEqual(["pending"]);
   });
@@ -50,7 +54,7 @@ describe("pickPendingPrompts (24h post-download prompt)", () => {
       new Set(),
       new Set(),
       3,
-      NOW
+      NOW,
     );
     expect(picked).toEqual([
       { setupId: "newer", downloadedAt: hoursAgo(40) },
@@ -60,7 +64,9 @@ describe("pickPendingPrompts (24h post-download prompt)", () => {
 
   it("caps at the limit and never invents prompts for empty history", () => {
     const many = ["a", "b", "c", "d", "e"].map((id) => event(id, hoursAgo(30)));
-    expect(pickPendingPrompts(many, new Set(), new Set(), 3, NOW)).toHaveLength(3);
+    expect(pickPendingPrompts(many, new Set(), new Set(), 3, NOW)).toHaveLength(
+      3,
+    );
     expect(pickPendingPrompts([], new Set(), new Set(), 3, NOW)).toEqual([]);
   });
 
@@ -72,7 +78,7 @@ describe("pickPendingPrompts (24h post-download prompt)", () => {
       new Set(),
       new Set(),
       3,
-      NOW
+      NOW,
     );
     expect(picked.map((p) => p.setupId)).toEqual(["ready"]);
   });

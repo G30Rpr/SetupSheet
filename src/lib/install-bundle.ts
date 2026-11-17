@@ -33,7 +33,8 @@ const crcTable = (() => {
   const table = new Uint32Array(256);
   for (let i = 0; i < 256; i++) {
     let c = i;
-    for (let bit = 0; bit < 8; bit++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    for (let bit = 0; bit < 8; bit++)
+      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
     table[i] = c >>> 0;
   }
   return table;
@@ -83,10 +84,14 @@ export function buildZip(files: BundledFile[]): Uint8Array {
   });
 
   const localSize = entries.reduce(
-    (total, entry) => total + 30 + entry.nameBytes.length + entry.content.length,
-    0
+    (total, entry) =>
+      total + 30 + entry.nameBytes.length + entry.content.length,
+    0,
   );
-  const centralSize = entries.reduce((total, entry) => total + 46 + entry.nameBytes.length, 0);
+  const centralSize = entries.reduce(
+    (total, entry) => total + 46 + entry.nameBytes.length,
+    0,
+  );
   const output = new Uint8Array(localSize + centralSize + 22);
   const view = new DataView(output.buffer);
   const encoderSink = encoder; // aliased for readability below
@@ -176,7 +181,7 @@ export function buildInstallReadme(
     fileExtension: string | null;
     steps: string[];
   },
-  exportedValues: string | null
+  exportedValues: string | null,
 ): string {
   const lines: string[] = [
     `${setup.car} @ ${setup.track}`,
@@ -206,7 +211,7 @@ export function buildInstallReadme(
   lines.push(
     "",
     "Shared via SetupSheet — free community sim racing setups.",
-    "Community values are opinions, not a safety certification: back up your own setups before overwriting anything."
+    "Community values are opinions, not a safety certification: back up your own setups before overwriting anything.",
   );
 
   return `${lines.join("\n")}\n`;

@@ -40,11 +40,17 @@ export const RIG_BRAKE_LABELS: Record<RigBrakeType, string> = {
 };
 
 export function isRigInputDevice(value: unknown): value is RigInputDevice {
-  return typeof value === "string" && (RIG_INPUT_DEVICES as readonly string[]).includes(value);
+  return (
+    typeof value === "string" &&
+    (RIG_INPUT_DEVICES as readonly string[]).includes(value)
+  );
 }
 
 export function isRigBrakeType(value: unknown): value is RigBrakeType {
-  return typeof value === "string" && (RIG_BRAKE_TYPES as readonly string[]).includes(value);
+  return (
+    typeof value === "string" &&
+    (RIG_BRAKE_TYPES as readonly string[]).includes(value)
+  );
 }
 
 /**
@@ -75,10 +81,13 @@ export function axesFromRigProfile(rig: RigProfile): RigAxes {
  */
 export function axesMatch(
   a: RigAxes | null | undefined,
-  b: RigAxes | null | undefined
+  b: RigAxes | null | undefined,
 ): boolean {
   if (!a?.inputDevice || !b?.inputDevice) return false;
-  return a.inputDevice === b.inputDevice && (a.brakeType ?? null) === (b.brakeType ?? null);
+  return (
+    a.inputDevice === b.inputDevice &&
+    (a.brakeType ?? null) === (b.brakeType ?? null)
+  );
 }
 
 /**

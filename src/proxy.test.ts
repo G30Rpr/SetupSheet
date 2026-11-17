@@ -22,7 +22,9 @@ describe("proxy malformed-ID response", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("content-type")).toContain("text/html");
     expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(response.headers.get("content-security-policy")).toContain("default-src 'none'");
+    expect(response.headers.get("content-security-policy")).toContain(
+      "default-src 'none'",
+    );
     const html = await response.text();
     expect(html).toContain("We couldn’t find that page");
     expect(html).toContain('href="/setups"');
@@ -34,23 +36,30 @@ describe("proxy malformed-ID response", () => {
     const previousUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project-123.supabase.co";
     try {
-      const response = await proxy(new NextRequest("https://setupsheet.app/setups"));
+      const response = await proxy(
+        new NextRequest("https://setupsheet.app/setups"),
+      );
       const csp = response.headers.get("content-security-policy") ?? "";
 
       expect(csp).toContain("img-src 'self' https://cdn.discordapp.com");
       expect(csp).not.toContain("img-src 'self' https:;");
-      expect(csp).toContain("connect-src 'self' https://project-123.supabase.co wss://project-123.supabase.co");
+      expect(csp).toContain(
+        "connect-src 'self' https://project-123.supabase.co wss://project-123.supabase.co",
+      );
       expect(csp).not.toContain("*.supabase.co");
       expect(csp).toContain("frame-ancestors 'none'");
     } finally {
-      if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if (previousUrl === undefined)
+        delete process.env.NEXT_PUBLIC_SUPABASE_URL;
       else process.env.NEXT_PUBLIC_SUPABASE_URL = previousUrl;
     }
   });
 
   it("keeps malformed social-image URLs as bodyless 404s", async () => {
     const response = await proxy(
-      new NextRequest("https://setupsheet.app/setups/not-a-uuid/opengraph-image")
+      new NextRequest(
+        "https://setupsheet.app/setups/not-a-uuid/opengraph-image",
+      ),
     );
 
     expect(response.status).toBe(404);

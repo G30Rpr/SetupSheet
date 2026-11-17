@@ -8,7 +8,8 @@ import { isUuid } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Rig Mode",
-  description: "Read and copy shared sim racing setup values on a second screen.",
+  description:
+    "Read and copy shared sim racing setup values on a second screen.",
   robots: { index: false, follow: false },
 };
 
@@ -27,8 +28,13 @@ export default async function SetupRigModePage({
     return (
       <section role="alert" className="mx-auto max-w-xl px-4 py-12">
         <h1 className="text-2xl font-bold">Setup temporarily unavailable</h1>
-        <p className="mt-3 text-muted-foreground">We couldn&apos;t load this setup right now.</p>
-        <Link className="mt-4 inline-block underline underline-offset-4" href="/setups">
+        <p className="mt-3 text-muted-foreground">
+          We couldn&apos;t load this setup right now.
+        </p>
+        <Link
+          className="mt-4 inline-block underline underline-offset-4"
+          href="/setups"
+        >
           Back to Browse Setups
         </Link>
       </section>

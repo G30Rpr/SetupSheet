@@ -11,9 +11,17 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: "**/mobile-release.spec.ts" },
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      testIgnore: "**/mobile-release.spec.ts",
+    },
     // Touch and mobile browser emulation. Real iOS/Android QA is still a separate release gate.
-    { name: "mobile-chromium", use: { ...devices["Pixel 7"] }, testMatch: "**/mobile-release.spec.ts" },
+    {
+      name: "mobile-chromium",
+      use: { ...devices["Pixel 7"] },
+      testMatch: "**/mobile-release.spec.ts",
+    },
   ],
   webServer: {
     command: "npm run start",

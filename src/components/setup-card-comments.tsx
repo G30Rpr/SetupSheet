@@ -11,14 +11,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { RetryButton } from "@/components/retry-button";
 import { Textarea } from "@/components/ui/textarea";
-import { createComment, deleteComment, getSetupCommentsAction } from "@/lib/actions/setup-comments";
+import {
+  createComment,
+  deleteComment,
+  getSetupCommentsAction,
+} from "@/lib/actions/setup-comments";
 import { MAX_COMMENT_LENGTH } from "@/lib/data";
 import { useUndoableDelete } from "@/lib/use-undoable-delete";
 import { getInitials } from "@/lib/utils";
 import type { Setup, SetupComment } from "@/lib/types";
 
 function formatTimestamp(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 /**
@@ -34,7 +41,9 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(
+    new Set(),
+  );
   const runUndoableDelete = useUndoableDelete();
 
   const refetch = useCallback(() => {
@@ -107,7 +116,10 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
             toast.error(result.error);
             return;
           }
-          setComments((prev) => prev?.filter((comment) => comment.id !== commentId) ?? prev);
+          setComments(
+            (prev) =>
+              prev?.filter((comment) => comment.id !== commentId) ?? prev,
+          );
           clearPendingDelete(commentId);
         } catch {
           clearPendingDelete(commentId);
@@ -117,13 +129,16 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
     });
   }
 
-  const visibleComments = comments?.filter((c) => !pendingDeleteIds.has(c.id)) ?? null;
+  const visibleComments =
+    comments?.filter((c) => !pendingDeleteIds.has(c.id)) ?? null;
 
   return (
     <div className="mt-2 flex flex-col gap-3 text-xs">
       {loadError ? (
         <div className="flex flex-col items-start gap-2">
-          <p role="alert" className="text-destructive">{loadError}</p>
+          <p role="alert" className="text-destructive">
+            {loadError}
+          </p>
           <RetryButton onRetry={handleRetry} />
         </div>
       ) : visibleComments === null ? (
@@ -142,12 +157,16 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
               </Avatar>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-foreground">{comment.username}</span>
+                  <span className="font-semibold text-foreground">
+                    {comment.username}
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     {formatTimestamp(comment.createdAt)}
                   </span>
                 </div>
-                <p className="whitespace-pre-wrap text-muted-foreground">{comment.body}</p>
+                <p className="whitespace-pre-wrap text-muted-foreground">
+                  {comment.body}
+                </p>
               </div>
               <Button
                 asChild
@@ -156,7 +175,9 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
                 aria-label="Report comment"
                 className="shrink-0"
               >
-                <Link href={`/report?type=comment&id=${encodeURIComponent(comment.id)}`}>
+                <Link
+                  href={`/report?type=comment&id=${encodeURIComponent(comment.id)}`}
+                >
                   <Flag className="size-4" />
                 </Link>
               </Button>
@@ -192,14 +213,21 @@ export default function SetupCardComments({ setup }: { setup: Setup }) {
               {error}
             </p>
           )}
-          <Button type="submit" size="sm" disabled={isPending || !body.trim()} className="self-end">
+          <Button
+            type="submit"
+            size="sm"
+            disabled={isPending || !body.trim()}
+            className="self-end"
+          >
             <Send className="size-3.5" />
             {isPending ? "Posting..." : "Post"}
           </Button>
         </form>
       ) : (
         <div className="flex items-center justify-between gap-2 rounded-md border border-border/60 px-3 py-2">
-          <span className="text-muted-foreground">Log in to join the conversation.</span>
+          <span className="text-muted-foreground">
+            Log in to join the conversation.
+          </span>
           <DiscordLoginButton />
         </div>
       )}

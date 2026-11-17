@@ -4,7 +4,8 @@ import { AlertTriangle } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Sign-in failed",
-  description: "Discord sign-in could not be completed. Try again to continue using SetupSheet.",
+  description:
+    "Discord sign-in could not be completed. Try again to continue using SetupSheet.",
   robots: { index: false, follow: false },
 };
 

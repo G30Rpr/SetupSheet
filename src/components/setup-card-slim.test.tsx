@@ -36,10 +36,9 @@ describe("SetupCard slim variant (browse/profile cards)", () => {
     render(<SetupCard setup={baseSetup} />);
 
     // Identity: car title (detail link) + track subtitle + game/condition
-    expect(screen.getByRole("link", { name: "Porsche 992 GT3 R" })).toHaveAttribute(
-      "href",
-      `/setups/${baseSetup.id}`
-    );
+    expect(
+      screen.getByRole("link", { name: "Porsche 992 GT3 R" }),
+    ).toHaveAttribute("href", `/setups/${baseSetup.id}`);
     expect(screen.getByText("Spa")).toBeInTheDocument();
     expect(screen.getByText("Assetto Corsa Competizione")).toBeInTheDocument();
     expect(screen.getByText("Dry")).toBeInTheDocument();
@@ -58,28 +57,42 @@ describe("SetupCard slim variant (browse/profile cards)", () => {
     expect(screen.getAllByText("6 ratings")).toHaveLength(2);
 
     // ONE button: Download
-    expect(screen.getByRole("button", { name: /Download Setup/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Download Setup/ }),
+    ).toBeInTheDocument();
   });
 
   it("hides install, history, comments, rate, upvote, save, and prose from cards", () => {
     render(<SetupCard setup={baseSetup} />);
 
-    expect(screen.queryByText("How to install this setup")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("How to install this setup"),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("Version history")).not.toBeInTheDocument();
     expect(screen.queryByText("Comments")).not.toBeInTheDocument();
     expect(screen.queryByText("Rate this setup")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /upvote|Upvote/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /save setup|remove from saved/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /upvote|Upvote/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /save setup|remove from saved/i }),
+    ).not.toBeInTheDocument();
     // Prose belongs to the detail page; real (non-zero) counts can ride
     // along on the Download button, but zero counts stay hidden (P3).
-    expect(screen.queryByText(/Stable through Eau Rouge/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Stable through Eau Rouge/),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("0 downloads")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Download Setup/ })).toHaveTextContent("42 downloads");
+    expect(
+      screen.getByRole("button", { name: /Download Setup/ }),
+    ).toHaveTextContent("42 downloads");
     // Byline is the social layer — detail only
     expect(screen.queryByText("Alex R.")).not.toBeInTheDocument();
   });
   it("labels file-only setups without an author note", () => {
-    const { rerender } = render(<SetupCard setup={makeSetup({ ...baseSetup, description: "" })} />);
+    const { rerender } = render(
+      <SetupCard setup={makeSetup({ ...baseSetup, description: "" })} />,
+    );
     expect(screen.getByText("File only")).toBeInTheDocument();
 
     // With a note, the label is gone (the note speaks for itself).
@@ -102,7 +115,14 @@ describe("SetupCard detail variant (setup page)", () => {
   });
 
   it("says so in words when a legacy setup has no note", () => {
-    render(<SetupCard setup={makeSetup({ ...baseSetup, description: "" })} variant="detail" />);
-    expect(screen.getByText("The uploader shared the file without a note.")).toBeInTheDocument();
+    render(
+      <SetupCard
+        setup={makeSetup({ ...baseSetup, description: "" })}
+        variant="detail"
+      />,
+    );
+    expect(
+      screen.getByText("The uploader shared the file without a note."),
+    ).toBeInTheDocument();
   });
 });

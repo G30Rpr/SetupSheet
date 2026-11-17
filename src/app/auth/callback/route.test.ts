@@ -10,7 +10,9 @@ describe("sanitizeRedirectUrl", () => {
 
   it("allows valid relative paths", () => {
     expect(sanitizeRedirectUrl("/setups")).toBe("/setups");
-    expect(sanitizeRedirectUrl("/requests?game=iRacing")).toBe("/requests?game=iRacing");
+    expect(sanitizeRedirectUrl("/requests?game=iRacing")).toBe(
+      "/requests?game=iRacing",
+    );
     expect(sanitizeRedirectUrl("/profile/123")).toBe("/profile/123");
   });
 

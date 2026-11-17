@@ -18,7 +18,10 @@ export default function SetupCardValues({ setup }: { setup: Setup }) {
             </p>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
               {rows.map((field) => (
-                <div key={field.key} className="col-span-2 flex items-center justify-between gap-2 sm:col-span-1">
+                <div
+                  key={field.key}
+                  className="col-span-2 flex items-center justify-between gap-2 sm:col-span-1"
+                >
                   <dt className="text-muted-foreground">{field.label}</dt>
                   <dd className="font-mono font-medium tabular-nums text-foreground">
                     {v[field.key]}

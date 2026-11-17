@@ -18,40 +18,63 @@ import { getSetupById } from "@/lib/supabase/setups";
 import { isUuid } from "@/lib/utils";
 
 export async function createGarageSession(
-  input: unknown
+  input: unknown,
 ): Promise<{ sessionId: string | null; error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
-  if (!user) return { sessionId: null, error: "Log in to create a private Garage session." };
+  if (!user)
+    return {
+      sessionId: null,
+      error: "Log in to create a private Garage session.",
+    };
 
   const fields =
     typeof input === "object" && input !== null && !Array.isArray(input)
-      ? input as Record<string, unknown>
+      ? (input as Record<string, unknown>)
       : null;
-  const hasSourceSetup = Boolean(fields && Object.hasOwn(fields, "sourceSetupId"));
+  const hasSourceSetup = Boolean(
+    fields && Object.hasOwn(fields, "sourceSetupId"),
+  );
   let sourceSetupId: string | null = null;
   let parsed: ReturnType<typeof parseCreateGarageSessionInput>;
 
   if (hasSourceSetup) {
-    if (!fields) return { sessionId: null, error: "Session details are invalid." };
+    if (!fields)
+      return { sessionId: null, error: "Session details are invalid." };
     const requestedSetupId = fields.sourceSetupId;
     if (typeof requestedSetupId !== "string" || !isUuid(requestedSetupId)) {
       return { sessionId: null, error: "That source setup is invalid." };
     }
     if (typeof fields.copySourceSetupValues !== "boolean") {
-      return { sessionId: null, error: "Choose whether to copy the source setup values." };
+      return {
+        sessionId: null,
+        error: "Choose whether to copy the source setup values.",
+      };
     }
 
     let sourceSetup;
     try {
       sourceSetup = await getSetupById(requestedSetupId);
     } catch (lookupError) {
-      logger.error("createGarageSession: source setup lookup failed", lookupError);
-      return { sessionId: null, error: "That public setup could not be loaded right now." };
+      logger.error(
+        "createGarageSession: source setup lookup failed",
+        lookupError,
+      );
+      return {
+        sessionId: null,
+        error: "That public setup could not be loaded right now.",
+      };
     }
-    if (!sourceSetup) return { sessionId: null, error: "That public setup could not be found." };
+    if (!sourceSetup)
+      return {
+        sessionId: null,
+        error: "That public setup could not be found.",
+      };
     if (!ENGINEER_GAMES.includes(sourceSetup.game as EngineerGame)) {
-      return { sessionId: null, error: "Garage can start from ACC and Le Mans Ultimate setups only." };
+      return {
+        sessionId: null,
+        error: "Garage can start from ACC and Le Mans Ultimate setups only.",
+      };
     }
 
     const game = sourceSetup.game as EngineerGame;
@@ -73,7 +96,11 @@ export async function createGarageSession(
     parsed = parseCreateGarageSessionInput(input);
   }
 
-  if (!parsed.value) return { sessionId: null, error: parsed.error ?? "Session details are invalid." };
+  if (!parsed.value)
+    return {
+      sessionId: null,
+      error: parsed.error ?? "Session details are invalid.",
+    };
 
   const { value } = parsed;
   const result = sourceSetupId
@@ -97,7 +124,10 @@ export async function createGarageSession(
     logger.error("createGarageSession: atomic create failed", result.error);
     return {
       sessionId: null,
-      error: getActionError(result.error, "Couldn't create that Garage session right now."),
+      error: getActionError(
+        result.error,
+        "Couldn't create that Garage session right now.",
+      ),
     };
   }
 
@@ -108,7 +138,7 @@ export async function createGarageSession(
 async function getOwnedSessionGame(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
-  sessionId: string
+  sessionId: string,
 ): Promise<string | null> {
   const { data, error } = await supabase
     .from("garage_sessions")
@@ -127,7 +157,7 @@ async function getOwnedSessionGame(
 async function ownsRevision(
   supabase: Awaited<ReturnType<typeof createClient>>,
   sessionId: string,
-  revisionId: string
+  revisionId: string,
 ): Promise<boolean> {
   const { data, error } = await supabase
     .from("garage_revisions")
@@ -136,12 +166,13 @@ async function ownsRevision(
     .eq("session_id", sessionId)
     .maybeSingle();
 
-  if (error) logger.error("garage action: failed to verify revision ownership", error);
+  if (error)
+    logger.error("garage action: failed to verify revision ownership", error);
   return Boolean(data && !error);
 }
 
 export async function createGarageRevision(
-  input: unknown
+  input: unknown,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
@@ -161,7 +192,8 @@ export async function createGarageRevision(
   }
 
   const parsed = parseCreateGarageRevisionInput(input, game as EngineerGame);
-  if (!parsed.value) return { error: parsed.error ?? "Revision details are invalid." };
+  if (!parsed.value)
+    return { error: parsed.error ?? "Revision details are invalid." };
 
   const { error } = await supabase.from("garage_revisions").insert({
     session_id: parsed.value.sessionId,
@@ -171,7 +203,9 @@ export async function createGarageRevision(
 
   if (error) {
     logger.error("createGarageRevision: insert failed", error);
-    return { error: getActionError(error, "Couldn't save that revision right now.") };
+    return {
+      error: getActionError(error, "Couldn't save that revision right now."),
+    };
   }
 
   revalidatePath("/garage");
@@ -179,17 +213,28 @@ export async function createGarageRevision(
 }
 
 export async function createGarageRunPlanItem(
-  input: unknown
+  input: unknown,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
   if (!user) return { error: "Log in to add a Garage run-plan item." };
 
   const parsed = parseCreateGarageRunPlanItemInput(input);
-  if (!parsed.value) return { error: parsed.error ?? "Run-plan details are invalid." };
-  const ownedGame = await getOwnedSessionGame(supabase, user.id, parsed.value.sessionId);
+  if (!parsed.value)
+    return { error: parsed.error ?? "Run-plan details are invalid." };
+  const ownedGame = await getOwnedSessionGame(
+    supabase,
+    user.id,
+    parsed.value.sessionId,
+  );
   if (!ownedGame) return { error: "Garage session not found." };
-  if (!(await ownsRevision(supabase, parsed.value.sessionId, parsed.value.revisionId))) {
+  if (
+    !(await ownsRevision(
+      supabase,
+      parsed.value.sessionId,
+      parsed.value.revisionId,
+    ))
+  ) {
     return { error: "That revision does not belong to this session." };
   }
 
@@ -205,23 +250,40 @@ export async function createGarageRunPlanItem(
 
   if (error) {
     logger.error("createGarageRunPlanItem: insert failed", error);
-    return { error: getActionError(error, "Couldn't save that run-plan result right now.") };
+    return {
+      error: getActionError(
+        error,
+        "Couldn't save that run-plan result right now.",
+      ),
+    };
   }
 
   revalidatePath("/garage");
   return { error: null };
 }
 
-export async function createGarageLap(input: unknown): Promise<{ error: string | null }> {
+export async function createGarageLap(
+  input: unknown,
+): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
   if (!user) return { error: "Log in to log a Garage lap." };
 
   const parsed = parseCreateGarageLapInput(input);
   if (!parsed.value) return { error: parsed.error };
-  const ownedGame = await getOwnedSessionGame(supabase, user.id, parsed.value.sessionId);
+  const ownedGame = await getOwnedSessionGame(
+    supabase,
+    user.id,
+    parsed.value.sessionId,
+  );
   if (!ownedGame) return { error: "Garage session not found." };
-  if (!(await ownsRevision(supabase, parsed.value.sessionId, parsed.value.revisionId))) {
+  if (
+    !(await ownsRevision(
+      supabase,
+      parsed.value.sessionId,
+      parsed.value.revisionId,
+    ))
+  ) {
     return { error: "That revision does not belong to this session." };
   }
 
@@ -235,14 +297,18 @@ export async function createGarageLap(input: unknown): Promise<{ error: string |
 
   if (error) {
     logger.error("createGarageLap: insert failed", error);
-    return { error: getActionError(error, "Couldn't save that lap right now.") };
+    return {
+      error: getActionError(error, "Couldn't save that lap right now."),
+    };
   }
 
   revalidatePath("/garage");
   return { error: null };
 }
 
-export async function deleteGarageSession(sessionId: string): Promise<{ error: string | null }> {
+export async function deleteGarageSession(
+  sessionId: string,
+): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
   if (!user) return { error: "Log in to delete a Garage session." };
@@ -258,7 +324,12 @@ export async function deleteGarageSession(sessionId: string): Promise<{ error: s
 
   if (error) {
     logger.error("deleteGarageSession: delete failed", error);
-    return { error: getActionError(error, "Couldn't delete that Garage session right now.") };
+    return {
+      error: getActionError(
+        error,
+        "Couldn't delete that Garage session right now.",
+      ),
+    };
   }
   if (!data) return { error: "Garage session not found." };
 

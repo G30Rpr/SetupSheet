@@ -11,10 +11,11 @@ interface DatabaseErrorLike {
 export function getActionError(
   error: unknown,
   fallback: string,
-  knownMessages: readonly string[] = []
+  knownMessages: readonly string[] = [],
 ): string {
   const candidate = error as DatabaseErrorLike | null;
-  const message = typeof candidate?.message === "string" ? candidate.message : "";
+  const message =
+    typeof candidate?.message === "string" ? candidate.message : "";
   if (knownMessages.includes(message)) return message;
 
   switch (candidate?.code) {

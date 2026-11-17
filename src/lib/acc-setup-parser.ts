@@ -40,7 +40,8 @@ export const ACC_CAR_NAME_MAP: Record<string, string> = {
   lamborghini_huracan_gt3_evo: "Lamborghini Huracan Evo GT3 2019",
   lamborghini_huracan_gt3_evo2: "Lamborghini Huracan EVO2 GT3 2023",
   lamborghini_huracan_st: "Lamborghini Huracan Super Trofeo 2015 GTC",
-  lamborghini_huracan_st_evo2: "Lamborghini Huracan Super Trofeo Evo 2 2021 GTC",
+  lamborghini_huracan_st_evo2:
+    "Lamborghini Huracan Super Trofeo Evo 2 2021 GTC",
   lexus_rc_f_gt3: "Lexus RC F GT3 2016",
   maserati_mc20_gt2: "Maserati MC20 GT2",
   maserati_mc_gt4: "Maserati GranTurismo MC GT4 2016",
@@ -108,17 +109,30 @@ export function parseAccSetupFile(jsonText: string): AccParseResult | null {
   const electronics = (basic.electronics ?? {}) as Record<string, unknown>;
   const strategy = (basic.strategy ?? {}) as Record<string, unknown>;
   const tyres = (basic.tyres ?? {}) as Record<string, unknown>;
-  const mechanicalBalance = (advanced.mechanicalBalance ?? {}) as Record<string, unknown>;
+  const mechanicalBalance = (advanced.mechanicalBalance ?? {}) as Record<
+    string,
+    unknown
+  >;
   const dampers = (advanced.dampers ?? {}) as Record<string, unknown>;
   const aeroBalance = (advanced.aeroBalance ?? {}) as Record<string, unknown>;
 
   const staticCamber = alignment.staticCamber;
   const camberArr = Array.isArray(staticCamber) ? staticCamber : [];
-  const dampersBumpSlow = Array.isArray(dampers.bumpSlow) ? dampers.bumpSlow : [];
-  const dampersBumpFast = Array.isArray(dampers.bumpFast) ? dampers.bumpFast : [];
-  const dampersReboundSlow = Array.isArray(dampers.reboundSlow) ? dampers.reboundSlow : [];
-  const dampersReboundFast = Array.isArray(dampers.reboundFast) ? dampers.reboundFast : [];
-  const brakeDuct = Array.isArray(aeroBalance.brakeDuct) ? aeroBalance.brakeDuct : [];
+  const dampersBumpSlow = Array.isArray(dampers.bumpSlow)
+    ? dampers.bumpSlow
+    : [];
+  const dampersBumpFast = Array.isArray(dampers.bumpFast)
+    ? dampers.bumpFast
+    : [];
+  const dampersReboundSlow = Array.isArray(dampers.reboundSlow)
+    ? dampers.reboundSlow
+    : [];
+  const dampersReboundFast = Array.isArray(dampers.reboundFast)
+    ? dampers.reboundFast
+    : [];
+  const brakeDuct = Array.isArray(aeroBalance.brakeDuct)
+    ? aeroBalance.brakeDuct
+    : [];
 
   const values: SetupValues = {};
 
@@ -141,23 +155,33 @@ export function parseAccSetupFile(jsonText: string): AccParseResult | null {
 
   // Fuel & Strategy -- fuel is already litres; set/compound numbers are
   // 0-indexed in the file vs. 1-indexed on screen.
-  set("fuel", typeof strategy.fuel === "number" ? `${strategy.fuel} L` : undefined);
+  set(
+    "fuel",
+    typeof strategy.fuel === "number" ? `${strategy.fuel} L` : undefined,
+  );
   set(
     "tyreCompound",
-    typeof tyres.tyreCompound === "number" ? TYRE_COMPOUND_NAMES[tyres.tyreCompound] : undefined
+    typeof tyres.tyreCompound === "number"
+      ? TYRE_COMPOUND_NAMES[tyres.tyreCompound]
+      : undefined,
   );
-  set("tyreSet", typeof strategy.tyreSet === "number" ? String(strategy.tyreSet + 1) : undefined);
+  set(
+    "tyreSet",
+    typeof strategy.tyreSet === "number"
+      ? String(strategy.tyreSet + 1)
+      : undefined,
+  );
   set(
     "frontBrakePadSet",
     typeof strategy.frontBrakePadCompound === "number"
       ? String(strategy.frontBrakePadCompound + 1)
-      : undefined
+      : undefined,
   );
   set(
     "rearBrakePadSet",
     typeof strategy.rearBrakePadCompound === "number"
       ? String(strategy.rearBrakePadCompound + 1)
-      : undefined
+      : undefined,
   );
 
   // Mechanical Grip -- ARB is the raw in-game click count, directly usable.
@@ -190,7 +214,9 @@ export function parseAccSetupFile(jsonText: string): AccParseResult | null {
   set("rearBrakeDuct", num(brakeDuct[1]));
 
   const car =
-    typeof root.carName === "string" ? ACC_CAR_NAME_MAP[root.carName] ?? null : null;
+    typeof root.carName === "string"
+      ? (ACC_CAR_NAME_MAP[root.carName] ?? null)
+      : null;
 
   return { car, setupValues: values, fieldCount: Object.keys(values).length };
 }

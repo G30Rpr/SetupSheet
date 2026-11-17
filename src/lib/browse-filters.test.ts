@@ -17,7 +17,7 @@ describe("browse filter normalization", () => {
         condition: "Dry",
         rig: ALL_BROWSE_FILTER,
         tag: ALL_BROWSE_FILTER,
-      })
+      }),
     ).toEqual({
       search: "spa porsche",
       game: "iRacing",
@@ -40,7 +40,7 @@ describe("browse filter normalization", () => {
         condition: ALL_BROWSE_FILTER,
         rig: ALL_BROWSE_FILTER,
         tag: ALL_BROWSE_FILTER,
-      })
+      }),
     ).toBeNull();
     expect(
       normalizeBrowseFilters({
@@ -51,14 +51,14 @@ describe("browse filter normalization", () => {
         condition: ALL_BROWSE_FILTER,
         rig: ALL_BROWSE_FILTER,
         tag: ALL_BROWSE_FILTER,
-      })
+      }),
     ).toBeNull();
   });
 
   it("removes PostgREST operators from the server search expression", () => {
     const expression = buildBrowseSearchExpression("spa, *");
     expect(expression).toBe(
-      "game.ilike.*spa*,car.ilike.*spa*,track.ilike.*spa*,description.ilike.*spa*,author_username.ilike.*spa*,tags.cs.{spa}"
+      "game.ilike.*spa*,car.ilike.*spa*,track.ilike.*spa*,description.ilike.*spa*,author_username.ilike.*spa*,tags.cs.{spa}",
     );
   });
 });

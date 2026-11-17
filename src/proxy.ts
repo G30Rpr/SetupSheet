@@ -70,7 +70,8 @@ function malformedIdResponse(pathname: string) {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
-      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "Content-Security-Policy":
+        "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
       "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -86,7 +87,11 @@ function supabaseConnectSources(): string[] {
     const url = new URL(configuredUrl);
     const isLocalDevelopment =
       isDev && ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
-    if (url.protocol !== "https:" && !(url.protocol === "http:" && isLocalDevelopment)) return [];
+    if (
+      url.protocol !== "https:" &&
+      !(url.protocol === "http:" && isLocalDevelopment)
+    )
+      return [];
     if (url.username || url.password) return [];
 
     const websocketScheme = url.protocol === "https:" ? "wss:" : "ws:";

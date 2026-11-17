@@ -23,19 +23,22 @@ export const ENGINEER_SYMPTOMS = [
     id: "mid-corner-understeer",
     label: "The car pushes wide mid-corner",
     category: "Cornering",
-    description: "The front runs wide after turn-in while you hold a steady line.",
+    description:
+      "The front runs wide after turn-in while you hold a steady line.",
   },
   {
     id: "mid-corner-oversteer",
     label: "The rear rotates too easily mid-corner",
     category: "Cornering",
-    description: "The rear moves outward while you're holding a steady cornering line.",
+    description:
+      "The rear moves outward while you're holding a steady cornering line.",
   },
   {
     id: "exit-oversteer",
     label: "The rear steps out on corner exit",
     category: "Corner exit",
-    description: "The car rotates or slides as you begin to apply throttle on exit.",
+    description:
+      "The car rotates or slides as you begin to apply throttle on exit.",
   },
   {
     id: "exit-wheelspin",
@@ -53,13 +56,15 @@ export const ENGINEER_SYMPTOMS = [
     id: "hot-tyre-pressure-high",
     label: "Hot tyre pressure is above its target",
     category: "Tyres",
-    description: "After the tyres are up to temperature, the in-game reading exceeds that car and compound's target.",
+    description:
+      "After the tyres are up to temperature, the in-game reading exceeds that car and compound's target.",
   },
   {
     id: "hot-tyre-pressure-low",
     label: "Hot tyre pressure is below its target",
     category: "Tyres",
-    description: "After the tyres are up to temperature, the in-game reading is below that car and compound's target.",
+    description:
+      "After the tyres are up to temperature, the in-game reading is below that car and compound's target.",
   },
 ] as const;
 
@@ -96,7 +101,8 @@ export type EngineerRecommendationConflict = {
   message: string;
 };
 
-export type EngineerResultStatus = "ready" | "generic" | "unknown-symptom" | "unavailable";
+export type EngineerResultStatus =
+  "ready" | "generic" | "unknown-symptom" | "unavailable";
 
 export type EngineerResult = {
   status: EngineerResultStatus;

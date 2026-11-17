@@ -13,15 +13,16 @@ import { isUuid } from "@/lib/utils";
 
 /** A read, not a mutation -- lets the client-side comment panel fetch/refetch on demand. */
 export async function getSetupCommentsAction(
-  setupId: string
+  setupId: string,
 ): Promise<{ comments: SetupComment[]; error: string | null }> {
-  if (!isUuid(setupId)) return { comments: [], error: "That setup id is invalid." };
+  if (!isUuid(setupId))
+    return { comments: [], error: "That setup id is invalid." };
   return getSetupComments(setupId);
 }
 
 export async function createComment(
   setupId: string,
-  body: string
+  body: string,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
@@ -41,7 +42,9 @@ export async function createComment(
     return { error: "Comment can't be empty." };
   }
   if (trimmed.length > MAX_COMMENT_LENGTH) {
-    return { error: `Comment is too long — max ${MAX_COMMENT_LENGTH} characters.` };
+    return {
+      error: `Comment is too long — max ${MAX_COMMENT_LENGTH} characters.`,
+    };
   }
 
   const { error } = await supabase
@@ -50,7 +53,9 @@ export async function createComment(
 
   if (error) {
     logger.error("createComment: insert failed", error);
-    return { error: getActionError(error, "Couldn't post the comment right now.") };
+    return {
+      error: getActionError(error, "Couldn't post the comment right now."),
+    };
   }
 
   revalidatePath(`/setups/${setupId}`);
@@ -59,7 +64,7 @@ export async function createComment(
 
 export async function deleteComment(
   commentId: string,
-  setupId: string
+  setupId: string,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
@@ -79,7 +84,9 @@ export async function deleteComment(
 
   if (error) {
     logger.error("deleteComment: delete failed", error);
-    return { error: getActionError(error, "Couldn't delete the comment right now.") };
+    return {
+      error: getActionError(error, "Couldn't delete the comment right now."),
+    };
   }
 
   revalidatePath(`/setups/${setupId}`);

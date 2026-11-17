@@ -10,8 +10,14 @@ describe("gameVersionState", () => {
   });
 
   it("shows a reported version plainly when the current patch is unknown", () => {
-    expect(gameVersionState("1.6", null)).toEqual({ kind: "reported", version: "1.6" });
-    expect(gameVersionState(" 1.6 ", "")).toEqual({ kind: "reported", version: "1.6" });
+    expect(gameVersionState("1.6", null)).toEqual({
+      kind: "reported",
+      version: "1.6",
+    });
+    expect(gameVersionState(" 1.6 ", "")).toEqual({
+      kind: "reported",
+      version: "1.6",
+    });
     expect(gameVersionState("LMU 1.6.2", "  ")).toEqual({
       kind: "reported",
       version: "LMU 1.6.2",
@@ -19,8 +25,14 @@ describe("gameVersionState", () => {
   });
 
   it("marks exact matches current -- no guessed version semantics", () => {
-    expect(gameVersionState("1.6", "1.6")).toEqual({ kind: "current", version: "1.6" });
-    expect(gameVersionState(" 1.6", "1.6 ")).toEqual({ kind: "current", version: "1.6" });
+    expect(gameVersionState("1.6", "1.6")).toEqual({
+      kind: "current",
+      version: "1.6",
+    });
+    expect(gameVersionState(" 1.6", "1.6 ")).toEqual({
+      kind: "current",
+      version: "1.6",
+    });
     expect(gameVersionState("1.6.0", "1.6")).toEqual({
       kind: "stale",
       version: "1.6.0",

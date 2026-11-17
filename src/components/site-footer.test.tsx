@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/supabase/leaderboard", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/supabase/leaderboard")>();
+  const actual =
+    await importOriginal<typeof import("@/lib/supabase/leaderboard")>();
   return {
     ...actual,
     getContributorCount: mocks.getContributorCount,
@@ -28,29 +29,44 @@ describe("SiteFooter", () => {
   it("uses the matched-to-your-rig tagline and primary nav", async () => {
     render(await SiteFooter());
 
-    expect(screen.getByText("Free setups, matched to your rig.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Browse" })).toHaveAttribute("href", "/setups");
-    expect(screen.getByRole("link", { name: "Engineer" })).toHaveAttribute("href", "/engineer");
-    expect(screen.getByRole("link", { name: "Requests" })).toHaveAttribute("href", "/requests");
+    expect(
+      screen.getByText("Free setups, matched to your rig."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Browse" })).toHaveAttribute(
+      "href",
+      "/setups",
+    );
+    expect(screen.getByRole("link", { name: "Engineer" })).toHaveAttribute(
+      "href",
+      "/engineer",
+    );
+    expect(screen.getByRole("link", { name: "Requests" })).toHaveAttribute(
+      "href",
+      "/requests",
+    );
   });
 
   it("hides the Leaderboard link until 10 contributors have shared", async () => {
     mocks.getContributorCount.mockResolvedValue(9);
     const { unmount } = render(await SiteFooter());
-    expect(screen.queryByRole("link", { name: "Leaderboard" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Leaderboard" }),
+    ).not.toBeInTheDocument();
     unmount();
 
     mocks.getContributorCount.mockResolvedValue(10);
     render(await SiteFooter());
     expect(screen.getByRole("link", { name: "Leaderboard" })).toHaveAttribute(
       "href",
-      "/leaderboard"
+      "/leaderboard",
     );
   });
 
   it("fails closed: a broken contributor count hides the link instead of erroring", async () => {
     mocks.getContributorCount.mockRejectedValue(new Error("db down"));
     render(await SiteFooter());
-    expect(screen.queryByRole("link", { name: "Leaderboard" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Leaderboard" }),
+    ).not.toBeInTheDocument();
   });
 });

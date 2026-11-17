@@ -46,7 +46,9 @@ const engineerDirections = new Set<EngineerDirection>([
 ]);
 
 function isEngineerGame(value: unknown): value is EngineerGame {
-  return typeof value === "string" && ENGINEER_GAMES.includes(value as EngineerGame);
+  return (
+    typeof value === "string" && ENGINEER_GAMES.includes(value as EngineerGame)
+  );
 }
 
 function isEngineerCondition(value: unknown): value is EngineerCondition {
@@ -54,7 +56,10 @@ function isEngineerCondition(value: unknown): value is EngineerCondition {
 }
 
 function isEngineerDirection(value: unknown): value is EngineerDirection {
-  return typeof value === "string" && engineerDirections.has(value as EngineerDirection);
+  return (
+    typeof value === "string" &&
+    engineerDirections.has(value as EngineerDirection)
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -67,7 +72,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * support-only update; absent changes are never treated as failures.
  */
 export function betaCalibrationFactor(supportingSetups: number): number | null {
-  if (!Number.isSafeInteger(supportingSetups) || supportingSetups < 0) return null;
+  if (!Number.isSafeInteger(supportingSetups) || supportingSetups < 0)
+    return null;
 
   const alpha = ENGINEER_CALIBRATION_BETA_ALPHA + supportingSetups;
   const beta = ENGINEER_CALIBRATION_BETA_BETA;
@@ -75,7 +81,7 @@ export function betaCalibrationFactor(supportingSetups: number): number | null {
   const factor = 0.6 + 0.8 * posteriorMean;
   return Math.max(
     ENGINEER_CALIBRATION_MIN_FACTOR,
-    Math.min(ENGINEER_CALIBRATION_MAX_FACTOR, factor)
+    Math.min(ENGINEER_CALIBRATION_MAX_FACTOR, factor),
   );
 }
 
@@ -87,26 +93,36 @@ export function betaCalibrationFactor(supportingSetups: number): number | null {
 export function mapPublicEngineerCalibrationRows(
   rows: readonly unknown[],
   gameValue: unknown,
-  conditionValue: unknown
+  conditionValue: unknown,
 ): EngineerCalibrationFactor[] {
-  if (!isEngineerGame(gameValue) || !isEngineerCondition(conditionValue)) return [];
+  if (!isEngineerGame(gameValue) || !isEngineerCondition(conditionValue))
+    return [];
 
   const expectedCondition = conditionValue === "dry" ? "Dry" : "Wet";
-  const groups = new Map<string, {
-    invalid: boolean;
-    seen: boolean;
-    direction?: EngineerDirection;
-    sampleCount?: number;
-  }>();
+  const groups = new Map<
+    string,
+    {
+      invalid: boolean;
+      seen: boolean;
+      direction?: EngineerDirection;
+      sampleCount?: number;
+    }
+  >();
 
   for (const value of rows) {
-    if (!isRecord(value) || value.game !== gameValue || value.condition !== expectedCondition) continue;
+    if (
+      !isRecord(value) ||
+      value.game !== gameValue ||
+      value.condition !== expectedCondition
+    )
+      continue;
     if (typeof value.parameter !== "string") continue;
 
     // Garage input is trimmed when recorded. Reject padded names here rather
     // than normalizing them; aliases, fuzzy, and case-folded matches are banned.
     const parameter = value.parameter;
-    if (!parameter || parameter !== parameter.trim() || parameter.length > 120) continue;
+    if (!parameter || parameter !== parameter.trim() || parameter.length > 120)
+      continue;
 
     const group = groups.get(parameter) ?? { invalid: false, seen: false };
     groups.set(parameter, group);
@@ -166,7 +182,9 @@ export function mapPublicEngineerCalibrationRows(
     });
   }
 
-  return factors.sort((left, right) => left.parameter.localeCompare(right.parameter));
+  return factors.sort((left, right) =>
+    left.parameter.localeCompare(right.parameter),
+  );
 }
 
 /**
@@ -177,7 +195,7 @@ export function mapPublicEngineerCalibrationRows(
 export function applyPublicEngineerCalibration(
   result: EngineerResult,
   input: EngineerInput,
-  factors: readonly EngineerCalibrationFactor[]
+  factors: readonly EngineerCalibrationFactor[],
 ): EngineerResult {
   if (
     result.recommendations.length === 0 ||
@@ -226,16 +244,22 @@ export function applyPublicEngineerCalibration(
         ...baseline,
         warnings: baseline.warnings ? [...baseline.warnings] : undefined,
         ...(evidence
-          ? { publicEvidence: { sampleCount: evidence.sampleCount, factor: evidence.factor } }
+          ? {
+              publicEvidence: {
+                sampleCount: evidence.sampleCount,
+                factor: evidence.factor,
+              },
+            }
           : {}),
       },
     };
   });
 
-  ranked.sort((left, right) =>
-    right.adjustedScore - left.adjustedScore ||
-    right.recommendation.score - left.recommendation.score ||
-    left.index - right.index
+  ranked.sort(
+    (left, right) =>
+      right.adjustedScore - left.adjustedScore ||
+      right.recommendation.score - left.recommendation.score ||
+      left.index - right.index,
   );
 
   const recommendations = ranked.map(({ recommendation }) => recommendation);

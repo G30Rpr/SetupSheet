@@ -5,7 +5,9 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 const rateSetup = vi.fn();
 const dismissRatingPrompt = vi.fn();
-vi.mock("@/lib/actions/setups", () => ({ rateSetup: (...a: unknown[]) => rateSetup(...a) }));
+vi.mock("@/lib/actions/setups", () => ({
+  rateSetup: (...a: unknown[]) => rateSetup(...a),
+}));
 vi.mock("@/lib/actions/rating-prompts", () => ({
   dismissRatingPrompt: (...a: unknown[]) => dismissRatingPrompt(...a),
 }));
@@ -36,7 +38,9 @@ describe("RatingPrompt (24h post-download)", () => {
 
     // Tap 1: pace. Tap 2: predictability. Tap 3: share.
     fireEvent.click(screen.getByRole("button", { name: "Pace: 4 of 5" }));
-    fireEvent.click(screen.getByRole("button", { name: "Predictability: 5 of 5" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Predictability: 5 of 5" }),
+    );
     const share = screen.getByRole("button", { name: "Share rating" });
     expect(share).toBeEnabled();
     fireEvent.click(share);
@@ -57,11 +61,15 @@ describe("RatingPrompt (24h post-download)", () => {
     rateSetup.mockResolvedValue({ error: "You can't rate your own setup." });
     render(<RatingPrompt prompt={prompt} />);
     fireEvent.click(screen.getByRole("button", { name: "Pace: 2 of 5" }));
-    fireEvent.click(screen.getByRole("button", { name: "Predictability: 2 of 5" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Predictability: 2 of 5" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Share rating" }));
 
     await vi.waitFor(() => {
-      expect(screen.getByRole("alert")).toHaveTextContent("You can't rate your own setup.");
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "You can't rate your own setup.",
+      );
     });
     expect(screen.getByRole("button", { name: "Share rating" })).toBeEnabled();
   });
