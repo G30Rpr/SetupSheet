@@ -7,7 +7,10 @@ vi.mock("@/lib/logger", () => ({
 
 const { POST } = await import("@/app/api/telemetry/route");
 
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+  vi.useRealTimers();
+});
 
 function request(body: unknown, headers: Record<string, string> = {}) {
   return new Request("https://setupsheet.app/api/telemetry", {
@@ -18,6 +21,30 @@ function request(body: unknown, headers: Record<string, string> = {}) {
 }
 
 describe("POST /api/telemetry", () => {
+  it("returns an uncached 408 for a stalled body and logs no partial events", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('{"events":['));
+      },
+      cancel: () => new Promise<void>(() => {}),
+    });
+    const pending = POST(
+      new Request("https://setupsheet.app/api/telemetry", {
+        method: "POST",
+        body,
+        duplex: "half",
+      } as RequestInit & { duplex: "half" }),
+    );
+    await vi.advanceTimersByTimeAsync(5_000);
+    const response = await pending;
+    expect(response.status).toBe(408);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(loggerInfo).not.toHaveBeenCalled();
+    expect(body.locked).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("logs only validated metrics and normalized paths", async () => {
     const response = await POST(
       request({
