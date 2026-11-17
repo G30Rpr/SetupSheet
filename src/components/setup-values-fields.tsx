@@ -27,13 +27,18 @@ export function SetupValuesFields({
       </p>
       {groups.map((group) => (
         <div key={group.title} className="flex flex-col gap-2.5">
-          <p className="text-xs font-medium text-muted-foreground">{group.title}</p>
+          <p className="text-xs font-medium text-muted-foreground">
+            {group.title}
+          </p>
           <div className="grid grid-cols-2 gap-3">
             {group.fields.map((field) => {
               const fieldId = idPrefix ? `${idPrefix}-${field.key}` : field.key;
               return (
                 <div key={field.key} className="flex flex-col gap-1.5">
-                  <Label htmlFor={fieldId} className="text-xs font-normal text-muted-foreground">
+                  <Label
+                    htmlFor={fieldId}
+                    className="text-xs font-normal text-muted-foreground"
+                  >
                     {field.label}
                   </Label>
                   <Input

@@ -27,16 +27,23 @@ import { cn } from "@/lib/utils";
 import type { SetupRequest } from "@/lib/types";
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export function SetupRequestCard({ request }: { request: SetupRequest }) {
   const router = useRouter();
   const { user, signInWithDiscord } = useAuth();
   const [showPicker, setShowPicker] = useState(false);
-  const [candidates, setCandidates] = useState<{ id: string; car: string; track: string }[] | null>(null);
+  const [candidates, setCandidates] = useState<
+    { id: string; car: string; track: string }[] | null
+  >(null);
   const [isLoadingCandidates, setIsLoadingCandidates] = useState(false);
-  const [candidateLoadError, setCandidateLoadError] = useState<string | null>(null);
+  const [candidateLoadError, setCandidateLoadError] = useState<string | null>(
+    null,
+  );
   const [selectedSetupId, setSelectedSetupId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -73,7 +80,11 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
     setCandidateLoadError(null);
     setIsLoadingCandidates(true);
     try {
-      const result = await getMyMatchingSetupsAction(request.game, request.car, request.track);
+      const result = await getMyMatchingSetupsAction(
+        request.game,
+        request.car,
+        request.track,
+      );
       if (result.error) {
         setCandidates(null);
         setCandidateLoadError(result.error);
@@ -119,7 +130,10 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
   if (isCancelled) return null;
 
   return (
-    <Card as="article" className={cn("gap-2.5 px-4 py-3.5", isFulfilled && "opacity-70")}>
+    <Card
+      as="article"
+      className={cn("gap-2.5 px-4 py-3.5", isFulfilled && "opacity-70")}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -148,10 +162,13 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
         ) : null}
       </div>
 
-      {request.notes && <p className="text-sm text-muted-foreground">{request.notes}</p>}
+      {request.notes && (
+        <p className="text-sm text-muted-foreground">{request.notes}</p>
+      )}
 
       <p className="text-xs text-muted-foreground">
-        Requested by {request.requesterUsername} · {formatDate(request.createdAt)}
+        Requested by {request.requesterUsername} ·{" "}
+        {formatDate(request.createdAt)}
       </p>
 
       {isFulfilled ? (
@@ -159,18 +176,27 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
           href={`/setups/${request.fulfilledSetupId}`}
           className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
         >
-          {request.fulfilledByUsername} shared {request.fulfilledCar} @ {request.fulfilledTrack}
+          {request.fulfilledByUsername} shared {request.fulfilledCar} @{" "}
+          {request.fulfilledTrack}
         </Link>
       ) : !isOwnRequest ? (
         <div className="flex flex-col gap-2">
           {!showPicker ? (
-            <Button type="button" variant="outline" size="sm" onClick={handleOpenPicker} className="self-start">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleOpenPicker}
+              className="self-start"
+            >
               <Wrench className="size-4" />
               Fulfill with one of your setups
             </Button>
           ) : candidateLoadError ? (
             <div className="flex flex-col items-start gap-2">
-              <p role="alert" className="text-sm text-destructive">{candidateLoadError}</p>
+              <p role="alert" className="text-sm text-destructive">
+                {candidateLoadError}
+              </p>
               <Button
                 type="button"
                 variant="outline"
@@ -182,10 +208,13 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
               </Button>
             </div>
           ) : candidates === null ? (
-            <p className="text-xs text-muted-foreground">Loading your setups...</p>
+            <p className="text-xs text-muted-foreground">
+              Loading your setups...
+            </p>
           ) : candidates.length === 0 ? (
             <p className="text-xs text-muted-foreground">
-              You don&apos;t have a matching {request.car} @ {request.track} setup yet —{" "}
+              You don&apos;t have a matching {request.car} @ {request.track}{" "}
+              setup yet —{" "}
               <Link
                 href={`/upload?request=${encodeURIComponent(request.id)}`}
                 className="font-medium text-foreground underline-offset-4 hover:underline"
@@ -196,7 +225,10 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
             </p>
           ) : (
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Select value={selectedSetupId} onValueChange={setSelectedSetupId}>
+              <Select
+                value={selectedSetupId}
+                onValueChange={setSelectedSetupId}
+              >
                 <SelectTrigger className="w-full sm:max-w-[240px]">
                   <SelectValue placeholder="Pick your setup" />
                 </SelectTrigger>
@@ -208,7 +240,12 @@ export function SetupRequestCard({ request }: { request: SetupRequest }) {
                   ))}
                 </SelectContent>
               </Select>
-              <Button type="button" size="sm" disabled={!selectedSetupId || isPending} onClick={handleFulfill}>
+              <Button
+                type="button"
+                size="sm"
+                disabled={!selectedSetupId || isPending}
+                onClick={handleFulfill}
+              >
                 {isPending ? "Fulfilling..." : "Confirm"}
               </Button>
             </div>

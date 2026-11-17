@@ -1,6 +1,9 @@
 "use server";
 
-import { normalizeBrowseFilters, type BrowseFilters } from "@/lib/browse-filters";
+import {
+  normalizeBrowseFilters,
+  type BrowseFilters,
+} from "@/lib/browse-filters";
 import { getSetupsAfter, type SetupCursor } from "@/lib/supabase/setups";
 import { getPublicFieldTestCounts } from "@/lib/supabase/field-tests";
 import { isUuid } from "@/lib/utils";
@@ -19,28 +22,34 @@ const ISO_CURSOR_PATTERN =
 /** Loads the next keyset page for the client-side browse index. */
 export async function loadMoreSetups(
   cursor: SetupCursor | null,
-  filters: BrowseFilters
+  filters: BrowseFilters,
 ): Promise<MoreSetupsResult> {
   const normalizedFilters = normalizeBrowseFilters(filters);
   if (
     !normalizedFilters ||
-    (cursor !== null && (
-      !cursor ||
-      typeof cursor.createdAt !== "string" ||
-      cursor.createdAt.length > 64 ||
-      !ISO_CURSOR_PATTERN.test(cursor.createdAt) ||
-      Number.isNaN(Date.parse(cursor.createdAt)) ||
-      !isUuid(cursor.id)
-    ))
+    (cursor !== null &&
+      (!cursor ||
+        typeof cursor.createdAt !== "string" ||
+        cursor.createdAt.length > 64 ||
+        !ISO_CURSOR_PATTERN.test(cursor.createdAt) ||
+        Number.isNaN(Date.parse(cursor.createdAt)) ||
+        !isUuid(cursor.id)))
   ) {
-    return { setups: [], nextCursor: null, fieldTestCounts: {}, error: "That browse cursor is invalid." };
+    return {
+      setups: [],
+      nextCursor: null,
+      fieldTestCounts: {},
+      error: "That browse cursor is invalid.",
+    };
   }
 
   try {
     const result = await getSetupsAfter(cursor, normalizedFilters);
     if (result.error) return { ...result, fieldTestCounts: {} };
 
-    const fieldTestCounts = await getPublicFieldTestCounts(result.setups.map((setup) => setup.id));
+    const fieldTestCounts = await getPublicFieldTestCounts(
+      result.setups.map((setup) => setup.id),
+    );
     return { ...result, fieldTestCounts: Object.fromEntries(fieldTestCounts) };
   } catch {
     return {

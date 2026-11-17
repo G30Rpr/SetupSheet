@@ -20,13 +20,22 @@ describe("Garage input validation", () => {
       frontArb: "",
     };
 
-    expect(getGarageCompatibleSetupValues("Assetto Corsa Competizione", sourceValues)).toEqual({
+    expect(
+      getGarageCompatibleSetupValues(
+        "Assetto Corsa Competizione",
+        sourceValues,
+      ),
+    ).toEqual({
       brakeBias: "56% front",
       rearArb: "4",
       frontArb: "",
     });
-    expect(countGarageSetupValues("Assetto Corsa Competizione", sourceValues)).toBe(2);
-    expect(getGarageCompatibleSetupValues("Le Mans Ultimate", null)).toEqual({});
+    expect(
+      countGarageSetupValues("Assetto Corsa Competizione", sourceValues),
+    ).toBe(2);
+    expect(getGarageCompatibleSetupValues("Le Mans Ultimate", null)).toEqual(
+      {},
+    );
   });
 
   it("accepts an ACC session with schema-backed baseline values", () => {
@@ -70,13 +79,15 @@ describe("Garage input validation", () => {
       baselineNote: "",
     };
 
-    expect(parseCreateGarageSessionInput({ ...base, game: "Gran Turismo 7" }).error).toMatch(/supported game/i);
+    expect(
+      parseCreateGarageSessionInput({ ...base, game: "Gran Turismo 7" }).error,
+    ).toMatch(/supported game/i);
     expect(
       parseCreateGarageSessionInput({
         ...base,
         game: "Le Mans Ultimate",
         setupValues: { notARealField: "1" },
-      }).error
+      }).error,
     ).toMatch(/invalid for this game/i);
   });
 
@@ -84,19 +95,23 @@ describe("Garage input validation", () => {
     const sessionId = "11111111-1111-4111-8111-111111111111";
     const valid = parseCreateGarageRevisionInput(
       { sessionId, setupValues: { brakeBias: "56%" }, note: "Revision two" },
-      "Assetto Corsa Competizione"
+      "Assetto Corsa Competizione",
     );
     expect(valid.error).toBeNull();
     expect(valid.value?.setupValues).toEqual({ brakeBias: "56%" });
 
-    expect(parseCreateGarageRevisionInput(
-      { sessionId, setupValues: { notARealField: "1" }, note: "" },
-      "Assetto Corsa Competizione"
-    ).value).toBeNull();
-    expect(parseCreateGarageRevisionInput(
-      { sessionId: "not-a-uuid", setupValues: {}, note: "" },
-      "Le Mans Ultimate"
-    ).value).toBeNull();
+    expect(
+      parseCreateGarageRevisionInput(
+        { sessionId, setupValues: { notARealField: "1" }, note: "" },
+        "Assetto Corsa Competizione",
+      ).value,
+    ).toBeNull();
+    expect(
+      parseCreateGarageRevisionInput(
+        { sessionId: "not-a-uuid", setupValues: {}, note: "" },
+        "Le Mans Ultimate",
+      ).value,
+    ).toBeNull();
   });
 
   it("parses common lap-time formats and rejects malformed or unsafe values", () => {
@@ -115,14 +130,23 @@ describe("Garage input validation", () => {
       revisionId: "22222222-2222-4222-8222-222222222222",
     };
 
-    expect(parseCreateGarageLapInput({
-      ...validIds,
-      lapTime: "1:42.350",
-      condition: "Dry",
-      note: "clean lap",
-    })).toMatchObject({ value: { lapTimeMs: 102_350 }, error: null });
+    expect(
+      parseCreateGarageLapInput({
+        ...validIds,
+        lapTime: "1:42.350",
+        condition: "Dry",
+        note: "clean lap",
+      }),
+    ).toMatchObject({ value: { lapTimeMs: 102_350 }, error: null });
 
-    expect(parseCreateGarageLapInput({ ...validIds, lapTime: "nope", condition: "Dry", note: "" }).value).toBeNull();
+    expect(
+      parseCreateGarageLapInput({
+        ...validIds,
+        lapTime: "nope",
+        condition: "Dry",
+        note: "",
+      }).value,
+    ).toBeNull();
 
     const runPlan = parseCreateGarageRunPlanItemInput({
       ...validIds,
@@ -134,13 +158,15 @@ describe("Garage input validation", () => {
     });
     expect(runPlan.error).toBeNull();
     expect(runPlan.value?.verdict).toBe("better");
-    expect(parseCreateGarageRunPlanItemInput({
-      ...validIds,
-      parameter: "Rear wing",
-      direction: "teleport",
-      amount: "1 click",
-      verdict: "better",
-      note: "",
-    }).value).toBeNull();
+    expect(
+      parseCreateGarageRunPlanItemInput({
+        ...validIds,
+        parameter: "Rear wing",
+        direction: "teleport",
+        amount: "1 click",
+        verdict: "better",
+        note: "",
+      }).value,
+    ).toBeNull();
   });
 });

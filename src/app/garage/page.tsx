@@ -6,7 +6,10 @@ import { DiscordLoginButton } from "@/components/auth-nav";
 import { Card } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/auth";
-import { getGarageSessionDetail, getGarageSessions } from "@/lib/supabase/garage";
+import {
+  getGarageSessionDetail,
+  getGarageSessions,
+} from "@/lib/supabase/garage";
 import { getSetupById } from "@/lib/supabase/setups";
 import { countGarageSetupValues, type GarageSetupSource } from "@/lib/garage";
 import { ENGINEER_GAMES, type EngineerGame } from "@/lib/engineer-types";
@@ -14,23 +17,33 @@ import { isUuid } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Garage",
-  description: "Private sim-racing sessions, setup revisions, run plans, and lap notes.",
+  description:
+    "Private sim-racing sessions, setup revisions, run plans, and lap notes.",
   robots: { index: false, follow: false },
 };
 
 export default async function GaragePage({
   searchParams,
 }: {
-  searchParams: Promise<{ session?: string | string[]; from?: string | string[] }>;
+  searchParams: Promise<{
+    session?: string | string[];
+    from?: string | string[];
+  }>;
 }) {
   const supabase = await createClient();
-  const [user, params] = await Promise.all([getCurrentUser(supabase), searchParams]);
+  const [user, params] = await Promise.all([
+    getCurrentUser(supabase),
+    searchParams,
+  ]);
   const requestedSourceSetupId = Array.isArray(params.from)
-    ? params.from.length === 1 ? params.from[0] : null
+    ? params.from.length === 1
+      ? params.from[0]
+      : null
     : params.from;
-  const loginNextPath = requestedSourceSetupId && isUuid(requestedSourceSetupId)
-    ? `/garage?from=${encodeURIComponent(requestedSourceSetupId)}`
-    : "/garage";
+  const loginNextPath =
+    requestedSourceSetupId && isUuid(requestedSourceSetupId)
+      ? `/garage?from=${encodeURIComponent(requestedSourceSetupId)}`
+      : "/garage";
 
   if (!user) {
     return (
@@ -40,9 +53,12 @@ export default async function GaragePage({
             <LockKeyhole className="size-7" aria-hidden="true" />
           </span>
           <div>
-            <h1 className="text-xl font-semibold">Log in to open your Garage</h1>
+            <h1 className="text-xl font-semibold">
+              Log in to open your Garage
+            </h1>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-              Garage sessions, setup snapshots, run-plan notes, and lap times are private to your account.
+              Garage sessions, setup snapshots, run-plan notes, and lap times
+              are private to your account.
             </p>
           </div>
           <DiscordLoginButton nextPath={loginNextPath} />
@@ -52,10 +68,13 @@ export default async function GaragePage({
   }
 
   const sessionList = await getGarageSessions(user.id);
-  const requestedId = Array.isArray(params.session) ? params.session[0] : params.session;
-  const selectedSession = sessionList.sessions.find((session) => session.id === requestedId)
-    ?? sessionList.sessions[0]
-    ?? null;
+  const requestedId = Array.isArray(params.session)
+    ? params.session[0]
+    : params.session;
+  const selectedSession =
+    sessionList.sessions.find((session) => session.id === requestedId) ??
+    sessionList.sessions[0] ??
+    null;
   const detailResult = selectedSession
     ? await getGarageSessionDetail(user.id, selectedSession.id)
     : { detail: null, error: false };
@@ -64,18 +83,23 @@ export default async function GaragePage({
   let sourceSetupError: string | null = null;
   if (params.from !== undefined) {
     const requestedSetupId = Array.isArray(params.from)
-      ? params.from.length === 1 ? params.from[0] : null
+      ? params.from.length === 1
+        ? params.from[0]
+        : null
       : params.from;
 
     if (!requestedSetupId || !isUuid(requestedSetupId)) {
-      sourceSetupError = "That setup link is invalid. Open a public ACC or LMU setup and try again.";
+      sourceSetupError =
+        "That setup link is invalid. Open a public ACC or LMU setup and try again.";
     } else {
       try {
         const setup = await getSetupById(requestedSetupId);
         if (!setup) {
-          sourceSetupError = "That public setup could not be found. It may have been removed.";
+          sourceSetupError =
+            "That public setup could not be found. It may have been removed.";
         } else if (!ENGINEER_GAMES.includes(setup.game as EngineerGame)) {
-          sourceSetupError = "Starting a Garage session from a setup is currently supported for ACC and Le Mans Ultimate only.";
+          sourceSetupError =
+            "Starting a Garage session from a setup is currently supported for ACC and Le Mans Ultimate only.";
         } else {
           const game = setup.game as EngineerGame;
           sourceSetup = {
@@ -88,7 +112,8 @@ export default async function GaragePage({
           };
         }
       } catch {
-        sourceSetupError = "The public setup could not be loaded right now. Please try again.";
+        sourceSetupError =
+          "The public setup could not be loaded right now. Please try again.";
       }
     }
   }

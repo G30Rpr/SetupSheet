@@ -3,14 +3,17 @@
 import { isUuid } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 
-export type DismissRatingPromptResult = { ok: true } | { ok: false; error: string };
+export type DismissRatingPromptResult =
+  { ok: true } | { ok: false; error: string };
 
 /**
  * Dismisses the 24h rating prompt for one (viewer, setup) pair. The prompt
  * is a nudge, not homework -- dismissal is one tap and permanent per pair.
  * Owner-only RLS scopes the write to the caller.
  */
-export async function dismissRatingPrompt(setupId: string): Promise<DismissRatingPromptResult> {
+export async function dismissRatingPrompt(
+  setupId: string,
+): Promise<DismissRatingPromptResult> {
   if (!isUuid(setupId)) {
     return { ok: false, error: "That setup id is invalid." };
   }
@@ -28,7 +31,7 @@ export async function dismissRatingPrompt(setupId: string): Promise<DismissRatin
       .from("rating_prompt_dismissals")
       .upsert(
         { user_id: user.id, setup_id: setupId },
-        { onConflict: "user_id,setup_id", ignoreDuplicates: true }
+        { onConflict: "user_id,setup_id", ignoreDuplicates: true },
       );
     if (error) {
       return { ok: false, error: "Couldn't dismiss the prompt. Try again." };

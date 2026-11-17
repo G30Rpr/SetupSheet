@@ -58,7 +58,9 @@ export default function SetupCardHistory({ setup }: { setup: Setup }) {
   if (loadError) {
     return (
       <div className="flex flex-col items-start gap-2">
-        <p role="alert" className="text-sm text-destructive">{loadError}</p>
+        <p role="alert" className="text-sm text-destructive">
+          {loadError}
+        </p>
         <RetryButton onRetry={handleRetry} />
       </div>
     );
@@ -77,11 +79,20 @@ export default function SetupCardHistory({ setup }: { setup: Setup }) {
       {versions.map((version, i) => {
         const after = i === 0 ? setup : versions[i - 1];
         const topLevelChanges = diffTopLevelFields(version, after);
-        const valueDiffGroups = diffSetupValues(setup.game, version.setupValues, after.setupValues);
-        const valuesActuallyDiffer = valueDiffGroups.some((group) => group.rows.some((row) => row.differs));
+        const valueDiffGroups = diffSetupValues(
+          setup.game,
+          version.setupValues,
+          after.setupValues,
+        );
+        const valuesActuallyDiffer = valueDiffGroups.some((group) =>
+          group.rows.some((row) => row.differs),
+        );
 
         return (
-          <div key={version.id} className="flex flex-col gap-2 rounded-md border border-border/60 px-3 py-2.5">
+          <div
+            key={version.id}
+            className="flex flex-col gap-2 rounded-md border border-border/60 px-3 py-2.5"
+          >
             <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
               <History className="size-3" />
               Edited {formatTimestamp(version.createdAt)}
@@ -90,8 +101,8 @@ export default function SetupCardHistory({ setup }: { setup: Setup }) {
               <ul className="flex flex-col gap-1 text-muted-foreground">
                 {topLevelChanges.map((change) => (
                   <li key={change.label}>
-                    <span className="text-foreground">{change.label}:</span> {change.before || "—"} →{" "}
-                    {change.after || "—"}
+                    <span className="text-foreground">{change.label}:</span>{" "}
+                    {change.before || "—"} → {change.after || "—"}
                   </li>
                 ))}
               </ul>
@@ -106,7 +117,9 @@ export default function SetupCardHistory({ setup }: { setup: Setup }) {
               />
             )}
             {topLevelChanges.length === 0 && !valuesActuallyDiffer && (
-              <p className="text-muted-foreground">Only the attached file changed.</p>
+              <p className="text-muted-foreground">
+                Only the attached file changed.
+              </p>
             )}
           </div>
         );

@@ -10,8 +10,14 @@ import { isUuid } from "@/lib/utils";
  * nothing deeper than the shapes below is ever intercepted.
  */
 const ID_ROUTE_PATTERNS: readonly { pattern: RegExp; prefix: string }[] = [
-  { pattern: /^\/setups\/([^/]+)(?:\/(?:edit|opengraph-image))?\/?$/, prefix: "/setups" },
-  { pattern: /^\/profile\/([^/]+)(?:\/opengraph-image)?\/?$/, prefix: "/profile" },
+  {
+    pattern: /^\/setups\/([^/]+)(?:\/(?:edit|opengraph-image))?\/?$/,
+    prefix: "/setups",
+  },
+  {
+    pattern: /^\/profile\/([^/]+)(?:\/opengraph-image)?\/?$/,
+    prefix: "/profile",
+  },
 ];
 
 /**

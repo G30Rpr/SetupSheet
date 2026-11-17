@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=22.0.0"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "next dev",
@@ -17,7 +17,9 @@
     "test:e2e": "playwright test",
     "test:db": "bash scripts/test-db.sh",
     "storage:sweep": "node scripts/sweep-orphaned-files.mjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.3",
@@ -48,21 +50,26 @@
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^26.1.2",
+    "@types/node": "^24.0.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "braces": "file:vendor/braces",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.3.8",
+    "eslint-config-next": "^16.4.6",
     "husky": "^9.1.7",
     "jsdom": "^30.0.1",
     "lint-staged": "^17.1.0",
+    "prettier": "3.10.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
   },
   "lint-staged": {
-    "*.{ts,tsx}": "eslint --fix"
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,mjs,cjs,json,css,md,yml,yaml}": "prettier --write --ignore-unknown"
   },
   "overrides": {
     "postcss": "^8.5.10",

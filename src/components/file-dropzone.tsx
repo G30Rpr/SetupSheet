@@ -62,7 +62,7 @@ export function FileDropzone({
             "flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 text-center ",
             isDragging
               ? "border-primary bg-primary/10"
-              : "border-border hover:border-primary/50 hover:bg-accent/40"
+              : "border-border hover:border-primary/50 hover:bg-accent/40",
           )}
         >
           <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground ring-1 ring-inset ring-border">
@@ -73,9 +73,7 @@ export function FileDropzone({
               Tap to choose a file
               <span className="hidden sm:inline"> or drag it here</span>
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {helperText}
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{helperText}</p>
           </div>
           <input
             ref={inputRef}

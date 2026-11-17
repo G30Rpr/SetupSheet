@@ -9,15 +9,26 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createFieldTestReport, setFieldTestReportAttribution } from "@/lib/actions/field-tests";
+import {
+  createFieldTestReport,
+  setFieldTestReportAttribution,
+} from "@/lib/actions/field-tests";
 import { MAX_FIELD_TEST_NOTE_LENGTH } from "@/lib/field-tests";
 import type { GarageSessionDetail } from "@/lib/garage";
 
-export function FieldTestReportForm({ detail }: { detail: GarageSessionDetail }) {
+export function FieldTestReportForm({
+  detail,
+}: {
+  detail: GarageSessionDetail;
+}) {
   const router = useRouter();
   const { session, runPlanItems, laps } = detail;
-  const betterRunCount = runPlanItems.filter((item) => item.verdict === "better").length;
-  const isEligible = Boolean(session.sourceSetupId && laps.length > 0 && betterRunCount > 0);
+  const betterRunCount = runPlanItems.filter(
+    (item) => item.verdict === "better",
+  ).length;
+  const isEligible = Boolean(
+    session.sourceSetupId && laps.length > 0 && betterRunCount > 0,
+  );
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [createdReportId, setCreatedReportId] = useState<string | null>(null);
@@ -66,7 +77,11 @@ export function FieldTestReportForm({ detail }: { detail: GarageSessionDetail })
           return;
         }
         setNameIsVisible(showName);
-        toast.success(showName ? "Your name will appear on this report" : "Your report is anonymous again");
+        toast.success(
+          showName
+            ? "Your name will appear on this report"
+            : "Your report is anonymous again",
+        );
         router.refresh();
       } catch {
         setError("Couldn't update report attribution. Please try again.");
@@ -79,29 +94,47 @@ export function FieldTestReportForm({ detail }: { detail: GarageSessionDetail })
       <div>
         <h3 className="text-lg font-semibold">Share a field test</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Lap metrics and successful changes are derived from this private Garage session. Your note stays private.
+          Lap metrics and successful changes are derived from this private
+          Garage session. Your note stays private.
         </p>
       </div>
 
       {!session.sourceSetupId ? (
         <p className="rounded-md border border-border/70 bg-secondary/20 px-3 py-2.5 text-sm text-muted-foreground">
-          To share a field test, start a Garage session from a public setup so the source can be verified.
-          <Link href="/setups" className="ml-1 font-medium text-foreground underline-offset-4 hover:underline">Browse setups</Link>.
+          To share a field test, start a Garage session from a public setup so
+          the source can be verified.
+          <Link
+            href="/setups"
+            className="ml-1 font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            Browse setups
+          </Link>
+          .
         </p>
       ) : (
         <p className="text-sm text-muted-foreground">
-          For <Link href={`/setups/${encodeURIComponent(session.sourceSetupId)}`} className="font-medium text-foreground underline-offset-4 hover:underline">
+          For{" "}
+          <Link
+            href={`/setups/${encodeURIComponent(session.sourceSetupId)}`}
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
             {session.car} at {session.track}
           </Link>
           {laps.length === 0 && " · Log at least one lap"}
-          {laps.length > 0 && betterRunCount === 0 && " · Mark at least one run-plan change “better”"}
+          {laps.length > 0 &&
+            betterRunCount === 0 &&
+            " · Mark at least one run-plan change “better”"}
         </p>
       )}
 
       {createdReportId ? (
         <div className="flex flex-col gap-3 rounded-lg border border-border/80 bg-secondary/30 p-3">
           <p className="text-sm">
-            Your report is {nameIsVisible ? "attributed to your profile" : "anonymous by default"}.
+            Your report is{" "}
+            {nameIsVisible
+              ? "attributed to your profile"
+              : "anonymous by default"}
+            .
           </p>
           <Button
             type="button"
@@ -120,7 +153,9 @@ export function FieldTestReportForm({ detail }: { detail: GarageSessionDetail })
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="field-test-private-note">Private note (optional)</Label>
+            <Label htmlFor="field-test-private-note">
+              Private note (optional)
+            </Label>
             <Textarea
               id="field-test-private-note"
               value={note}
@@ -130,14 +165,29 @@ export function FieldTestReportForm({ detail }: { detail: GarageSessionDetail })
               placeholder="Add context for your own records. This note is never shown publicly."
             />
           </div>
-          <p className="text-xs text-muted-foreground">Public attribution is off. You can opt in separately after submitting.</p>
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" disabled={!isEligible || createPending} className="self-start">
+          <p className="text-xs text-muted-foreground">
+            Public attribution is off. You can opt in separately after
+            submitting.
+          </p>
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          <Button
+            type="submit"
+            disabled={!isEligible || createPending}
+            className="self-start"
+          >
             {createPending ? "Submitting…" : "Submit field test anonymously"}
           </Button>
         </form>
       )}
-      {createdReportId && error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {createdReportId && error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
     </Card>
   );
 }

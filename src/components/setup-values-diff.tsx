@@ -50,14 +50,16 @@ export function SetupValuesDiff({
       </div>
       {groups.map((group) => (
         <div key={group.title} className="flex flex-col gap-1">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">{group.title}</p>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            {group.title}
+          </p>
           <dl className="flex flex-col gap-0.5">
             {group.rows.map((row) => (
               <div
                 key={row.key}
                 className={cn(
                   "grid grid-cols-[1fr_1fr_1fr] items-center gap-x-4 rounded px-1.5 py-1",
-                  row.differs && "border-l-2 border-foreground/50 bg-accent"
+                  row.differs && "border-l-2 border-foreground/50 bg-accent",
                 )}
               >
                 <dt className="truncate text-muted-foreground">

@@ -77,7 +77,7 @@ export function describeUploadTarget(
   rawFileName: unknown,
   fileSize: unknown,
   ownerId: unknown,
-  makeId: () => string = () => crypto.randomUUID()
+  makeId: () => string = () => crypto.randomUUID(),
 ): UploadTargetResult {
   const rule = UPLOAD_RULES[kind];
 
@@ -95,8 +95,15 @@ export function describeUploadTarget(
     return { target: null, error: `No ${rule.label.toLowerCase()} selected.` };
   }
 
-  if (typeof fileSize !== "number" || !Number.isFinite(fileSize) || fileSize <= 0) {
-    return { target: null, error: `That ${rule.label.toLowerCase()} is empty or unreadable.` };
+  if (
+    typeof fileSize !== "number" ||
+    !Number.isFinite(fileSize) ||
+    fileSize <= 0
+  ) {
+    return {
+      target: null,
+      error: `That ${rule.label.toLowerCase()} is empty or unreadable.`,
+    };
   }
 
   if (fileSize > rule.maxBytes) {

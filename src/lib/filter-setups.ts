@@ -2,7 +2,8 @@ import { similarRigPredictability } from "@/lib/rating-splits";
 import { axesMatch, type RigAxes } from "@/lib/rig-axes";
 import type { Setup } from "@/lib/types";
 
-export type SortOption = "bestMatch" | "newest" | "trending" | "mostDownloaded" | "safest" | "fastest";
+export type SortOption =
+  "bestMatch" | "newest" | "trending" | "mostDownloaded" | "safest" | "fastest";
 
 export const ALL = "all";
 
@@ -18,8 +19,14 @@ export interface SetupFilters {
 }
 
 /** Whether the setup was built on the same steering and brake hardware as `axes`. */
-export function setupMatchesRigAxes(setup: Setup, axes: RigAxes | null | undefined): boolean {
-  return axesMatch(axes, { inputDevice: setup.inputDevice ?? null, brakeType: setup.brakeType ?? null });
+export function setupMatchesRigAxes(
+  setup: Setup,
+  axes: RigAxes | null | undefined,
+): boolean {
+  return axesMatch(axes, {
+    inputDevice: setup.inputDevice ?? null,
+    brakeType: setup.brakeType ?? null,
+  });
 }
 
 /** Parses an "M:SS.mmm" lap time into total seconds; unparseable/blank times sort last. */
@@ -31,7 +38,11 @@ function lapTimeSeconds(lapTime: string): number {
 }
 
 /** Iterative Levenshtein distance, capped early once it can no longer beat maxDistance. */
-function withinEditDistance(a: string, b: string, maxDistance: number): boolean {
+function withinEditDistance(
+  a: string,
+  b: string,
+  maxDistance: number,
+): boolean {
   if (Math.abs(a.length - b.length) > maxDistance) return false;
 
   const prev = new Array(b.length + 1);
@@ -66,7 +77,9 @@ function matchesQuery(haystack: string, query: string): boolean {
   const haystackWords = haystack.toLowerCase().split(/\s+/).filter(Boolean);
 
   return queryTokens.every((token) =>
-    haystackWords.some((word) => word.includes(token) || withinEditDistance(word, token, 1))
+    haystackWords.some(
+      (word) => word.includes(token) || withinEditDistance(word, token, 1),
+    ),
   );
 }
 
@@ -75,18 +88,30 @@ export function filterAndSortSetups(
   filters: SetupFilters,
   sort: SortOption,
   preferredRig: string | null = null,
-  preferredAxes: RigAxes | null = null
+  preferredAxes: RigAxes | null = null,
 ): Setup[] {
   const query = filters.search.trim();
   const results = setups.filter((s) => {
     if (filters.game !== ALL && s.game !== filters.game) return false;
     if (filters.car !== ALL && s.car !== filters.car) return false;
     if (filters.track !== ALL && s.track !== filters.track) return false;
-    if (filters.condition !== ALL && s.condition !== filters.condition) return false;
+    if (filters.condition !== ALL && s.condition !== filters.condition)
+      return false;
     if (filters.rig !== ALL && s.rigProfile !== filters.rig) return false;
-    if (filters.tag !== ALL && !s.tags.includes(filters.tag as Setup["tags"][number])) return false;
+    if (
+      filters.tag !== ALL &&
+      !s.tags.includes(filters.tag as Setup["tags"][number])
+    )
+      return false;
     if (query) {
-      const haystack = [s.game, s.car, s.track, s.author, s.description, ...s.tags].join(" ");
+      const haystack = [
+        s.game,
+        s.car,
+        s.track,
+        s.author,
+        s.description,
+        ...s.tags,
+      ].join(" ");
       if (!matchesQuery(haystack, query)) return false;
     }
     return true;
@@ -111,7 +136,8 @@ export function filterAndSortSetups(
         const rigA = matchTier(a);
         const rigB = matchTier(b);
         if (rigA !== rigB) return rigA - rigB;
-        if (a.ratingCount !== b.ratingCount) return b.ratingCount - a.ratingCount;
+        if (a.ratingCount !== b.ratingCount)
+          return b.ratingCount - a.ratingCount;
         // Similar-rig predictability (nulls last), only when there's a rig to
         // be similar to. Stage order keeps the evidence guarantee above.
         const simA = rig ? similarRigPredictability(a.ratingSplits, rig) : null;
@@ -137,7 +163,9 @@ export function filterAndSortSetups(
     case "safest":
       return [...results].sort((a, b) => b.predictability - a.predictability);
     case "fastest":
-      return [...results].sort((a, b) => lapTimeSeconds(a.lapTime) - lapTimeSeconds(b.lapTime));
+      return [...results].sort(
+        (a, b) => lapTimeSeconds(a.lapTime) - lapTimeSeconds(b.lapTime),
+      );
   }
 }
 
@@ -147,7 +175,11 @@ export function filterAndSortSetups(
  * simple substring matching rather than filterAndSortSetups' fuzzy
  * tolerance, since these are meant to be exact, clickable completions.
  */
-export function getSearchSuggestions(setups: Setup[], query: string, limit = 6): string[] {
+export function getSearchSuggestions(
+  setups: Setup[],
+  query: string,
+  limit = 6,
+): string[] {
   const trimmed = query.trim().toLowerCase();
   if (!trimmed) return [];
 

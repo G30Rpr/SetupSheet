@@ -27,7 +27,8 @@ function worstCaseSetup(): Setup {
   const setupValues: Record<string, string | number> = {};
   for (let index = 0; index < LMU_FIELD_COUNT; index += 1) {
     // Realistic mix of numeric and short-label values.
-    setupValues[`field_${index}_long_key_name`] = index % 3 === 0 ? 12.5 : "Soft";
+    setupValues[`field_${index}_long_key_name`] =
+      index % 3 === 0 ? 12.5 : "Soft";
   }
 
   return {
@@ -78,7 +79,7 @@ describe("setup payload budget", () => {
     expect(
       serializedBytes,
       `worst-case Setup serializes to ${(serializedBytes / 1024).toFixed(2)} KiB; ` +
-        "either trim the row (see the setup_values note above) or raise this budget deliberately"
+        "either trim the row (see the setup_values note above) or raise this budget deliberately",
     ).toBeLessThanOrEqual(PER_SETUP_BUDGET_BYTES);
   });
 
@@ -86,7 +87,7 @@ describe("setup payload budget", () => {
     const worstCase = serializedBytes * SETUPS_BROWSE_LIMIT;
     expect(
       worstCase,
-      `${SETUPS_BROWSE_LIMIT} setups serialize to ${(worstCase / 1024 / 1024).toFixed(2)} MiB`
+      `${SETUPS_BROWSE_LIMIT} setups serialize to ${(worstCase / 1024 / 1024).toFixed(2)} MiB`,
     ).toBeLessThanOrEqual(BROWSE_PAYLOAD_BUDGET_BYTES);
   });
 
@@ -95,7 +96,7 @@ describe("setup payload budget", () => {
     const worstCase = serializedBytes * pageSize;
     expect(
       worstCase,
-      `${pageSize} setups serialize to ${(worstCase / 1024).toFixed(0)} KiB`
+      `${pageSize} setups serialize to ${(worstCase / 1024).toFixed(0)} KiB`,
     ).toBeLessThanOrEqual(LOAD_OLDER_PAGE_BUDGET_BYTES);
   });
 
@@ -103,7 +104,8 @@ describe("setup payload budget", () => {
     // Not an assertion about correctness -- a tripwire that makes the biggest
     // contributor visible if this budget is ever tightened. ~57% at audit time.
     const withoutValues = { ...worstCaseSetup(), setupValues: undefined };
-    const valuesShare = 1 - JSON.stringify(withoutValues).length / serializedBytes;
+    const valuesShare =
+      1 - JSON.stringify(withoutValues).length / serializedBytes;
     expect(valuesShare).toBeGreaterThan(0.3);
   });
 });

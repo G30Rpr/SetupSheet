@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildInstallReadme, buildZip, crc32, sanitizeEntryName } from "@/lib/install-bundle";
+import {
+  buildInstallReadme,
+  buildZip,
+  crc32,
+  sanitizeEntryName,
+} from "@/lib/install-bundle";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -19,7 +24,11 @@ interface ParsedEntry {
  * own bookkeeping.
  */
 function parseZip(archive: Uint8Array): ParsedEntry[] {
-  const view = new DataView(archive.buffer, archive.byteOffset, archive.byteLength);
+  const view = new DataView(
+    archive.buffer,
+    archive.byteOffset,
+    archive.byteLength,
+  );
 
   let eocd = -1;
   for (let i = archive.length - 22; i >= 0; i--) {
@@ -42,7 +51,9 @@ function parseZip(archive: Uint8Array): ParsedEntry[] {
     const extraLength = view.getUint16(offset + 30, true);
     const commentLength = view.getUint16(offset + 32, true);
     const localOffset = view.getUint32(offset + 42, true);
-    const name = decoder.decode(archive.subarray(offset + 46, offset + 46 + nameLength));
+    const name = decoder.decode(
+      archive.subarray(offset + 46, offset + 46 + nameLength),
+    );
 
     // The central directory must agree with the local header it points at.
     expect(view.getUint32(localOffset, true)).toBe(0x04034b50);
@@ -69,7 +80,9 @@ describe("crc32", () => {
 describe("sanitizeEntryName", () => {
   it("strips path separators so an entry can't escape the archive", () => {
     expect(sanitizeEntryName("../../etc/passwd")).toBe("etc_passwd");
-    expect(sanitizeEntryName(String.raw`C:\Users\me\setup.sto`)).toBe("C:_Users_me_setup.sto");
+    expect(sanitizeEntryName(String.raw`C:\Users\me\setup.sto`)).toBe(
+      "C:_Users_me_setup.sto",
+    );
   });
 
   it("falls back to a usable name for empty or control-character input", () => {
@@ -88,7 +101,10 @@ describe("buildZip", () => {
     ]);
 
     const entries = parseZip(archive);
-    expect(entries.map((entry) => entry.name)).toEqual(["README.txt", "setup.json"]);
+    expect(entries.map((entry) => entry.name)).toEqual([
+      "README.txt",
+      "setup.json",
+    ]);
     expect(decoder.decode(entries[0].content)).toBe("hello");
     expect(decoder.decode(entries[1].content)).toBe('{"a":1}');
     for (const entry of entries) {
@@ -111,18 +127,28 @@ describe("buildZip", () => {
   });
 
   it("sanitizes entry names it was handed", () => {
-    const archive = buildZip([{ name: "../../evil.txt", content: encoder.encode("x") }]);
+    const archive = buildZip([
+      { name: "../../evil.txt", content: encoder.encode("x") },
+    ]);
     expect(parseZip(archive)[0].name).toBe("evil.txt");
   });
 
   it("is deterministic, so the same setup produces identical bytes", () => {
     const files = [{ name: "README.txt", content: encoder.encode("hello") }];
-    expect(Buffer.from(buildZip(files)).equals(Buffer.from(buildZip(files)))).toBe(true);
+    expect(
+      Buffer.from(buildZip(files)).equals(Buffer.from(buildZip(files))),
+    ).toBe(true);
   });
 
   it("marks names as UTF-8 and writes real sizes into the local header", () => {
-    const archive = buildZip([{ name: "ünicode.txt", content: encoder.encode("xy") }]);
-    const view = new DataView(archive.buffer, archive.byteOffset, archive.byteLength);
+    const archive = buildZip([
+      { name: "ünicode.txt", content: encoder.encode("xy") },
+    ]);
+    const view = new DataView(
+      archive.buffer,
+      archive.byteOffset,
+      archive.byteLength,
+    );
 
     expect(view.getUint16(6, true) & 0x0800).toBe(0x0800); // bit 11: UTF-8
     // Bit 3 must stay clear: it promises a trailing data descriptor, and
@@ -156,7 +182,11 @@ describe("buildInstallReadme", () => {
       folderPath: String.raw`Documents\Assetto Corsa Competizione\Setups\Ford Mustang GT3\Zandvoort`,
       folderNote: "Car and track folders must match ACC's own naming.",
       fileExtension: ".json",
-      steps: ["Download the setup file.", "Move it into the folder below.", "Load it in-game."],
+      steps: [
+        "Download the setup file.",
+        "Move it into the folder below.",
+        "Load it in-game.",
+      ],
     };
   }
 
@@ -167,9 +197,13 @@ describe("buildInstallReadme", () => {
     expect(readme).toContain("https://setupsheet.app/setups/abc");
     expect(readme).toContain("How to install".toUpperCase());
     expect(readme).toContain("1. Download the setup file.");
-    expect(readme).toContain(String.raw`Documents\Assetto Corsa Competizione\Setups\Ford Mustang GT3\Zandvoort`);
+    expect(readme).toContain(
+      String.raw`Documents\Assetto Corsa Competizione\Setups\Ford Mustang GT3\Zandvoort`,
+    );
     expect(readme).toContain("mustang-zandvoort.json");
-    expect(readme).toContain("Community values are opinions, not a safety certification");
+    expect(readme).toContain(
+      "Community values are opinions, not a safety certification",
+    );
     // The folder caveat travels with the path -- a wrong folder is the most
     // likely way this ends in "the game can't see my setup".
     expect(readme).toContain("must match ACC's own naming");
@@ -178,8 +212,13 @@ describe("buildInstallReadme", () => {
   it("omits the folder block for manual-entry games", () => {
     const readme = buildInstallReadme(
       { ...setup, game: "F1 25" },
-      { folderPath: null, folderNote: null, fileExtension: null, steps: ["Enter values by hand."] },
-      "Front Wing: 5"
+      {
+        folderPath: null,
+        folderNote: null,
+        fileExtension: null,
+        steps: ["Enter values by hand."],
+      },
+      "Front Wing: 5",
     );
 
     expect(readme).not.toContain("DESTINATION FOLDER");

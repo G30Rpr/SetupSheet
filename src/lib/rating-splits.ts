@@ -16,7 +16,12 @@ export interface ScoreTotals {
   predN: number;
 }
 
-export const EMPTY_TOTALS: ScoreTotals = { paceSum: 0, paceN: 0, predSum: 0, predN: 0 };
+export const EMPTY_TOTALS: ScoreTotals = {
+  paceSum: 0,
+  paceN: 0,
+  predSum: 0,
+  predN: 0,
+};
 
 export function mergeTotals(buckets: RatingSplit[]): ScoreTotals {
   return buckets.reduce<ScoreTotals>(
@@ -26,7 +31,7 @@ export function mergeTotals(buckets: RatingSplit[]): ScoreTotals {
       predSum: acc.predSum + b.predSum,
       predN: acc.predN + b.predN,
     }),
-    { ...EMPTY_TOTALS }
+    { ...EMPTY_TOTALS },
   );
 }
 
@@ -37,7 +42,7 @@ export function mergeTotals(buckets: RatingSplit[]): ScoreTotals {
  */
 export function splitBySimilarRig(
   splits: RatingSplit[],
-  anchorRig: string | null
+  anchorRig: string | null,
 ): { similar: ScoreTotals; others: ScoreTotals } {
   const similarBuckets = anchorRig
     ? splits.filter((s) => s.rigProfile === anchorRig)
@@ -45,13 +50,16 @@ export function splitBySimilarRig(
   const otherBuckets = anchorRig
     ? splits.filter((s) => s.rigProfile !== anchorRig)
     : splits;
-  return { similar: mergeTotals(similarBuckets), others: mergeTotals(otherBuckets) };
+  return {
+    similar: mergeTotals(similarBuckets),
+    others: mergeTotals(otherBuckets),
+  };
 }
 
 /** Mean predictability for one rig bucket — Best match's similar-rig tiebreak. Null when that rig hasn't rated. */
 export function similarRigPredictability(
   splits: RatingSplit[] | undefined,
-  rig: string | null
+  rig: string | null,
 ): number | null {
   if (!rig) return null;
   const bucket = (splits ?? []).find((s) => s.rigProfile === rig);
@@ -90,7 +98,8 @@ export function rigTypeSubScores(splits: RatingSplit[]): RigTypeScore[] {
   for (const s of splits) {
     if (!s.rigProfile) continue;
     const pace = s.paceN >= MIN_RIG_SUBSCORE_N ? s.paceSum / s.paceN : null;
-    const predictability = s.predN >= MIN_RIG_SUBSCORE_N ? s.predSum / s.predN : null;
+    const predictability =
+      s.predN >= MIN_RIG_SUBSCORE_N ? s.predSum / s.predN : null;
     if (pace === null && predictability === null) continue;
     rows.push({
       rigProfile: s.rigProfile,
@@ -103,6 +112,6 @@ export function rigTypeSubScores(splits: RatingSplit[]): RigTypeScore[] {
   return rows.sort(
     (a, b) =>
       Math.max(b.paceN, b.predN) - Math.max(a.paceN, a.predN) ||
-      a.rigProfile.localeCompare(b.rigProfile)
+      a.rigProfile.localeCompare(b.rigProfile),
   );
 }

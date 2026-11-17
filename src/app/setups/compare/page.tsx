@@ -42,7 +42,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
   // No `alternates.canonical`: a canonical that points at a noindex page asks a
   // crawler to consolidate onto a URL it is simultaneously told to drop.
-  openGraph: { title: socialTitle, description, url: "/setups/compare", type: "website", siteName: SITE_NAME },
+  openGraph: {
+    title: socialTitle,
+    description,
+    url: "/setups/compare",
+    type: "website",
+    siteName: SITE_NAME,
+  },
   twitter: { card: "summary_large_image", title: socialTitle, description },
 };
 
@@ -57,12 +63,19 @@ export default async function ComparePage({
 
   const setupA = setups.find((s) => s.id === a);
   const setupB = setups.find((s) => s.id === b);
-  const mismatches = setupA && setupB ? [
-    setupA.car !== setupB.car ? "car" : null,
-    setupA.track !== setupB.track ? "track" : null,
-    setupA.condition !== setupB.condition ? "track conditions" : null,
-    setupA.gameVersion && setupB.gameVersion && setupA.gameVersion !== setupB.gameVersion ? "game build" : null,
-  ].filter((value): value is string => value !== null) : [];
+  const mismatches =
+    setupA && setupB
+      ? [
+          setupA.car !== setupB.car ? "car" : null,
+          setupA.track !== setupB.track ? "track" : null,
+          setupA.condition !== setupB.condition ? "track conditions" : null,
+          setupA.gameVersion &&
+          setupB.gameVersion &&
+          setupA.gameVersion !== setupB.gameVersion
+            ? "game build"
+            : null,
+        ].filter((value): value is string => value !== null)
+      : [];
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
@@ -74,7 +87,9 @@ export default async function ComparePage({
         Back to Browse Setups
       </Link>
 
-      <h1 className="mb-6 text-3xl font-bold tracking-tight sm:text-4xl">Compare Setups</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight sm:text-4xl">
+        Compare Setups
+      </h1>
 
       {!setupA || !setupB ? (
         <EmptyState
@@ -101,12 +116,21 @@ export default async function ComparePage({
       ) : (
         <div className="flex flex-col gap-6">
           {mismatches.length > 0 && (
-            <div role="note" className="flex items-start gap-3 rounded-lg border border-border bg-secondary/40 px-4 py-3">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <div
+              role="note"
+              className="flex items-start gap-3 rounded-lg border border-border bg-secondary/40 px-4 py-3"
+            >
+              <TriangleAlert
+                className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
               <div>
-                <p className="text-sm font-semibold">Different driving context — compare with caution</p>
+                <p className="text-sm font-semibold">
+                  Different driving context — compare with caution
+                </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  These setups differ in {mismatches.join(", ")}. Changes may reflect different requirements rather than an improvement.
+                  These setups differ in {mismatches.join(", ")}. Changes may
+                  reflect different requirements rather than an improvement.
                 </p>
               </div>
             </div>
@@ -120,7 +144,9 @@ export default async function ComparePage({
                 >
                   {setup.car}
                 </Link>
-                <p className="truncate text-sm text-muted-foreground">{setup.track}</p>
+                <p className="truncate text-sm text-muted-foreground">
+                  {setup.track}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {setup.condition} · {setup.lapTime || "no lap time"}
                 </p>

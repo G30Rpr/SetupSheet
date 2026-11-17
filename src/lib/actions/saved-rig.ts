@@ -3,9 +3,7 @@
 import { isRigBrakeType, isRigInputDevice } from "@/lib/rig-axes";
 import { createClient } from "@/lib/supabase/server";
 
-export type SaveRigProfileResult =
-  | { ok: true }
-  | { ok: false; error: string };
+export type SaveRigProfileResult = { ok: true } | { ok: false; error: string };
 
 /**
  * Saves (or replaces) the signed-in user's rig axes -- the account-level
@@ -15,7 +13,7 @@ export type SaveRigProfileResult =
  */
 export async function saveRigProfile(
   inputDevice: string,
-  brakeType: string | null
+  brakeType: string | null,
 ): Promise<SaveRigProfileResult> {
   if (!isRigInputDevice(inputDevice)) {
     return { ok: false, error: "Pick how you steer to save your rig." };
@@ -39,7 +37,7 @@ export async function saveRigProfile(
         input_device: inputDevice,
         brake_type: brakeType,
       },
-      { onConflict: "user_id" }
+      { onConflict: "user_id" },
     );
     if (error) {
       return { ok: false, error: "Couldn't save your rig. Try again." };

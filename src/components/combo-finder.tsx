@@ -89,7 +89,9 @@ export function ComboFinder({ combos }: { combos: FinderCombo[] }) {
     if (!game) return [];
     const rosterCars = rosters?.game === game ? rosters.cars : [];
     return uniqueSorted([
-      ...combos.filter((combo) => combo.game === game).map((combo) => combo.car),
+      ...combos
+        .filter((combo) => combo.game === game)
+        .map((combo) => combo.car),
       ...rosterCars,
     ]);
   }, [combos, game, rosters]);
@@ -98,13 +100,16 @@ export function ComboFinder({ combos }: { combos: FinderCombo[] }) {
     if (!game) return [];
     const rosterTracks = rosters?.game === game ? rosters.tracks : [];
     const matches = combos.filter(
-      (combo) => combo.game === game && (!car.trim() || combo.car === car.trim())
+      (combo) =>
+        combo.game === game && (!car.trim() || combo.car === car.trim()),
     );
     return uniqueSorted([
       ...matches.map((combo) => combo.track),
       // Fall back to everything known for the game so an unrepresented
       // car at a known track can still be typed and requested.
-      ...combos.filter((combo) => combo.game === game).map((combo) => combo.track),
+      ...combos
+        .filter((combo) => combo.game === game)
+        .map((combo) => combo.track),
       ...rosterTracks,
     ]);
   }, [combos, game, car, rosters]);
@@ -202,7 +207,13 @@ export function ComboFinder({ combos }: { combos: FinderCombo[] }) {
           Find a setup
           <ArrowRight />
         </Button>
-        <Button asChild variant="link" className={cn("w-full justify-start px-0 text-muted-foreground sm:w-auto")}>
+        <Button
+          asChild
+          variant="link"
+          className={cn(
+            "w-full justify-start px-0 text-muted-foreground sm:w-auto",
+          )}
+        >
           <Link href="/engineer">
             <Wrench className="size-4" />
             The car is misbehaving

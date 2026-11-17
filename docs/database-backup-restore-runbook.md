@@ -28,7 +28,7 @@ Execute on an operator-controlled machine:
 bash scripts/backup-supabase-encrypted.sh
 ```
 
-The script writes only encrypted ciphertext to the specified directory. It removes partial output on failure and avoids printing secrets. The dump includes `public`, `auth`, and `storage` **database schemas**, not actual Storage object bytes or external secrets. A database dump is *not* a full snapshot of the Supabase project configuration, OAuth provider secrets, or deployed Vercel environment.
+The script writes only encrypted ciphertext to the specified directory. It removes partial output on failure and avoids printing secrets. The dump includes `public`, `auth`, and `storage` **database schemas**, not actual Storage object bytes or external secrets. A database dump is _not_ a full snapshot of the Supabase project configuration, OAuth provider secrets, or deployed Vercel environment.
 
 ## 3. Restore test — mandatory before release
 
@@ -50,7 +50,7 @@ A second helper, `scripts/verify-supabase-backup.sh`, decrypts the archive in a 
 
 Then execute `bash scripts/verify-supabase-backup.sh` on the trusted operator machine.
 
-**Important limitations:** A raw custom-format dump of managed Supabase schemas may require a compatible Supabase local bootstrap, extensions and roles. A successful `pg_restore --list` validates decryptability and archive readability **but does not prove restoration**. A schema/role/extension conflict means the restore has *failed*; do not declare backup verified. Supabase's [official CLI backup/restore guide](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore) also describes a roles/schema/data sequence and special steps for managed Auth, Storage, Vault, and migration history. Use that supported sequence when a raw custom-format restore cannot recreate the target.
+**Important limitations:** A raw custom-format dump of managed Supabase schemas may require a compatible Supabase local bootstrap, extensions and roles. A successful `pg_restore --list` validates decryptability and archive readability **but does not prove restoration**. A schema/role/extension conflict means the restore has _failed_; do not declare backup verified. Supabase's [official CLI backup/restore guide](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore) also describes a roles/schema/data sequence and special steps for managed Auth, Storage, Vault, and migration history. Use that supported sequence when a raw custom-format restore cannot recreate the target.
 
 An isolated restore of database rows does **not** validate actual Storage object bytes or re-create Discord OAuth settings. Those require their own independent checks before marking issue #26 complete.
 
@@ -62,7 +62,6 @@ manual exact-SHA release through the `production-database` Environment. See
 [migration release controls](migration-release-controls.md) for the required
 reviewer settings, separate release credential and coordinated app promotion.
 Verify backup and isolated recovery evidence before approving any hosted apply.
-
 
 ## 4. Audit migration deployment gate
 

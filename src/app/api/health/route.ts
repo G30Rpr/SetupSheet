@@ -19,14 +19,20 @@ export async function GET() {
       .limit(1);
 
     if (error) throw new Error("Public database read failed");
-    return NextResponse.json({ status: "ok" }, {
-      status: 200,
-      headers: { "Cache-Control": "private, no-store, max-age=0" },
-    });
+    return NextResponse.json(
+      { status: "ok" },
+      {
+        status: 200,
+        headers: { "Cache-Control": "private, no-store, max-age=0" },
+      },
+    );
   } catch {
-    return NextResponse.json({ status: "unavailable" }, {
-      status: 503,
-      headers: { "Cache-Control": "private, no-store, max-age=0" },
-    });
+    return NextResponse.json(
+      { status: "unavailable" },
+      {
+        status: 503,
+        headers: { "Cache-Control": "private, no-store, max-age=0" },
+      },
+    );
   }
 }

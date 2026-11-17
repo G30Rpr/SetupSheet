@@ -17,7 +17,10 @@ const FETCH_TIMEOUT_MS = 4000;
  * the page itself, so a Google Fonts hiccup should fall back to satori's
  * default font rather than fail the whole response.
  */
-export function loadGoogleFont(family: string, weight: number): Promise<ArrayBuffer | null> {
+export function loadGoogleFont(
+  family: string,
+  weight: number,
+): Promise<ArrayBuffer | null> {
   const key = `${family}-${weight}`;
   const cached = fontCache.get(key);
   if (cached) return cached;
@@ -27,17 +30,21 @@ export function loadGoogleFont(family: string, weight: number): Promise<ArrayBuf
       const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}`;
       const cssResponse = await fetch(cssUrl, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko",
         },
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         cache: "force-cache",
       });
-      if (!cssResponse.ok) throw new Error(`font CSS request returned ${cssResponse.status}`);
+      if (!cssResponse.ok)
+        throw new Error(`font CSS request returned ${cssResponse.status}`);
       const css = await cssResponse.text();
 
       const match = css.match(/src: url\(([^)]+)\)/);
       if (!match) {
-        logger.error(`loadGoogleFont: no font source found for ${family} ${weight}`);
+        logger.error(
+          `loadGoogleFont: no font source found for ${family} ${weight}`,
+        );
         return null;
       }
 
@@ -45,7 +52,8 @@ export function loadGoogleFont(family: string, weight: number): Promise<ArrayBuf
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         cache: "force-cache",
       });
-      if (!fontResponse.ok) throw new Error(`font binary request returned ${fontResponse.status}`);
+      if (!fontResponse.ok)
+        throw new Error(`font binary request returned ${fontResponse.status}`);
       return await fontResponse.arrayBuffer();
     } catch (error) {
       logger.error(`loadGoogleFont: failed to load ${family} ${weight}`, error);

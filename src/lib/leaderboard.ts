@@ -16,8 +16,12 @@ export interface LeaderboardImpact {
 }
 
 /** Whether the board can honestly talk about impact yet. */
-export function leaderboardMode(entries: readonly LeaderboardImpact[]): "impact" | "upvotes" {
-  return entries.some((e) => e.lapsDrivenByOthers > 0 || e.fieldTestedSetupCount > 0)
+export function leaderboardMode(
+  entries: readonly LeaderboardImpact[],
+): "impact" | "upvotes" {
+  return entries.some(
+    (e) => e.lapsDrivenByOthers > 0 || e.fieldTestedSetupCount > 0,
+  )
     ? "impact"
     : "upvotes";
 }

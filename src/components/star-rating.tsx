@@ -33,7 +33,7 @@ export function StarRating({
                 "size-4",
                 i < value
                   ? "fill-primary text-primary"
-                  : "fill-transparent text-muted-foreground/40 hover:text-foreground"
+                  : "fill-transparent text-muted-foreground/40 hover:text-foreground",
               )}
             />
           </button>
@@ -43,7 +43,10 @@ export function StarRating({
   }
 
   return (
-    <div className={cn("flex items-center gap-0.5", className)} aria-label={`${value} out of ${max} stars`}>
+    <div
+      className={cn("flex items-center gap-0.5", className)}
+      aria-label={`${value} out of ${max} stars`}
+    >
       {Array.from({ length: max }).map((_, i) => (
         <Star
           key={i}
@@ -51,7 +54,7 @@ export function StarRating({
             "size-3.5",
             i < value
               ? "fill-foreground text-foreground"
-              : "fill-transparent text-muted-foreground/40"
+              : "fill-transparent text-muted-foreground/40",
           )}
         />
       ))}

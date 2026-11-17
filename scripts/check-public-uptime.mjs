@@ -1,7 +1,8 @@
 // Read-only public availability smoke check. No user data writes or secrets.
 // A pass confirms HTTP reachability only; it is not a substitute for signed-in
 // API/RLS tests, synthetic browser journeys, or real-user Web Vitals.
-const baseUrl = process.env.SETUPSHEET_HEALTH_BASE_URL || "https://setupsheet.app";
+const baseUrl =
+  process.env.SETUPSHEET_HEALTH_BASE_URL || "https://setupsheet.app";
 const paths = ["/", "/help", "/setups", "/requests", "/api/health"];
 const retries = 3;
 
@@ -41,15 +42,23 @@ for (const path of paths) {
 }
 
 for (const r of results) {
-  console.log(`${r.status}: ${r.path} ${r.durationMs === undefined ? r.detail : `${r.durationMs}ms`}`);
+  console.log(
+    `${r.status}: ${r.path} ${r.durationMs === undefined ? r.detail : `${r.durationMs}ms`}`,
+  );
 }
 if (process.env.GITHUB_STEP_SUMMARY) {
   const { appendFileSync } = await import("node:fs");
-  appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+  appendFileSync(
+    process.env.GITHUB_STEP_SUMMARY,
     "## SetupSheet public availability\n\n" +
-    "| Route | Result | Detail |\n|---|---|---|\n" +
-    results.map((r) => `| ${r.path} | ${r.status} | ${r.durationMs === undefined ? r.detail : `${r.durationMs} ms`} |`).join("\n") +
-    "\n\nHTTP availability and one bounded anonymous database read were checked. Authentication, privileged writes and recovery are not validated here.\n"
+      "| Route | Result | Detail |\n|---|---|---|\n" +
+      results
+        .map(
+          (r) =>
+            `| ${r.path} | ${r.status} | ${r.durationMs === undefined ? r.detail : `${r.durationMs} ms`} |`,
+        )
+        .join("\n") +
+      "\n\nHTTP availability and one bounded anonymous database read were checked. Authentication, privileged writes and recovery are not validated here.\n",
   );
 }
 if (results.some((r) => r.status !== "PASS")) process.exitCode = 1;

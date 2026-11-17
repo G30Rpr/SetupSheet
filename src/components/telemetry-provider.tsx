@@ -6,7 +6,12 @@ import { usePathname } from "next/navigation";
 import { logger } from "@/lib/logger";
 
 type MetricName = "LCP" | "CLS" | "INP" | "TTFB" | "FCP";
-type EventName = MetricName | "pageview" | "window.error" | "unhandledrejection" | "react.error-boundary";
+type EventName =
+  | MetricName
+  | "pageview"
+  | "window.error"
+  | "unhandledrejection"
+  | "react.error-boundary";
 
 interface TelemetryEvent {
   kind: "metric" | "pageview" | "error";
@@ -25,7 +30,10 @@ const THRESHOLDS: Record<MetricName, [number, number]> = {
   FCP: [1800, 3000],
 };
 
-function rate(name: MetricName, value: number): "good" | "needs-improvement" | "poor" {
+function rate(
+  name: MetricName,
+  value: number,
+): "good" | "needs-improvement" | "poor" {
   const [good, poor] = THRESHOLDS[name];
   if (value <= good) return "good";
   if (value <= poor) return "needs-improvement";
@@ -37,7 +45,7 @@ function currentPath(): string {
   if (typeof window === "undefined") return "/";
   return window.location.pathname.replace(
     /[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi,
-    ":id"
+    ":id",
   );
 }
 
@@ -92,27 +100,33 @@ function observeMetrics(onMetric: (name: MetricName, value: number) => void) {
   });
 
   safeObserve("layout-shift", (list) => {
-    for (const entry of list.getEntries() as (PerformanceEntry & { value: number; hadRecentInput: boolean })[]) {
+    for (const entry of list.getEntries() as (PerformanceEntry & {
+      value: number;
+      hadRecentInput: boolean;
+    })[]) {
       if (!entry.hadRecentInput) clsValue += entry.value;
     }
     onMetric("CLS", Number(clsValue.toFixed(4)));
   });
 
   safeObserve("event", (list) => {
-    for (const entry of list.getEntries() as (PerformanceEntry & { interactionId?: number })[]) {
+    for (const entry of list.getEntries() as (PerformanceEntry & {
+      interactionId?: number;
+    })[]) {
       if (entry.interactionId) maxInp = Math.max(maxInp, entry.duration);
     }
     if (maxInp > 0) onMetric("INP", Math.round(maxInp));
   });
 
   safeObserve("paint", (list) => {
-    const fcp = list.getEntries().find((entry) => entry.name === "first-contentful-paint");
+    const fcp = list
+      .getEntries()
+      .find((entry) => entry.name === "first-contentful-paint");
     if (fcp) onMetric("FCP", Math.round(fcp.startTime));
   });
 
   const navigation = performance.getEntriesByType("navigation")[0] as
-    | PerformanceNavigationTiming
-    | undefined;
+    PerformanceNavigationTiming | undefined;
   if (navigation) onMetric("TTFB", Math.round(navigation.responseStart));
 
   return () => observers.forEach((observer) => observer.disconnect());
@@ -122,7 +136,9 @@ export function TelemetryProvider() {
   const pathname = usePathname();
 
   useEffect(() => {
-    sendTelemetry([{ kind: "pageview", name: "pageview", path: currentPath() }]);
+    sendTelemetry([
+      { kind: "pageview", name: "pageview", path: currentPath() },
+    ]);
   }, [pathname]);
 
   useEffect(() => {
@@ -162,10 +178,14 @@ export function TelemetryProvider() {
     window.addEventListener("pagehide", onPageHide);
 
     const onError = () => {
-      sendTelemetry([{ kind: "error", name: "window.error", path: currentPath() }]);
+      sendTelemetry([
+        { kind: "error", name: "window.error", path: currentPath() },
+      ]);
     };
     const onRejection = () => {
-      sendTelemetry([{ kind: "error", name: "unhandledrejection", path: currentPath() }]);
+      sendTelemetry([
+        { kind: "error", name: "unhandledrejection", path: currentPath() },
+      ]);
     };
     window.addEventListener("error", onError);
     window.addEventListener("unhandledrejection", onRejection);

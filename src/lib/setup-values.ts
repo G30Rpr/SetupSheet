@@ -44,5 +44,9 @@ export function normalizeSetupValues(value: unknown): SetupValues | null {
 }
 
 export function isValidSetupValues(value: unknown): boolean {
-  return value === undefined || value === null || normalizeSetupValues(value) !== null;
+  return (
+    value === undefined ||
+    value === null ||
+    normalizeSetupValues(value) !== null
+  );
 }

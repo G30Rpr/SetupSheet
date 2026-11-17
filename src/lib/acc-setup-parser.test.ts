@@ -8,7 +8,9 @@ describe("parseAccSetupFile", () => {
   });
 
   it("returns null for valid JSON missing basicSetup", () => {
-    expect(parseAccSetupFile(JSON.stringify({ carName: "bmw_m4_gt3" }))).toBeNull();
+    expect(
+      parseAccSetupFile(JSON.stringify({ carName: "bmw_m4_gt3" })),
+    ).toBeNull();
   });
 
   it("returns null for a JSON array or primitive root", () => {
@@ -27,14 +29,14 @@ describe("parseAccSetupFile", () => {
 
   it("maps a known carName to its display name", () => {
     const result = parseAccSetupFile(
-      JSON.stringify({ carName: "bmw_m4_gt3", basicSetup: {} })
+      JSON.stringify({ carName: "bmw_m4_gt3", basicSetup: {} }),
     );
     expect(result?.car).toBe("BMW M4 GT3 2021");
   });
 
   it("leaves car null for an unmapped carName without failing the parse", () => {
     const result = parseAccSetupFile(
-      JSON.stringify({ carName: "bmw_m2_cs_racing", basicSetup: {} })
+      JSON.stringify({ carName: "bmw_m2_cs_racing", basicSetup: {} }),
     );
     expect(result).not.toBeNull();
     expect(result?.car).toBeNull();
@@ -42,7 +44,10 @@ describe("parseAccSetupFile", () => {
 
   it("does not throw when advancedSetup is entirely absent", () => {
     const result = parseAccSetupFile(
-      JSON.stringify({ carName: "bmw_m4_gt3", basicSetup: { electronics: { tC1: 3 } } })
+      JSON.stringify({
+        carName: "bmw_m4_gt3",
+        basicSetup: { electronics: { tC1: 3 } },
+      }),
     );
     expect(result?.setupValues.tractionControl).toBe("3");
     expect(result?.setupValues.rearWing).toBeUndefined();
@@ -54,7 +59,13 @@ describe("parseAccSetupFile", () => {
       basicSetup: {
         alignment: { staticCamber: [-3.2, -3.2, -2.7, -2.7] },
         electronics: { tC1: 4, tC2: 0, abs: 3, eCUMap: 8 },
-        strategy: { fuel: 18, tyreCompound: 0, tyreSet: 0, frontBrakePadCompound: 0, rearBrakePadCompound: 1 },
+        strategy: {
+          fuel: 18,
+          tyreCompound: 0,
+          tyreSet: 0,
+          frontBrakePadCompound: 0,
+          rearBrakePadCompound: 1,
+        },
         tyres: { tyreCompound: 0 },
       },
       advancedSetup: {

@@ -15,14 +15,22 @@ describe("resolveEffectiveSetupValues", () => {
   it("sends the manually-typed values in manual mode, regardless of file state", () => {
     const manual = { frontTirePressure: "23.5 psi" };
     expect(
-      resolveEffectiveSetupValues({ ...base, entryMode: "manual", manualSetupValues: manual })
+      resolveEffectiveSetupValues({
+        ...base,
+        entryMode: "manual",
+        manualSetupValues: manual,
+      }),
     ).toBe(manual);
   });
 
   it("sends this session's auto-parsed values when a file produced any", () => {
     const detected = { frontLeftCamber: "-3.20°" };
     expect(
-      resolveEffectiveSetupValues({ ...base, entryMode: "file", detectedSetupValues: detected })
+      resolveEffectiveSetupValues({
+        ...base,
+        entryMode: "file",
+        detectedSetupValues: detected,
+      }),
     ).toBe(detected);
   });
 
@@ -34,12 +42,18 @@ describe("resolveEffectiveSetupValues", () => {
         isEditing: true,
         keepExistingFile: true,
         hasNewFile: false,
-      })
+      }),
     ).toBeUndefined();
   });
 
   it("clears setup_values on a fresh create in file mode with nothing parsed", () => {
-    expect(resolveEffectiveSetupValues({ ...base, entryMode: "file", isEditing: false })).toBeNull();
+    expect(
+      resolveEffectiveSetupValues({
+        ...base,
+        entryMode: "file",
+        isEditing: false,
+      }),
+    ).toBeNull();
   });
 
   it("clears setup_values when a new file this session didn't parse to anything", () => {
@@ -50,7 +64,7 @@ describe("resolveEffectiveSetupValues", () => {
         isEditing: true,
         keepExistingFile: true,
         hasNewFile: true,
-      })
+      }),
     ).toBeNull();
   });
 
@@ -62,7 +76,7 @@ describe("resolveEffectiveSetupValues", () => {
         isEditing: true,
         keepExistingFile: false,
         hasNewFile: false,
-      })
+      }),
     ).toBeNull();
   });
 });

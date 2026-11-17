@@ -11,7 +11,9 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 vi.mock("@/components/setup-card", () => ({
-  SetupCard: ({ setup }: { setup: { car: string } }) => <div data-testid="card">{setup.car}</div>,
+  SetupCard: ({ setup }: { setup: { car: string } }) => (
+    <div data-testid="card">{setup.car}</div>
+  ),
 }));
 
 import { SetupsBrowser, sortOptions } from "@/components/setups-browser";
@@ -35,19 +37,36 @@ afterEach(() => {
 describe("SetupsBrowser degraded read", () => {
   it("shows an outage with a retry instead of claiming the community is empty", () => {
     render(
-      <SetupsBrowser setups={[]} totalCount={0} initialFilters={EMPTY_FILTERS} loadFailed />
+      <SetupsBrowser
+        setups={[]}
+        totalCount={0}
+        initialFilters={EMPTY_FILTERS}
+        loadFailed
+      />,
     );
 
-    expect(screen.getByRole("alert")).toHaveTextContent(/couldn't load setups/i);
-    expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /couldn't load setups/i,
+    );
+    expect(
+      screen.getByRole("button", { name: /try again/i }),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/no setups yet/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/no setups match your filters/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/no setups match your filters/i),
+    ).not.toBeInTheDocument();
     // "0 setups found" next to an error reads as a filter problem.
     expect(screen.queryByText(/setups found/i)).not.toBeInTheDocument();
   });
 
   it("keeps the quiet empty state when the library really is empty", () => {
-    render(<SetupsBrowser setups={[]} totalCount={0} initialFilters={EMPTY_FILTERS} />);
+    render(
+      <SetupsBrowser
+        setups={[]}
+        totalCount={0}
+        initialFilters={EMPTY_FILTERS}
+      />,
+    );
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.getByText(/no setups yet/i)).toBeInTheDocument();
@@ -57,7 +76,9 @@ describe("SetupsBrowser degraded read", () => {
 
 describe("sort labels", () => {
   it("names each sort by what it actually does", () => {
-    const labels = Object.fromEntries(sortOptions.map((option) => [option.value, option.label]));
+    const labels = Object.fromEntries(
+      sortOptions.map((option) => [option.value, option.label]),
+    );
 
     // Sort URLs people already shared keep working ("trending"), but the label
     // no longer implies a recency weighting the sort doesn't apply.

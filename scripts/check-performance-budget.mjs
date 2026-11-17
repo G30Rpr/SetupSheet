@@ -20,7 +20,9 @@ async function collectFiles(directory) {
 try {
   await stat(CHUNKS_DIR);
 } catch {
-  console.error("Performance budget: .next/static/chunks does not exist. Run npm run build first.");
+  console.error(
+    "Performance budget: .next/static/chunks does not exist. Run npm run build first.",
+  );
   process.exit(1);
 }
 
@@ -33,31 +35,41 @@ const assets = await Promise.all(
       type: filePath.endsWith(".css") ? "css" : "js",
       gzipBytes: gzipSync(raw, { level: 9 }).length,
     };
-  })
+  }),
 );
 
 const totalGzipBytes = assets.reduce((sum, asset) => sum + asset.gzipBytes, 0);
-const largest = [...assets].sort((a, b) => b.gzipBytes - a.gzipBytes).slice(0, 5);
+const largest = [...assets]
+  .sort((a, b) => b.gzipBytes - a.gzipBytes)
+  .slice(0, 5);
 const violations = assets.filter(
   (asset) =>
     asset.gzipBytes > MAX_CHUNK_GZIP_BYTES ||
-    (asset.type === "css" && asset.gzipBytes > MAX_CSS_GZIP_BYTES)
+    (asset.type === "css" && asset.gzipBytes > MAX_CSS_GZIP_BYTES),
 );
 
-console.log(`Performance budget: ${assets.length} JS/CSS chunks, ${(totalGzipBytes / 1024).toFixed(1)} KiB gzip total.`);
+console.log(
+  `Performance budget: ${assets.length} JS/CSS chunks, ${(totalGzipBytes / 1024).toFixed(1)} KiB gzip total.`,
+);
 console.log("Largest chunks:");
 for (const asset of largest) {
   console.log(`  ${(asset.gzipBytes / 1024).toFixed(1)} KiB  ${asset.file}`);
 }
 
 if (totalGzipBytes > MAX_TOTAL_GZIP_BYTES) {
-  violations.push({ file: "all chunks", type: "total", gzipBytes: totalGzipBytes });
+  violations.push({
+    file: "all chunks",
+    type: "total",
+    gzipBytes: totalGzipBytes,
+  });
 }
 
 if (violations.length > 0) {
   console.error("Performance budget failed:");
   for (const violation of violations) {
-    console.error(`  ${(violation.gzipBytes / 1024).toFixed(1)} KiB gzip  ${violation.file}`);
+    console.error(
+      `  ${(violation.gzipBytes / 1024).toFixed(1)} KiB gzip  ${violation.file}`,
+    );
   }
   process.exit(1);
 }

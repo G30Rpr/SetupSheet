@@ -17,25 +17,33 @@ function runInventory(historyExists: boolean, mode?: string) {
   temporaryDirectories.push(directory);
   const log = join(directory, "queries.log");
   // Stand in for psql at the process boundary and capture every statement.
-  writeFileSync(join(directory, "psql"), `#!/usr/bin/env bash
+  writeFileSync(
+    join(directory, "psql"),
+    `#!/usr/bin/env bash
 printf '%s\\n' "$@" >> "$QUERY_LOG"
 if [[ "$*" == *to_regclass* ]]; then
   echo "$HISTORY_EXISTS"
 else
   echo 0044
 fi
-`, { mode: 0o700 });
-  const result = spawnSync("bash", ["scripts/deploy-migrations.sh", ...(mode ? [mode] : [])], {
-    encoding: "utf8",
-    timeout: 5000,
-    env: {
-      NODE_ENV: "test",
-      PATH: `${directory}:${process.env.PATH}`,
-      SUPABASE_DB_URL: "postgresql://unused.invalid/test",
-      QUERY_LOG: log,
-      HISTORY_EXISTS: historyExists ? "t" : "f",
+`,
+    { mode: 0o700 },
+  );
+  const result = spawnSync(
+    "bash",
+    ["scripts/deploy-migrations.sh", ...(mode ? [mode] : [])],
+    {
+      encoding: "utf8",
+      timeout: 5000,
+      env: {
+        NODE_ENV: "test",
+        PATH: `${directory}:${process.env.PATH}`,
+        SUPABASE_DB_URL: "postgresql://unused.invalid/test",
+        QUERY_LOG: log,
+        HISTORY_EXISTS: historyExists ? "t" : "f",
+      },
     },
-  });
+  );
   return { ...result, queries: readFileSync(log, "utf8") };
 }
 
@@ -47,7 +55,9 @@ describe("production migration inventory", () => {
     expect(result.stdout).not.toContain("0044_lock_profile_sync_rpc.sql");
     expect(result.stdout).toContain("0045_public_reporting_invoker_views.sql");
     expect(result.queries).toContain("begin read only;");
-    expect(result.queries).not.toMatch(/create|insert|update|delete|--single-transaction|\n-f\n/i);
+    expect(result.queries).not.toMatch(
+      /create|insert|update|delete|--single-transaction|\n-f\n/i,
+    );
   });
 
   it("lists a target without migration history without creating anything", () => {

@@ -22,7 +22,9 @@ describe("DiscordLoginButton", () => {
   it("forwards its safe return path to the auth provider", () => {
     render(<DiscordLoginButton nextPath="/garage?from=setup-id" />);
 
-    fireEvent.click(screen.getByRole("button", { name: /login with discord/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /login with discord/i }),
+    );
 
     expect(signInWithDiscordMock).toHaveBeenCalledWith("/garage?from=setup-id");
   });

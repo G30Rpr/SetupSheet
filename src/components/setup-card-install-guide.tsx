@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, ClipboardCopy, Download, Maximize2, PackageOpen } from "lucide-react";
+import {
+  Check,
+  ClipboardCopy,
+  Download,
+  Maximize2,
+  PackageOpen,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,12 +48,19 @@ export default function SetupCardInstallGuide({ setup }: { setup: Setup }) {
 
   return (
     <div className="mt-2 flex flex-col gap-4 rounded-lg border border-border/60 bg-secondary/20 p-4 text-sm">
-      <Badge variant={guide.supportsFileImport ? "green" : "amber"} className="w-fit">
-        {guide.supportsFileImport ? "File import supported" : "Manual entry only"}
+      <Badge
+        variant={guide.supportsFileImport ? "green" : "amber"}
+        className="w-fit"
+      >
+        {guide.supportsFileImport
+          ? "File import supported"
+          : "Manual entry only"}
       </Badge>
 
       <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Installation steps</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Installation steps
+        </p>
         <ol className="flex list-decimal flex-col gap-2 pl-5 leading-relaxed text-muted-foreground">
           {guide.steps.map((step, i) => (
             <li key={i}>{step}</li>
@@ -73,7 +86,10 @@ export default function SetupCardInstallGuide({ setup }: { setup: Setup }) {
               className="shrink-0 gap-1"
             >
               {copied === "folder" ? (
-                <Check className="size-4 text-racing-green" aria-hidden="true" />
+                <Check
+                  className="size-4 text-racing-green"
+                  aria-hidden="true"
+                />
               ) : (
                 <ClipboardCopy className="size-4" aria-hidden="true" />
               )}
@@ -87,8 +103,16 @@ export default function SetupCardInstallGuide({ setup }: { setup: Setup }) {
       )}
 
       {canBundle && guide.supportsFileImport && (
-        <Button asChild variant="outline" size="sm" className="w-fit self-start">
-          <a href={`/api/setups/${encodeURIComponent(setup.id)}/bundle`} download>
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="w-fit self-start"
+        >
+          <a
+            href={`/api/setups/${encodeURIComponent(setup.id)}/bundle`}
+            download
+          >
             <PackageOpen className="size-4" aria-hidden="true" />
             Download install bundle
           </a>
@@ -98,7 +122,8 @@ export default function SetupCardInstallGuide({ setup }: { setup: Setup }) {
       {canBundle && guide.supportsFileImport && (
         <p className="text-xs text-muted-foreground">
           The bundle contains the setup file, your values as text, and these
-          instructions — so you don&apos;t need to come back to this page mid-install.
+          instructions — so you don&apos;t need to come back to this page
+          mid-install.
         </p>
       )}
 
@@ -115,7 +140,9 @@ export default function SetupCardInstallGuide({ setup }: { setup: Setup }) {
         <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
           <Download className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
           <span>
-            This title needs manual entry. Copy the values beside Download, or use Rig Mode for a larger, second-screen view while entering each setting.
+            This title needs manual entry. Copy the values beside Download, or
+            use Rig Mode for a larger, second-screen view while entering each
+            setting.
           </span>
         </p>
       )}

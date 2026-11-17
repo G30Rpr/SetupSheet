@@ -25,7 +25,9 @@ import { cn, getInitials } from "@/lib/utils";
 import type { NotificationItem } from "@/lib/supabase/notifications";
 
 function formatRelativeTime(dateStr: string) {
-  const diffMin = Math.round((Date.now() - new Date(dateStr).getTime()) / 60000);
+  const diffMin = Math.round(
+    (Date.now() - new Date(dateStr).getTime()) / 60000,
+  );
   if (diffMin < 1) return "just now";
   if (diffMin < 60) return `${diffMin}m ago`;
   const diffHr = Math.round(diffMin / 60);
@@ -82,12 +84,14 @@ export function NotificationBell({
   // Adjusting state during render (rather than in an effect) re-syncs from
   // a fresh server render in the same pass, instead of committing the stale
   // state first and correcting it a render later.
-  const [prevInitialNotifications, setPrevInitialNotifications] = useState(initialNotifications);
+  const [prevInitialNotifications, setPrevInitialNotifications] =
+    useState(initialNotifications);
   if (initialNotifications !== prevInitialNotifications) {
     setPrevInitialNotifications(initialNotifications);
     setNotifications(initialNotifications);
   }
-  const [prevInitialUnreadCount, setPrevInitialUnreadCount] = useState(initialUnreadCount);
+  const [prevInitialUnreadCount, setPrevInitialUnreadCount] =
+    useState(initialUnreadCount);
   if (initialUnreadCount !== prevInitialUnreadCount) {
     setPrevInitialUnreadCount(initialUnreadCount);
     setUnreadCount(initialUnreadCount);
@@ -98,7 +102,7 @@ export function NotificationBell({
   function handleItemClick(notification: NotificationItem) {
     if (!notification.read) {
       setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
+        prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n)),
       );
       setUnreadCount((n) => Math.max(n - 1, 0));
       startTransition(async () => {
@@ -172,7 +176,11 @@ export function NotificationBell({
           variant="ghost"
           size="icon"
           className="relative rounded-full"
-          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+          aria-label={
+            unreadCount > 0
+              ? `Notifications, ${unreadCount} unread`
+              : "Notifications"
+          }
         >
           <Bell className="size-5" />
           {unreadCount > 0 && (
@@ -207,7 +215,10 @@ export function NotificationBell({
             <DropdownMenuItem
               key={n.id}
               onSelect={() => handleItemClick(n)}
-              className={cn("flex items-start gap-2.5 py-2", !n.read && "bg-accent/60")}
+              className={cn(
+                "flex items-start gap-2.5 py-2",
+                !n.read && "bg-accent/60",
+              )}
             >
               <Avatar className="size-8 shrink-0 ring-1 ring-border">
                 <AvatarImage src={n.actorAvatarUrl ?? undefined} alt="" />
@@ -234,7 +245,9 @@ export function NotificationBell({
                 </p>
                 <RelativeTime dateStr={n.createdAt} />
               </div>
-              {!n.read && <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />}
+              {!n.read && (
+                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+              )}
             </DropdownMenuItem>
           ))
         )}

@@ -46,7 +46,10 @@ export function RetryButton({
         })
       }
     >
-      <RefreshCw className={cn(isPending && "animate-spin")} aria-hidden="true" />
+      <RefreshCw
+        className={cn(isPending && "animate-spin")}
+        aria-hidden="true"
+      />
       {isPending ? "Trying again…" : label}
     </Button>
   );

@@ -4,7 +4,10 @@ const { getProfileSitemapEntries, getSetupSitemapEntries } = vi.hoisted(() => ({
   getProfileSitemapEntries: vi.fn(),
   getSetupSitemapEntries: vi.fn(),
 }));
-vi.mock("@/lib/supabase/setups", () => ({ getProfileSitemapEntries, getSetupSitemapEntries }));
+vi.mock("@/lib/supabase/setups", () => ({
+  getProfileSitemapEntries,
+  getSetupSitemapEntries,
+}));
 
 import { GET } from "@/app/sitemap.xml/route";
 
@@ -17,7 +20,10 @@ describe("GET /sitemap.xml", () => {
 
   it("returns a public-cacheable XML sitemap on success", async () => {
     getSetupSitemapEntries.mockResolvedValue([
-      { id: "11111111-1111-4111-8111-111111111111", updatedAt: "2026-09-30T12:00:00Z" },
+      {
+        id: "11111111-1111-4111-8111-111111111111",
+        updatedAt: "2026-09-30T12:00:00Z",
+      },
     ]);
 
     const response = await GET();

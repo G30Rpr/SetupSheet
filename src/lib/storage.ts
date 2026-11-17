@@ -44,7 +44,8 @@ export function sanitizeFileName(name: string): string {
     .replace(/[\\/]/g, "_")
     .replace(/[\u0000-\u001f\u007f]/g, "_")
     .replace(/[^a-zA-Z0-9._-]/g, "_");
-  if (cleaned.length <= MAX_STORED_FILE_NAME_LENGTH) return cleaned || "setup-file";
+  if (cleaned.length <= MAX_STORED_FILE_NAME_LENGTH)
+    return cleaned || "setup-file";
 
   // Preserve the extension when a browser supplies an unusually long name;
   // otherwise the upload would pass extension validation, then fail again
@@ -60,7 +61,9 @@ export function sanitizeFileName(name: string): string {
 /** Makes a database filename safe to render/use as a download attribute. */
 export function sanitizeStoredFileName(name: unknown): string | null {
   if (typeof name !== "string" || !name) return null;
-  const cleaned = name.replace(/[\u0000-\u001f\u007f]/g, "_").slice(0, MAX_STORED_FILE_NAME_LENGTH);
+  const cleaned = name
+    .replace(/[\u0000-\u001f\u007f]/g, "_")
+    .slice(0, MAX_STORED_FILE_NAME_LENGTH);
   return cleaned || null;
 }
 
@@ -70,8 +73,15 @@ export function sanitizeStoredFileName(name: unknown): string | null {
  * before turning a database value into a URL prevents a setup from pointing
  * at another user's object or a path containing traversal components.
  */
-export function isOwnedStoragePath(path: unknown, ownerId: string): path is string {
-  if (typeof path !== "string" || !ownerId || path.length > MAX_STORAGE_PATH_LENGTH) {
+export function isOwnedStoragePath(
+  path: unknown,
+  ownerId: string,
+): path is string {
+  if (
+    typeof path !== "string" ||
+    !ownerId ||
+    path.length > MAX_STORAGE_PATH_LENGTH
+  ) {
     return false;
   }
 
