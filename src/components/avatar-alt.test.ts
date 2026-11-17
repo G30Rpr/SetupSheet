@@ -23,16 +23,21 @@ function collectSourceFiles(directory: string): string[] {
   for (const entry of readdirSync(directory)) {
     const full = path.join(directory, entry);
     if (statSync(full).isDirectory()) files.push(...collectSourceFiles(full));
-    else if (entry.endsWith(".tsx") && !entry.endsWith(".test.tsx")) files.push(full);
+    else if (entry.endsWith(".tsx") && !entry.endsWith(".test.tsx"))
+      files.push(full);
   }
   return files;
 }
 
-const files = SOURCE_ROOTS.flatMap((root) => collectSourceFiles(path.join(process.cwd(), root)));
+const files = SOURCE_ROOTS.flatMap((root) =>
+  collectSourceFiles(path.join(process.cwd(), root)),
+);
 
 describe("avatar images are decorative", () => {
   it("scans the call sites it is meant to guard", () => {
-    const withAvatars = files.filter((file) => readFileSync(file, "utf8").includes("<AvatarImage"));
+    const withAvatars = files.filter((file) =>
+      readFileSync(file, "utf8").includes("<AvatarImage"),
+    );
     // Guards against the scanner silently matching nothing after a refactor.
     expect(withAvatars.length).toBeGreaterThanOrEqual(5);
   });
@@ -49,9 +54,12 @@ describe("avatar images are decorative", () => {
       for (const element of source.match(/<AvatarImage\b[\s\S]*?\/>/g) ?? []) {
         checked += 1;
         const alt = /\balt=("([^"]*)"|\{`([^`]*)`\})/.exec(element);
-        if (!alt) violations.push(`${relative}: <AvatarImage> has no alt attribute`);
+        if (!alt)
+          violations.push(`${relative}: <AvatarImage> has no alt attribute`);
         else if ((alt[2] ?? alt[3] ?? "") !== "")
-          violations.push(`${relative}: alt="${alt[2] ?? alt[3]}" should be "" (name is adjacent text)`);
+          violations.push(
+            `${relative}: alt="${alt[2] ?? alt[3]}" should be "" (name is adjacent text)`,
+          );
       }
     }
 

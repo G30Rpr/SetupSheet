@@ -4,12 +4,18 @@ export const DEFAULT_SITE_DESCRIPTION =
   "Download and share free sim racing setups for iRacing, Assetto Corsa, Le Mans Ultimate, F1 25 and more. Built by the community, for the community.";
 
 /** Keep search snippets and social descriptions within a predictable length. */
-export function truncateMetaDescription(value: string, maxLength = 160): string {
+export function truncateMetaDescription(
+  value: string,
+  maxLength = 160,
+): string {
   const normalized = value.replace(/\s+/g, " ").trim();
   if (normalized.length <= maxLength) return normalized;
 
   const safeLength = Math.max(1, maxLength - 1);
-  const shortened = normalized.slice(0, safeLength).replace(/\s+\S*$/, "").trim();
+  const shortened = normalized
+    .slice(0, safeLength)
+    .replace(/\s+\S*$/, "")
+    .trim();
   return `${shortened || normalized.slice(0, safeLength).trim()}…`;
 }
 

@@ -5,11 +5,13 @@ import { normalizeVideoUrl, validateVideoUrl } from "@/lib/video-url";
 describe("video URL validation", () => {
   it("allows HTTPS YouTube and Twitch links", () => {
     expect(normalizeVideoUrl("https://www.youtube.com/watch?v=abc123_-")).toBe(
-      "https://www.youtube.com/watch?v=abc123_-"
+      "https://www.youtube.com/watch?v=abc123_-",
     );
-    expect(normalizeVideoUrl("youtu.be/abc123_-")).toBe("https://youtu.be/abc123_-");
+    expect(normalizeVideoUrl("youtu.be/abc123_-")).toBe(
+      "https://youtu.be/abc123_-",
+    );
     expect(normalizeVideoUrl("https://clips.twitch.tv/example-clip")).toBe(
-      "https://clips.twitch.tv/example-clip"
+      "https://clips.twitch.tv/example-clip",
     );
   });
 
@@ -35,6 +37,8 @@ describe("video URL validation", () => {
 
   it("rejects non-string and overlong values", () => {
     expect(validateVideoUrl(42)).toMatch(/YouTube or Twitch HTTPS link/);
-    expect(validateVideoUrl(`https://youtube.com/${"x".repeat(2049)}`)).toMatch(/too long/);
+    expect(validateVideoUrl(`https://youtube.com/${"x".repeat(2049)}`)).toMatch(
+      /too long/,
+    );
   });
 });

@@ -31,7 +31,10 @@ export default function LoadingUpload() {
           <div className="h-4 w-12 animate-pulse rounded-md bg-secondary/60" />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-10 animate-pulse rounded-lg border border-border/80 bg-secondary/20" />
+              <div
+                key={i}
+                className="h-10 animate-pulse rounded-lg border border-border/80 bg-secondary/20"
+              />
             ))}
           </div>
         </div>

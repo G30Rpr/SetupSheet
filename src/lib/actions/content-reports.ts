@@ -9,9 +9,16 @@ import { createClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/utils";
 
 export type ReportTargetType = "setup" | "comment" | "profile";
-export type ReportReason = "spam" | "unsafe_file" | "harassment" | "copyright" | "other";
+export type ReportReason =
+  "spam" | "unsafe_file" | "harassment" | "copyright" | "other";
 
-const reasons: ReportReason[] = ["spam", "unsafe_file", "harassment", "copyright", "other"];
+const reasons: ReportReason[] = [
+  "spam",
+  "unsafe_file",
+  "harassment",
+  "copyright",
+  "other",
+];
 
 export interface ContentReportInput {
   targetType: ReportTargetType;
@@ -27,21 +34,25 @@ function validateReport(input: unknown): string | null {
 
   const fields = input as Record<string, unknown>;
   if (
-    (fields.targetType !== "setup" && fields.targetType !== "comment" && fields.targetType !== "profile") ||
+    (fields.targetType !== "setup" &&
+      fields.targetType !== "comment" &&
+      fields.targetType !== "profile") ||
     !isUuid(fields.targetId) ||
-    (typeof fields.reason !== "string" || !reasons.includes(fields.reason as ReportReason)) ||
+    typeof fields.reason !== "string" ||
+    !reasons.includes(fields.reason as ReportReason) ||
     typeof fields.details !== "string"
   ) {
     return "Invalid report.";
   }
 
-  if (fields.details.length > 2000) return "Report details are too long — max 2000 characters.";
+  if (fields.details.length > 2000)
+    return "Report details are too long — max 2000 characters.";
   return null;
 }
 
 /** Submits a private moderation report for operator review. */
 export async function submitContentReport(
-  input: ContentReportInput
+  input: ContentReportInput,
 ): Promise<{ error: string | null }> {
   const validationError = validateReport(input);
   if (validationError) return { error: validationError };
@@ -63,7 +74,9 @@ export async function submitContentReport(
       return { error: "You already have an active report for this content." };
     }
     logger.error("submitContentReport: insert failed", error);
-    return { error: getActionError(error, "Couldn't submit the report right now.") };
+    return {
+      error: getActionError(error, "Couldn't submit the report right now."),
+    };
   }
 
   revalidatePath("/report");

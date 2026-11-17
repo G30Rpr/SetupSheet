@@ -6,7 +6,10 @@ import { CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SetupRequestCard } from "@/components/setup-request-card";
 import { loadMoreSetupRequests } from "@/lib/actions/setup-requests";
-import type { SetupRequestCursor, SetupRequestsPage } from "@/lib/supabase/setup-requests";
+import type {
+  SetupRequestCursor,
+  SetupRequestsPage,
+} from "@/lib/supabase/setup-requests";
 import type { SetupRequest } from "@/lib/types";
 
 /**
@@ -25,9 +28,13 @@ export function SetupRequestsList({
   initialPage: SetupRequestsPage;
 }) {
   const [open, setOpen] = useState<SetupRequest[]>(initialPage.open);
-  const [fulfilled, setFulfilled] = useState<SetupRequest[]>(initialPage.fulfilled);
+  const [fulfilled, setFulfilled] = useState<SetupRequest[]>(
+    initialPage.fulfilled,
+  );
   const [openTotal, setOpenTotal] = useState(initialPage.openTotal);
-  const [nextCursor, setNextCursor] = useState<SetupRequestCursor | null>(initialPage.nextCursor);
+  const [nextCursor, setNextCursor] = useState<SetupRequestCursor | null>(
+    initialPage.nextCursor,
+  );
   const [error, setError] = useState<string | null>(initialPage.error);
   const [isLoading, startTransition] = useTransition();
 
@@ -60,7 +67,10 @@ export function SetupRequestsList({
 
         setOpen((previous) => {
           const knownIds = new Set(previous.map((request) => request.id));
-          return [...previous, ...result.open.filter((request) => !knownIds.has(request.id))];
+          return [
+            ...previous,
+            ...result.open.filter((request) => !knownIds.has(request.id)),
+          ];
         });
         setOpenTotal(result.openTotal);
         setNextCursor(result.nextCursor);
@@ -85,11 +95,19 @@ export function SetupRequestsList({
       {(shownOpen > 0 || nextCursor) && (
         <div className="flex flex-col items-center gap-2">
           <p className="text-sm text-muted-foreground">
-            Showing {shownOpen} of {openTotal} open {openTotal === 1 ? "request" : "requests"}
+            Showing {shownOpen} of {openTotal} open{" "}
+            {openTotal === 1 ? "request" : "requests"}
           </p>
           {nextCursor && (
-            <Button variant="outline" size="sm" onClick={loadMore} disabled={isLoading}>
-              {isLoading ? "Loading more requests..." : "Load more open requests"}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadMore}
+              disabled={isLoading}
+            >
+              {isLoading
+                ? "Loading more requests..."
+                : "Load more open requests"}
             </Button>
           )}
           {error && (
@@ -101,7 +119,10 @@ export function SetupRequestsList({
       )}
 
       {fulfilled.length > 0 && (
-        <section aria-labelledby="recently-fulfilled-heading" className="flex flex-col gap-3">
+        <section
+          aria-labelledby="recently-fulfilled-heading"
+          className="flex flex-col gap-3"
+        >
           <h3
             id="recently-fulfilled-heading"
             className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted-foreground"

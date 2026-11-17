@@ -9,13 +9,16 @@ import {
   ENGINEER_CALIBRATION_MIN_SETUPS,
   mapPublicEngineerCalibrationRows,
 } from "@/lib/engineer-calibration";
-import type { EngineerCalibrationFactor, PublicEngineerCalibrationRow } from "@/lib/engineer-calibration";
+import type {
+  EngineerCalibrationFactor,
+  PublicEngineerCalibrationRow,
+} from "@/lib/engineer-calibration";
 import type { EngineerInput } from "@/lib/engineer-types";
 
 const game = "Assetto Corsa Competizione" as const;
 
 function aggregateRow(
-  overrides: Partial<PublicEngineerCalibrationRow> = {}
+  overrides: Partial<PublicEngineerCalibrationRow> = {},
 ): PublicEngineerCalibrationRow {
   return {
     game,
@@ -28,7 +31,9 @@ function aggregateRow(
   };
 }
 
-function factor(overrides: Partial<EngineerCalibrationFactor> = {}): EngineerCalibrationFactor {
+function factor(
+  overrides: Partial<EngineerCalibrationFactor> = {},
+): EngineerCalibrationFactor {
   return {
     game,
     condition: "dry",
@@ -44,7 +49,9 @@ describe("public Engineer calibration", () => {
   it("uses the approved Beta(2,2) prior and bounded score-factor mapping", () => {
     expect(betaCalibrationFactor(0)).toBe(1);
     expect(betaCalibrationFactor(5)).toBeCloseTo(1.2222222222);
-    expect(betaCalibrationFactor(1_000_000)).toBeLessThanOrEqual(ENGINEER_CALIBRATION_MAX_FACTOR);
+    expect(betaCalibrationFactor(1_000_000)).toBeLessThanOrEqual(
+      ENGINEER_CALIBRATION_MAX_FACTOR,
+    );
     expect(betaCalibrationFactor(1_000_000)).toBeGreaterThan(1.3999);
     expect(betaCalibrationFactor(-1)).toBeNull();
     expect(betaCalibrationFactor(Number.POSITIVE_INFINITY)).toBeNull();
@@ -54,7 +61,9 @@ describe("public Engineer calibration", () => {
 
   it("requires the minimum number of distinct public setups and exact game/condition", () => {
     const rows = [
-      aggregateRow({ supporting_setup_count: ENGINEER_CALIBRATION_MIN_SETUPS - 1 }),
+      aggregateRow({
+        supporting_setup_count: ENGINEER_CALIBRATION_MIN_SETUPS - 1,
+      }),
       aggregateRow({
         parameter: "Brake bias",
         direction: "decrease",
@@ -82,7 +91,9 @@ describe("public Engineer calibration", () => {
         sampleCount: ENGINEER_CALIBRATION_MIN_SETUPS,
       }),
     ]);
-    expect(mapPublicEngineerCalibrationRows(rows, "Gran Turismo 7", "dry")).toEqual([]);
+    expect(
+      mapPublicEngineerCalibrationRows(rows, "Gran Turismo 7", "dry"),
+    ).toEqual([]);
     expect(mapPublicEngineerCalibrationRows(rows, game, "mixed")).toEqual([]);
   });
 
@@ -90,17 +101,20 @@ describe("public Engineer calibration", () => {
     const padded = mapPublicEngineerCalibrationRows(
       [aggregateRow({ parameter: " Rear anti-roll bar " })],
       game,
-      "dry"
+      "dry",
     );
     expect(padded).toEqual([]);
 
     const contradictory = mapPublicEngineerCalibrationRows(
       [
         aggregateRow({ directions: ["decrease", "stiffen"] }),
-        aggregateRow({ direction: "decrease", directions: ["decrease", "stiffen"] }),
+        aggregateRow({
+          direction: "decrease",
+          directions: ["decrease", "stiffen"],
+        }),
       ],
       game,
-      "dry"
+      "dry",
     );
     expect(contradictory).toEqual([]);
   });
@@ -108,17 +122,21 @@ describe("public Engineer calibration", () => {
   it("fails closed on malformed or duplicate aggregate rows", () => {
     expect(
       mapPublicEngineerCalibrationRows(
-        [aggregateRow({ direction: "unknown" }), aggregateRow({ directions: [] }), null],
+        [
+          aggregateRow({ direction: "unknown" }),
+          aggregateRow({ directions: [] }),
+          null,
+        ],
         game,
-        "dry"
-      )
+        "dry",
+      ),
     ).toEqual([]);
     expect(
       mapPublicEngineerCalibrationRows(
         [aggregateRow(), aggregateRow()],
         game,
-        "dry"
-      )
+        "dry",
+      ),
     ).toEqual([]);
   });
 
@@ -131,17 +149,26 @@ describe("public Engineer calibration", () => {
     };
     const staticResult = getEngineerRecommendations(input);
     const before = JSON.stringify(staticResult);
-    const staticRearBar = staticResult.recommendations.find((item) => item.parameter === "Rear anti-roll bar");
+    const staticRearBar = staticResult.recommendations.find(
+      (item) => item.parameter === "Rear anti-roll bar",
+    );
     const calibration = factor();
 
-    const calibrated = applyPublicEngineerCalibration(staticResult, input, [calibration]);
+    const calibrated = applyPublicEngineerCalibration(staticResult, input, [
+      calibration,
+    ]);
 
     expect(JSON.stringify(staticResult)).toBe(before);
     expect(calibrated.recommendations[0].parameter).toBe("Rear anti-roll bar");
     expect(calibrated.recommendations[0].score).toBe(staticRearBar?.score);
     expect(calibrated.recommendations[0].amount).toBe(staticRearBar?.amount);
-    expect(calibrated.recommendations[0].publicEvidence).toEqual({ sampleCount: 5, factor: 1.4 });
-    expect(calibrated.recommendations[0].warnings).toEqual(staticRearBar?.warnings);
+    expect(calibrated.recommendations[0].publicEvidence).toEqual({
+      sampleCount: 5,
+      factor: 1.4,
+    });
+    expect(calibrated.recommendations[0].warnings).toEqual(
+      staticRearBar?.warnings,
+    );
     expect(calibrated.recommendations[1].publicEvidence).toBeUndefined();
   });
 
@@ -160,11 +187,19 @@ describe("public Engineer calibration", () => {
       factor(),
       factor(),
     ];
-    const calibrated = applyPublicEngineerCalibration(staticResult, input, invalidFactors);
+    const calibrated = applyPublicEngineerCalibration(
+      staticResult,
+      input,
+      invalidFactors,
+    );
 
-    expect(calibrated.recommendations.every((item) => item.publicEvidence === undefined)).toBe(true);
+    expect(
+      calibrated.recommendations.every(
+        (item) => item.publicEvidence === undefined,
+      ),
+    ).toBe(true);
     expect(calibrated.recommendations.map((item) => item.parameter)).toEqual(
-      staticResult.recommendations.map((item) => item.parameter)
+      staticResult.recommendations.map((item) => item.parameter),
     );
   });
 
@@ -176,19 +211,36 @@ describe("public Engineer calibration", () => {
       condition: "wet",
     };
     const staticResult = getEngineerRecommendations(input);
-    const dryEvidence = factor({ parameter: "ABS", direction: "increase", condition: "dry" });
-    const wetEvidence = factor({ parameter: "ABS", direction: "increase", condition: "wet" });
+    const dryEvidence = factor({
+      parameter: "ABS",
+      direction: "increase",
+      condition: "dry",
+    });
+    const wetEvidence = factor({
+      parameter: "ABS",
+      direction: "increase",
+      condition: "wet",
+    });
 
-    const calibrated = applyPublicEngineerCalibration(staticResult, input, [dryEvidence, wetEvidence]);
+    const calibrated = applyPublicEngineerCalibration(staticResult, input, [
+      dryEvidence,
+      wetEvidence,
+    ]);
 
-    expect(calibrated.recommendations.some((item) => item.parameter === "Brake bias")).toBe(false);
-    expect(calibrated.recommendations.find((item) => item.parameter === "ABS")?.publicEvidence)
-      .toEqual({ sampleCount: 5, factor: 1.4 });
+    expect(
+      calibrated.recommendations.some(
+        (item) => item.parameter === "Brake bias",
+      ),
+    ).toBe(false);
+    expect(
+      calibrated.recommendations.find((item) => item.parameter === "ABS")
+        ?.publicEvidence,
+    ).toEqual({ sampleCount: 5, factor: 1.4 });
 
     const withoutCondition = applyPublicEngineerCalibration(
       staticResult,
       { ...input, condition: undefined },
-      [wetEvidence]
+      [wetEvidence],
     );
     expect(withoutCondition).toBe(staticResult);
   });

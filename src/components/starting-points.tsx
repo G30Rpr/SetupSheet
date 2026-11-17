@@ -27,7 +27,9 @@ export function StartingPoints({
 
   useEffect(() => {
     const rig = readLastRig();
-    const pool = rig ? candidates.filter((setup) => setup.rigProfile === rig) : candidates;
+    const pool = rig
+      ? candidates.filter((setup) => setup.rigProfile === rig)
+      : candidates;
     // Hydrating from localStorage on mount, not deriving from props/state.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPicks(pool.slice(0, 3));
@@ -36,9 +38,15 @@ export function StartingPoints({
   if (picks.length === 0) return null;
 
   return (
-    <section aria-labelledby="starting-points-heading" className="border-t border-border/80 bg-secondary/10">
+    <section
+      aria-labelledby="starting-points-heading"
+      className="border-t border-border/80 bg-secondary/10"
+    >
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-        <h2 id="starting-points-heading" className="mb-6 text-2xl font-bold tracking-tight sm:text-3xl">
+        <h2
+          id="starting-points-heading"
+          className="mb-6 text-2xl font-bold tracking-tight sm:text-3xl"
+        >
           Starting points
         </h2>
         <ul className="grid list-none grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">

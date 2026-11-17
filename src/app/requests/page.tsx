@@ -11,7 +11,10 @@ import { RetryButton } from "@/components/retry-button";
 import { SetupRequestsList } from "@/components/setup-requests-list";
 import { fullPageTitle } from "@/lib/seo";
 import { SetupRequestForm } from "@/components/setup-request-form";
-import { getMostWantedRequests, getSetupRequestsPage } from "@/lib/supabase/setup-requests";
+import {
+  getMostWantedRequests,
+  getSetupRequestsPage,
+} from "@/lib/supabase/setup-requests";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const title = "Setup Requests";
@@ -23,7 +26,13 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: `${SITE_URL}/requests` },
-  openGraph: { title: socialTitle, description, url: "/requests", type: "website", siteName: SITE_NAME },
+  openGraph: {
+    title: socialTitle,
+    description,
+    url: "/requests",
+    type: "website",
+    siteName: SITE_NAME,
+  },
   twitter: { card: "summary_large_image", title: socialTitle, description },
 };
 
@@ -44,7 +53,8 @@ export default async function RequestsPage({
     getMostWantedRequests(5),
     getSetupRequestsPage(),
   ]);
-  const isEmpty = requestPage.open.length === 0 && requestPage.fulfilled.length === 0;
+  const isEmpty =
+    requestPage.open.length === 0 && requestPage.fulfilled.length === 0;
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -58,13 +68,22 @@ export default async function RequestsPage({
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
       <JsonLd data={jsonLd} />
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Setup Requests</h1>
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          Setup Requests
+        </h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">{description}</p>
       </div>
 
       {mostWanted.length > 0 && (
-        <Card as="section" aria-labelledby="most-wanted-heading" className="mb-8 gap-3 px-5 py-4">
-          <h2 id="most-wanted-heading" className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <Card
+          as="section"
+          aria-labelledby="most-wanted-heading"
+          className="mb-8 gap-3 px-5 py-4"
+        >
+          <h2
+            id="most-wanted-heading"
+            className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted-foreground"
+          >
             <Flame className="size-4 text-foreground" />
             Most wanted
           </h2>
@@ -75,11 +94,13 @@ export default async function RequestsPage({
                 className="flex min-w-0 flex-wrap items-center justify-between gap-2 text-sm"
               >
                 <span className="min-w-0 flex-1 break-words">
-                  <span className="font-medium">{entry.car}</span> @ {entry.track}
+                  <span className="font-medium">{entry.car}</span> @{" "}
+                  {entry.track}
                   <span className="text-muted-foreground"> · {entry.game}</span>
                 </span>
                 <Badge variant="secondary" className="shrink-0">
-                  {entry.requestCount} {entry.requestCount === 1 ? "request" : "requests"}
+                  {entry.requestCount}{" "}
+                  {entry.requestCount === 1 ? "request" : "requests"}
                 </Badge>
               </li>
             ))}
@@ -100,7 +121,10 @@ export default async function RequestsPage({
       </div>
 
       <section aria-labelledby="request-list-heading">
-        <h2 id="request-list-heading" className="mb-4 text-xl font-semibold tracking-tight">
+        <h2
+          id="request-list-heading"
+          className="mb-4 text-xl font-semibold tracking-tight"
+        >
           Community requests
         </h2>
         {/* Every public reader degrades to an empty result rather than an error
@@ -108,7 +132,10 @@ export default async function RequestsPage({
             board -- otherwise "nobody has posted yet" and "the database is
             unreachable" render identically. */}
         {requestPage.error && !isEmpty && (
-          <p role="alert" className="mb-4 flex items-center gap-2 text-sm text-destructive">
+          <p
+            role="alert"
+            className="mb-4 flex items-center gap-2 text-sm text-destructive"
+          >
             <TriangleAlert className="size-4 shrink-0" aria-hidden="true" />
             {requestPage.error}
           </p>

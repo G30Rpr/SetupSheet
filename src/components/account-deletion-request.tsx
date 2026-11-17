@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { AlertTriangle, CheckCircle2, Clock3, RotateCcw, X } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock3,
+  RotateCcw,
+  X,
+} from "lucide-react";
 
 import {
   cancelAccountDeletionRequest,
@@ -75,7 +81,8 @@ export function AccountDeletionRequest({
         <div>
           <h2 className="font-semibold">Request account and data deletion</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            This submits a manual-review request. Your public contributions and Supabase account are not deleted automatically from this page.
+            This submits a manual-review request. Your public contributions and
+            Supabase account are not deleted automatically from this page.
           </p>
         </div>
       </div>
@@ -87,9 +94,17 @@ export function AccountDeletionRequest({
             Deletion request pending review
           </p>
           <p className="text-muted-foreground">
-            A project operator must complete the account and data removal. You can cancel the request while it is pending.
+            A project operator must complete the account and data removal. You
+            can cancel the request while it is pending.
           </p>
-          <Button type="button" variant="outline" size="sm" onClick={cancelRequest} disabled={isPending} className="self-start">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={cancelRequest}
+            disabled={isPending}
+            className="self-start"
+          >
             <X />
             {isPending ? "Cancelling..." : "Cancel request"}
           </Button>
@@ -97,7 +112,8 @@ export function AccountDeletionRequest({
       ) : request?.status === "processing" ? (
         <p className="flex items-center gap-2 rounded-md border border-border/80 bg-secondary/30 px-4 py-3 text-sm text-muted-foreground">
           <Clock3 className="size-4 shrink-0 text-racing-amber" />
-          Your deletion request is being processed. Cancellation is no longer available.
+          Your deletion request is being processed. Cancellation is no longer
+          available.
         </p>
       ) : request?.status === "completed" ? (
         <p className="flex items-center gap-2 rounded-md border border-border/80 bg-secondary/30 px-4 py-3 text-sm text-muted-foreground">
@@ -108,15 +124,33 @@ export function AccountDeletionRequest({
         <div className="flex flex-col gap-3">
           {confirming && (
             <p className="text-sm font-medium text-destructive">
-              Click the button again to confirm. This starts a manual deletion review.
+              Click the button again to confirm. This starts a manual deletion
+              review.
             </p>
           )}
-          <Button type="button" variant="destructive" onClick={submitRequest} disabled={isPending} className="self-start">
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={submitRequest}
+            disabled={isPending}
+            className="self-start"
+          >
             {confirming ? <CheckCircle2 /> : <AlertTriangle />}
-            {isPending ? "Submitting..." : confirming ? "Confirm deletion request" : "Start deletion request"}
+            {isPending
+              ? "Submitting..."
+              : confirming
+                ? "Confirm deletion request"
+                : "Start deletion request"}
           </Button>
           {confirming && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)} disabled={isPending} className="self-start">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setConfirming(false)}
+              disabled={isPending}
+              className="self-start"
+            >
               <RotateCcw />
               Never mind
             </Button>

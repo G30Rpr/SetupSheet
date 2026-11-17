@@ -22,7 +22,11 @@ function serializeError(error: unknown): unknown {
  * stdout/stderr -- no external service, no new dependency.
  */
 function log(level: LogLevel, message: string, error?: unknown) {
-  const entry: LogEntry = { level, message, timestamp: new Date().toISOString() };
+  const entry: LogEntry = {
+    level,
+    message,
+    timestamp: new Date().toISOString(),
+  };
   if (error !== undefined) entry.error = serializeError(error);
 
   let line: string;
@@ -31,7 +35,12 @@ function log(level: LogLevel, message: string, error?: unknown) {
   } catch {
     // Error payloads from third-party libraries are not guaranteed to be
     // serializable (a circular object should never crash an error boundary).
-    line = JSON.stringify({ level, message, timestamp: entry.timestamp, error: String(error) });
+    line = JSON.stringify({
+      level,
+      message,
+      timestamp: entry.timestamp,
+      error: String(error),
+    });
   }
   if (level === "error") console.error(line);
   else if (level === "warn") console.warn(line);

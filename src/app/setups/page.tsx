@@ -19,13 +19,20 @@ import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 const title = "Browse Setups";
 const socialTitle = fullPageTitle(title);
-const description = "Browse free community sim racing setups by game, car, track and condition.";
+const description =
+  "Browse free community sim racing setups by game, car, track and condition.";
 
 export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: `${SITE_URL}/setups` },
-  openGraph: { title: socialTitle, description, url: "/setups", type: "website", siteName: SITE_NAME },
+  openGraph: {
+    title: socialTitle,
+    description,
+    url: "/setups",
+    type: "website",
+    siteName: SITE_NAME,
+  },
   twitter: { card: "summary_large_image", title: socialTitle, description },
 };
 
@@ -57,11 +64,8 @@ export default async function SetupsPage({
   // Keep the global count separate from the filtered setup page. The browser
   // can change filters without a server navigation, so it needs a global
   // upper bound to know whether an older-page request may still be useful.
-  const [{ setups, failed: loadFailed }, totalCount, viewerRig] = await Promise.all([
-    getSetups(filters),
-    getSetupCount(),
-    getViewerRig(),
-  ]);
+  const [{ setups, failed: loadFailed }, totalCount, viewerRig] =
+    await Promise.all([getSetups(filters), getSetupCount(), getViewerRig()]);
   // getSetups() caps at SETUPS_BROWSE_LIMIT -- search and filtering run
   // client-side over whatever it fetched, so once the community actually
   // grows past that cap, both stop covering the oldest setups too (not
@@ -70,7 +74,9 @@ export default async function SetupsPage({
     totalCount !== null &&
     setups.length === SETUPS_BROWSE_LIMIT &&
     totalCount > SETUPS_BROWSE_LIMIT;
-  const fieldTestCounts = Object.fromEntries(await getPublicFieldTestCounts(setups.map((setup) => setup.id)));
+  const fieldTestCounts = Object.fromEntries(
+    await getPublicFieldTestCounts(setups.map((setup) => setup.id)),
+  );
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -107,7 +113,8 @@ export default async function SetupsPage({
         {isCapped && !loadFailed && (
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
             Showing the {SETUPS_BROWSE_LIMIT} most recent setups first. Use
-            “Load older setups” below to expand search and filters to all {totalCount}.
+            “Load older setups” below to expand search and filters to all{" "}
+            {totalCount}.
           </p>
         )}
       </div>

@@ -16,10 +16,17 @@ describe("normalizeSetupValues", () => {
   it("rejects non-object, nested, and oversized values", () => {
     expect(normalizeSetupValues(["3"])).toBeNull();
     expect(normalizeSetupValues({ frontArb: { value: 3 } })).toBeNull();
-    expect(normalizeSetupValues({ frontArb: "x".repeat(MAX_SETUP_VALUE_LENGTH + 1) })).toBeNull();
+    expect(
+      normalizeSetupValues({
+        frontArb: "x".repeat(MAX_SETUP_VALUE_LENGTH + 1),
+      }),
+    ).toBeNull();
 
     const tooMany = Object.fromEntries(
-      Array.from({ length: MAX_SETUP_VALUE_COUNT + 1 }, (_, i) => [`field${i}`, "1"])
+      Array.from({ length: MAX_SETUP_VALUE_COUNT + 1 }, (_, i) => [
+        `field${i}`,
+        "1",
+      ]),
     );
     expect(normalizeSetupValues(tooMany)).toBeNull();
   });

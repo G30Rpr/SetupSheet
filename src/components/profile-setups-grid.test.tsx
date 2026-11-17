@@ -1,14 +1,22 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 
 import { ProfileSetupsGrid } from "@/components/profile-setups-grid";
 import { loadMoreProfileSetups } from "@/lib/actions/profile-browse";
 import { makeSetup } from "@/lib/test-helpers/make-setup";
 
 vi.mock("@/components/setup-card", () => ({
-  SetupCard: ({ setup }: { setup: { id: string } }) => <article>{setup.id}</article>,
+  SetupCard: ({ setup }: { setup: { id: string } }) => (
+    <article>{setup.id}</article>
+  ),
 }));
 
 vi.mock("@/lib/actions/profile-browse", () => ({
@@ -26,7 +34,10 @@ const cursor = {
 };
 
 const initialSetup = makeSetup({ id: "setup-1" });
-const laterSetup = makeSetup({ id: "setup-25", uploadedAt: "2026-01-02T00:00:00.000Z" });
+const laterSetup = makeSetup({
+  id: "setup-25",
+  uploadedAt: "2026-01-02T00:00:00.000Z",
+});
 
 describe("ProfileSetupsGrid", () => {
   it("loads and reveals the next server page without duplicate cards", async () => {
@@ -39,20 +50,27 @@ describe("ProfileSetupsGrid", () => {
     render(
       <ProfileSetupsGrid
         setups={[initialSetup]}
-        pagination={{ profileId: "11111111-1111-4111-8111-111111111111", nextCursor: cursor }}
-      />
+        pagination={{
+          profileId: "11111111-1111-4111-8111-111111111111",
+          nextCursor: cursor,
+        }}
+      />,
     );
 
     expect(screen.getByText("setup-1")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Load more setups" }));
 
-    await waitFor(() => expect(screen.getByText("setup-25")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("setup-25")).toBeInTheDocument(),
+    );
     expect(screen.getAllByRole("article")).toHaveLength(2);
     expect(loadMoreProfileSetups).toHaveBeenCalledWith(
       "11111111-1111-4111-8111-111111111111",
-      cursor
+      cursor,
     );
-    expect(screen.queryByRole("button", { name: /load more/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /load more/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows a recoverable error when a later page fails", async () => {
@@ -65,15 +83,20 @@ describe("ProfileSetupsGrid", () => {
     render(
       <ProfileSetupsGrid
         setups={[initialSetup]}
-        pagination={{ profileId: "11111111-1111-4111-8111-111111111111", nextCursor: cursor }}
-      />
+        pagination={{
+          profileId: "11111111-1111-4111-8111-111111111111",
+          nextCursor: cursor,
+        }}
+      />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Load more setups" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Couldn't load more profile setups right now."
+      "Couldn't load more profile setups right now.",
     );
-    expect(screen.getByRole("button", { name: "Load more setups" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Load more setups" }),
+    ).toBeEnabled();
   });
 });

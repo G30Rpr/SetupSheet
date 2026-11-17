@@ -20,7 +20,7 @@ const validFilters = {
 describe("loadMoreSetups", () => {
   it("rejects malformed cursors before touching the database", async () => {
     await expect(
-      loadMoreSetups({ ...validCursor, createdAt: "not-a-date" }, validFilters)
+      loadMoreSetups({ ...validCursor, createdAt: "not-a-date" }, validFilters),
     ).resolves.toEqual({
       setups: [],
       nextCursor: null,
@@ -31,14 +31,17 @@ describe("loadMoreSetups", () => {
 
   it("rejects oversized or malformed cursor ids", async () => {
     await expect(
-      loadMoreSetups({ ...validCursor, createdAt: "x".repeat(65) }, validFilters)
+      loadMoreSetups(
+        { ...validCursor, createdAt: "x".repeat(65) },
+        validFilters,
+      ),
     ).resolves.toMatchObject({
       setups: [],
       nextCursor: null,
       error: "That browse cursor is invalid.",
     });
     await expect(
-      loadMoreSetups({ ...validCursor, id: "not-a-uuid" }, validFilters)
+      loadMoreSetups({ ...validCursor, id: "not-a-uuid" }, validFilters),
     ).resolves.toMatchObject({
       setups: [],
       nextCursor: null,
@@ -48,7 +51,7 @@ describe("loadMoreSetups", () => {
 
   it("rejects malformed server-side filters", async () => {
     await expect(
-      loadMoreSetups(validCursor, { ...validFilters, game: "Unknown game" })
+      loadMoreSetups(validCursor, { ...validFilters, game: "Unknown game" }),
     ).resolves.toMatchObject({
       setups: [],
       nextCursor: null,

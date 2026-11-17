@@ -20,7 +20,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createSetupRequest } from "@/lib/actions/setup-requests";
-import { MAX_CAR_LENGTH, MAX_DESCRIPTION_LENGTH, MAX_TRACK_LENGTH, games } from "@/lib/data";
+import {
+  MAX_CAR_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_TRACK_LENGTH,
+  games,
+} from "@/lib/data";
 
 /**
  * Combo handed over from an empty browse result (or the homepage finder):
@@ -41,7 +46,9 @@ export function SetupRequestForm({ prefill }: { prefill?: RequestPrefill }) {
   const { user, isLoading } = useAuth();
   // Only prefill game with a known title — query params are untrusted.
   const initialGame =
-    prefill?.game && (games as string[]).includes(prefill.game) ? prefill.game : "";
+    prefill?.game && (games as string[]).includes(prefill.game)
+      ? prefill.game
+      : "";
   const [game, setGame] = useState(initialGame);
   const initialCar = (prefill?.car ?? "").slice(0, MAX_CAR_LENGTH);
   const initialTrack = (prefill?.track ?? "").slice(0, MAX_TRACK_LENGTH);
@@ -84,7 +91,9 @@ export function SetupRequestForm({ prefill }: { prefill?: RequestPrefill }) {
   }
 
   if (isLoading) {
-    return <Card className="h-40 animate-pulse border-border/60 bg-secondary/20" />;
+    return (
+      <Card className="h-40 animate-pulse border-border/60 bg-secondary/20" />
+    );
   }
 
   if (!user) {
@@ -124,12 +133,26 @@ export function SetupRequestForm({ prefill }: { prefill?: RequestPrefill }) {
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="request-car">Car</Label>
-            <Input id="request-car" name="car" placeholder="e.g. Porsche 992 GT3 Cup" maxLength={MAX_CAR_LENGTH} defaultValue={initialCar} required />
+            <Input
+              id="request-car"
+              name="car"
+              placeholder="e.g. Porsche 992 GT3 Cup"
+              maxLength={MAX_CAR_LENGTH}
+              defaultValue={initialCar}
+              required
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="request-track">Track</Label>
-            <Input id="request-track" name="track" placeholder="e.g. Spa-Francorchamps" maxLength={MAX_TRACK_LENGTH} defaultValue={initialTrack} required />
+            <Input
+              id="request-track"
+              name="track"
+              placeholder="e.g. Spa-Francorchamps"
+              maxLength={MAX_TRACK_LENGTH}
+              defaultValue={initialTrack}
+              required
+            />
           </div>
         </div>
 
@@ -146,7 +169,10 @@ export function SetupRequestForm({ prefill }: { prefill?: RequestPrefill }) {
         </div>
 
         {error && (
-          <p role="alert" className="flex items-start gap-2 text-sm text-destructive">
+          <p
+            role="alert"
+            className="flex items-start gap-2 text-sm text-destructive"
+          >
             <AlertCircle className="mt-0.5 size-4 shrink-0" />
             {error}
           </p>

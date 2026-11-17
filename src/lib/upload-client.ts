@@ -29,21 +29,38 @@ export async function uploadFileDirectly(
   kind: UploadKind,
   file: File,
   userId: string | null,
-  onProgress?: UploadProgressHandler
+  onProgress?: UploadProgressHandler,
 ): Promise<DirectUploadResult> {
-  const localCheck = describeUploadTarget(kind, file.name, file.size, userId ?? "");
+  const localCheck = describeUploadTarget(
+    kind,
+    file.name,
+    file.size,
+    userId ?? "",
+  );
   if (!localCheck.target || !userId) {
-    return { path: null, fileName: null, error: localCheck.error ?? "You need to be signed in." };
+    return {
+      path: null,
+      fileName: null,
+      error: localCheck.error ?? "You need to be signed in.",
+    };
   }
 
-  const signatureError = await validateFileSignature(file, localCheck.target.fileName.slice(
-    localCheck.target.fileName.lastIndexOf(".")
-  ).toLowerCase());
-  if (signatureError) return { path: null, fileName: null, error: signatureError };
+  const signatureError = await validateFileSignature(
+    file,
+    localCheck.target.fileName
+      .slice(localCheck.target.fileName.lastIndexOf("."))
+      .toLowerCase(),
+  );
+  if (signatureError)
+    return { path: null, fileName: null, error: signatureError };
 
   const target = await createUploadTarget(kind, file.name, file.size);
   if (target.error || !target.path || !target.token) {
-    return { path: null, fileName: null, error: target.error ?? "Couldn't start the upload." };
+    return {
+      path: null,
+      fileName: null,
+      error: target.error ?? "Couldn't start the upload.",
+    };
   }
 
   const supabase = createClient();
@@ -80,7 +97,11 @@ export async function uploadFileDirectly(
 
   const verified = await verifyUploadedFile(kind, target.path, target.fileName);
   if (verified.error || !verified.path) {
-    return { path: null, fileName: null, error: verified.error ?? "Upload failed." };
+    return {
+      path: null,
+      fileName: null,
+      error: verified.error ?? "Upload failed.",
+    };
   }
 
   return { path: verified.path, fileName: verified.fileName, error: null };

@@ -14,10 +14,18 @@ const ALL_TAGS: string[] = Object.values(CACHE_TAG);
 
 describe("cache tag partitioning", () => {
   it("only ever uses declared tag names", () => {
-    for (const tags of [SETUP_ROW_TAGS, SETUP_CONTENT_TAGS, SETUP_SITEMAP_TAGS]) {
+    for (const tags of [
+      SETUP_ROW_TAGS,
+      SETUP_CONTENT_TAGS,
+      SETUP_SITEMAP_TAGS,
+    ]) {
       for (const tag of tags) expect(ALL_TAGS).toContain(tag);
     }
-    for (const tags of [tagsForContentMutation(), tagsForCounterMutation(), tagsForProfileMutation()]) {
+    for (const tags of [
+      tagsForContentMutation(),
+      tagsForCounterMutation(),
+      tagsForProfileMutation(),
+    ]) {
       for (const tag of tags) expect(ALL_TAGS).toContain(tag);
     }
   });
@@ -55,7 +63,11 @@ describe("cache tag partitioning", () => {
 
     // Every reader tag set must be intersected by a content mutation, or an
     // edit would keep serving stale rows until the revalidate window expired.
-    for (const tags of [SETUP_ROW_TAGS, SETUP_CONTENT_TAGS, SETUP_SITEMAP_TAGS]) {
+    for (const tags of [
+      SETUP_ROW_TAGS,
+      SETUP_CONTENT_TAGS,
+      SETUP_SITEMAP_TAGS,
+    ]) {
       expect(tags.some((tag) => contentTags.includes(tag))).toBe(true);
     }
   });

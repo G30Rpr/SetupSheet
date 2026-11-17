@@ -29,9 +29,18 @@ function isAllowedOrAll(value: string, allowed: readonly string[]) {
 
 /** Validates untrusted URL/Server Action filter input before it reaches a query builder. */
 export function normalizeBrowseFilters(input: unknown): BrowseFilters | null {
-  if (typeof input !== "object" || input === null || Array.isArray(input)) return null;
+  if (typeof input !== "object" || input === null || Array.isArray(input))
+    return null;
   const fields = input as Record<string, unknown>;
-  const values = [fields.search, fields.game, fields.car, fields.track, fields.condition, fields.rig, fields.tag];
+  const values = [
+    fields.search,
+    fields.game,
+    fields.car,
+    fields.track,
+    fields.condition,
+    fields.rig,
+    fields.tag,
+  ];
   if (!values.every((value) => typeof value === "string")) return null;
 
   const search = (fields.search as string).trim();

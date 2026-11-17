@@ -10,7 +10,8 @@ export type Game =
 
 export type Condition = "Dry" | "Wet" | "Mixed";
 
-export type SetupTag = "Safe" | "Beginner" | "Quali" | "Race" | "Aggressive" | "Wet Weather";
+export type SetupTag =
+  "Safe" | "Beginner" | "Quali" | "Race" | "Aggressive" | "Wet Weather";
 
 export type RigProfile =
   | "Wheel + 3 Pedals"

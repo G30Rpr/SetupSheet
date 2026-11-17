@@ -9,20 +9,46 @@ import {
 } from "@/lib/rating-splits";
 import type { RatingSplit } from "@/lib/types";
 
-const dd: RatingSplit = { rigProfile: "Direct Drive + Load Cell", paceSum: 12, paceN: 3, predSum: 11, predN: 3 };
-const wheel: RatingSplit = { rigProfile: "Wheel + 3 Pedals", paceSum: 4, paceN: 1, predSum: 2, predN: 1 };
-const unshared: RatingSplit = { rigProfile: null, paceSum: 5, paceN: 1, predSum: 4, predN: 1 };
+const dd: RatingSplit = {
+  rigProfile: "Direct Drive + Load Cell",
+  paceSum: 12,
+  paceN: 3,
+  predSum: 11,
+  predN: 3,
+};
+const wheel: RatingSplit = {
+  rigProfile: "Wheel + 3 Pedals",
+  paceSum: 4,
+  paceN: 1,
+  predSum: 2,
+  predN: 1,
+};
+const unshared: RatingSplit = {
+  rigProfile: null,
+  paceSum: 5,
+  paceN: 1,
+  predSum: 4,
+  predN: 1,
+};
 
 describe("mergeTotals", () => {
   it("sums buckets and is empty for none", () => {
-    expect(mergeTotals([dd, wheel])).toEqual({ paceSum: 16, paceN: 4, predSum: 13, predN: 4 });
+    expect(mergeTotals([dd, wheel])).toEqual({
+      paceSum: 16,
+      paceN: 4,
+      predSum: 13,
+      predN: 4,
+    });
     expect(mergeTotals([])).toEqual(EMPTY_TOTALS);
   });
 });
 
 describe("splitBySimilarRig", () => {
   it("puts the anchor rig's bucket on a similar rig and everything else in the rest", () => {
-    const { similar, others } = splitBySimilarRig([dd, wheel, unshared], "Direct Drive + Load Cell");
+    const { similar, others } = splitBySimilarRig(
+      [dd, wheel, unshared],
+      "Direct Drive + Load Cell",
+    );
 
     expect(similar).toEqual({ paceSum: 12, paceN: 3, predSum: 11, predN: 3 });
     // Unshared-rig ratings count as everyone else (P2: "Everyone else").
@@ -70,9 +96,21 @@ describe("rigTypeSubScores (2c)", () => {
 
   it("orders by strongest evidence first, then name", () => {
     const rows = rigTypeSubScores([
-      { rigProfile: "Wheel + 3 Pedals", paceSum: 12, paceN: 3, predSum: 12, predN: 3 },
+      {
+        rigProfile: "Wheel + 3 Pedals",
+        paceSum: 12,
+        paceN: 3,
+        predSum: 12,
+        predN: 3,
+      },
       { rigProfile: "Gamepad", paceSum: 21, paceN: 5, predSum: 21, predN: 5 },
-      { rigProfile: "Direct Drive + Load Cell", paceSum: 24, paceN: 4, predSum: 24, predN: 4 },
+      {
+        rigProfile: "Direct Drive + Load Cell",
+        paceSum: 24,
+        paceN: 4,
+        predSum: 24,
+        predN: 4,
+      },
     ]);
     expect(rows.map((r) => r.rigProfile)).toEqual([
       "Gamepad",
@@ -83,7 +121,13 @@ describe("rigTypeSubScores (2c)", () => {
 
   it("averages within the 0-5 score scale", () => {
     const rows = rigTypeSubScores([
-      { rigProfile: "Gamepad", paceSum: 11.4, paceN: 3, predSum: 7.6, predN: 2 },
+      {
+        rigProfile: "Gamepad",
+        paceSum: 11.4,
+        paceN: 3,
+        predSum: 7.6,
+        predN: 2,
+      },
     ]);
     expect(rows[0].pace).toBeCloseTo(3.8, 5);
     expect(rows[0].predictability).toBeNull();
@@ -92,7 +136,9 @@ describe("rigTypeSubScores (2c)", () => {
 
 describe("similarRigPredictability", () => {
   it("averages the rig's predictability and ignores other buckets", () => {
-    expect(similarRigPredictability([dd, wheel], "Direct Drive + Load Cell")).toBeCloseTo(11 / 3);
+    expect(
+      similarRigPredictability([dd, wheel], "Direct Drive + Load Cell"),
+    ).toBeCloseTo(11 / 3);
     expect(similarRigPredictability([dd, wheel], "Gamepad")).toBeNull();
     expect(similarRigPredictability(undefined, "Gamepad")).toBeNull();
     expect(similarRigPredictability([dd], null)).toBeNull();

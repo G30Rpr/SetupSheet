@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { RigMode } from "@/components/rig-mode";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -24,18 +30,39 @@ afterEach(() => {
 describe("RigMode", () => {
   it("shows an honest install handoff when no values were submitted", () => {
     render(<RigMode setup={{ ...base, setupValues: {} }} />);
-    expect(screen.getByRole("heading", { name: "No individual setup values attached" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View download and install options" })).toHaveAttribute(
-      "href", `/setups/${base.id}`
-    );
-    expect(screen.queryByRole("button", { name: "Copy all values" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "No individual setup values attached",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "View download and install options" }),
+    ).toHaveAttribute("href", `/setups/${base.id}`);
+    expect(
+      screen.queryByRole("button", { name: "Copy all values" }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders real values in large-value rows and allows copying", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
-    render(<RigMode setup={{ ...base, setupValues: { frontTyrePressure: "26.4 psi", rearTyrePressure: "26.7 psi" } }} />);
-    expect(screen.getByRole("heading", { name: "GT3 Test Car" })).toBeInTheDocument();
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    render(
+      <RigMode
+        setup={{
+          ...base,
+          setupValues: {
+            frontTyrePressure: "26.4 psi",
+            rearTyrePressure: "26.7 psi",
+          },
+        }}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "GT3 Test Car" }),
+    ).toBeInTheDocument();
     const buttons = screen.getAllByRole("button", { name: /Copy/ });
     expect(buttons.length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Copy all values" }));
@@ -53,7 +80,9 @@ describe("RigMode", () => {
     });
     render(<RigMode setup={{ ...base, setupValues: {} }} />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Keep screen awake" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Keep screen awake" }),
+    );
     await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
     fireEvent(document, new Event("visibilitychange"));
     expect(request).toHaveBeenCalledTimes(1);
@@ -61,5 +90,4 @@ describe("RigMode", () => {
     fireEvent.click(screen.getByRole("button", { name: "Screen stays awake" }));
     await waitFor(() => expect(release).toHaveBeenCalledTimes(1));
   });
-
 });

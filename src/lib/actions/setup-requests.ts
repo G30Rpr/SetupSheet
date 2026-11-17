@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 
 import { getActionError } from "@/lib/actions/action-errors";
-import { MAX_CAR_LENGTH, MAX_DESCRIPTION_LENGTH, MAX_TRACK_LENGTH, games } from "@/lib/data";
+import {
+  MAX_CAR_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_TRACK_LENGTH,
+  games,
+} from "@/lib/data";
 import { logger } from "@/lib/logger";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -19,7 +24,8 @@ const ISO_CURSOR_PATTERN =
 
 /** A client-supplied keyset cursor is a query string, so validate it first. */
 function isValidRequestCursor(cursor: unknown): cursor is SetupRequestCursor {
-  if (typeof cursor !== "object" || cursor === null || Array.isArray(cursor)) return false;
+  if (typeof cursor !== "object" || cursor === null || Array.isArray(cursor))
+    return false;
   const fields = cursor as Record<string, unknown>;
 
   return (
@@ -33,7 +39,7 @@ function isValidRequestCursor(cursor: unknown): cursor is SetupRequestCursor {
 
 /** Next page of open requests for the board's "load more" control. */
 export async function loadMoreSetupRequests(
-  cursor: SetupRequestCursor
+  cursor: SetupRequestCursor,
 ): Promise<SetupRequestsPage> {
   if (!isValidRequestCursor(cursor)) {
     return {
@@ -103,13 +109,15 @@ function validateRequestFields(input: unknown): string | null {
 }
 
 export async function createSetupRequest(
-  input: CreateSetupRequestInput
+  input: CreateSetupRequestInput,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
 
   if (!user) {
-    return { error: "You need to be logged in with Discord to post a request." };
+    return {
+      error: "You need to be logged in with Discord to post a request.",
+    };
   }
 
   const validationError = validateRequestFields(input);
@@ -127,7 +135,9 @@ export async function createSetupRequest(
 
   if (error) {
     logger.error("createSetupRequest: insert failed", error);
-    return { error: getActionError(error, "Couldn't post the request right now.") };
+    return {
+      error: getActionError(error, "Couldn't post the request right now."),
+    };
   }
 
   revalidatePath("/requests");
@@ -135,7 +145,9 @@ export async function createSetupRequest(
 }
 
 /** Cancels one of the current user's own open requests. */
-export async function deleteSetupRequest(requestId: string): Promise<{ error: string | null }> {
+export async function deleteSetupRequest(
+  requestId: string,
+): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
 
@@ -157,7 +169,9 @@ export async function deleteSetupRequest(requestId: string): Promise<{ error: st
 
   if (error) {
     logger.error("deleteSetupRequest: delete failed", error);
-    return { error: getActionError(error, "Couldn't cancel the request right now.") };
+    return {
+      error: getActionError(error, "Couldn't cancel the request right now."),
+    };
   }
   if (!deleted) {
     return { error: "Request not found or already fulfilled." };
@@ -181,7 +195,7 @@ export async function deleteSetupRequest(requestId: string): Promise<{ error: st
 export async function getMyMatchingSetupsAction(
   game: string,
   car: string,
-  track: string
+  track: string,
 ): Promise<{
   setups: { id: string; car: string; track: string }[];
   error: string | null;
@@ -189,8 +203,16 @@ export async function getMyMatchingSetupsAction(
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
 
-  if (!user) return { setups: [], error: "You need to be logged in to load your setups." };
-  if (typeof game !== "string" || typeof car !== "string" || typeof track !== "string") {
+  if (!user)
+    return {
+      setups: [],
+      error: "You need to be logged in to load your setups.",
+    };
+  if (
+    typeof game !== "string" ||
+    typeof car !== "string" ||
+    typeof track !== "string"
+  ) {
     return { setups: [], error: "That request is invalid." };
   }
 
@@ -210,7 +232,9 @@ export async function getMyMatchingSetupsAction(
   const normalize = (s: string) => s.trim().toLowerCase();
   return {
     setups: data.filter(
-      (setup) => normalize(setup.car) === normalize(car) && normalize(setup.track) === normalize(track)
+      (setup) =>
+        normalize(setup.car) === normalize(car) &&
+        normalize(setup.track) === normalize(track),
     ),
     error: null,
   };
@@ -225,13 +249,15 @@ export async function getMyMatchingSetupsAction(
  */
 export async function fulfillSetupRequest(
   requestId: string,
-  setupId: string
+  setupId: string,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
 
   if (!user) {
-    return { error: "You need to be logged in with Discord to fulfill a request." };
+    return {
+      error: "You need to be logged in with Discord to fulfill a request.",
+    };
   }
   if (!isUuid(requestId) || !isUuid(setupId)) {
     return { error: "That fulfillment request is invalid." };

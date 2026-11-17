@@ -12,8 +12,11 @@
   --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
   --elevation-card: 0 1px 2px oklch(0 0 0 / 16%);
   --elevation-popover: 0 8px 24px oklch(0 0 0 / 20%);
-  --font-inter: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-jetbrains-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-inter:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-jetbrains-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
 }
 
 /*
@@ -53,7 +56,7 @@
   /* 0.54 measured 3.29-3.49:1 as text on card/background (>4.5 needed). The
      lighter red keeps the destructive button readable by pairing it with a
      dark label, the same way the coral primary button works. */
-  --destructive: oklch(0.66 0.20 27);
+  --destructive: oklch(0.66 0.2 27);
   --destructive-foreground: oklch(0.15 0.02 27);
 
   --border: oklch(1 0 0 / 10%);
@@ -61,12 +64,12 @@
   /* Fully opaque and lighter than the old primary@55% (which cleared 3:1 by
      0.02 against the card). SC 1.4.11 wants a visible indicator, not one that
      barely qualifies. */
-  --ring: oklch(0.72 0.20 27);
+  --ring: oklch(0.72 0.2 27);
 
   /* Error/alert text: 0.58 measured 3.62-4.14:1 on card/muted (>4.5 needed).
      The foreground is now a dark label for the light-red solid badge, matching
      --destructive-foreground. */
-  --racing-red: oklch(0.66 0.20 27);
+  --racing-red: oklch(0.66 0.2 27);
   --racing-red-foreground: oklch(0.15 0.02 27);
   --racing-green: oklch(0.72 0.19 149);
   --racing-amber: oklch(0.79 0.16 80);
@@ -95,7 +98,7 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.01 260);
 
-  --primary: oklch(0.54 0.20 25);
+  --primary: oklch(0.54 0.2 25);
   --primary-foreground: oklch(0.99 0.005 25);
 
   --secondary: oklch(0.95 0.006 260);
@@ -115,7 +118,7 @@
   /* Was primary@45%, which composited to ~1.56:1 -- the focus indicator was
      effectively invisible in light mode. Opaque, and >=5:1 against every
      surface it can outline. */
-  --ring: oklch(0.50 0.20 25);
+  --ring: oklch(0.5 0.2 25);
 
   --racing-red: oklch(0.54 0.22 27);
   --racing-red-foreground: oklch(0.99 0.01 27);

@@ -1,0 +1,16 @@
+# Generated artifacts and third-party source; .gitignore is also respected.
+node_modules/
+.next/
+out/
+build/
+coverage/
+test-results/
+playwright-report/
+next-env.d.ts
+package-lock.json
+vendor/
+public/
+
+# SQL and shell scripts require their own language-aware tools.
+supabase/
+*.sh

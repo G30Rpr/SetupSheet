@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bookmark, Calendar, ChevronDown, Gauge, Star, TrendingUp } from "lucide-react";
+import {
+  Bookmark,
+  Calendar,
+  ChevronDown,
+  Gauge,
+  Star,
+  TrendingUp,
+} from "lucide-react";
 
 import { ScoreMeters } from "@/components/rating-bar";
 import { Button } from "@/components/ui/button";
@@ -27,7 +34,11 @@ function formatDate(dateStr: string) {
 function SplitScore({ sum, n }: { sum: number; n: number }) {
   return (
     <span className="whitespace-nowrap font-mono text-xs tabular-nums text-foreground">
-      {n > 0 ? `${formatScore(sum / n)} (${n})` : <span className="text-muted-foreground">Unrated</span>}
+      {n > 0 ? (
+        `${formatScore(sum / n)} (${n})`
+      ) : (
+        <span className="text-muted-foreground">Unrated</span>
+      )}
     </span>
   );
 }
@@ -42,7 +53,10 @@ function SplitRow({
   totals: ScoreTotals;
 }) {
   return (
-    <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3" title={title}>
+    <div
+      className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3"
+      title={title}
+    >
       <span className="truncate text-xs text-muted-foreground">{label}</span>
       <SplitScore sum={totals.paceSum} n={totals.paceN} />
       <SplitScore sum={totals.predSum} n={totals.predN} />
@@ -152,7 +166,9 @@ export function SetupCardFooter({
             ratingCount={setup.ratingCount}
           />
           {/* One sentence total defining the two scores (P3 detail touch) */}
-          <p className="text-xs text-muted-foreground">{SCORE_DEFINITIONS_SENTENCE}</p>
+          <p className="text-xs text-muted-foreground">
+            {SCORE_DEFINITIONS_SENTENCE}
+          </p>
 
           {/* "On a similar rig" vs "Everyone else" (P2 item 3). Aggregates
               only; a side with no ratings reads Unrated, never a zero. */}
@@ -211,9 +227,13 @@ export function SetupCardFooter({
             onClick={onFavorite}
             disabled={isFavoritePending}
             aria-pressed={hasFavorited}
-            aria-label={hasFavorited ? "Remove from saved setups" : "Save setup"}
+            aria-label={
+              hasFavorited ? "Remove from saved setups" : "Save setup"
+            }
           >
-            <Bookmark className={cn("size-4", hasFavorited && "fill-current")} />
+            <Bookmark
+              className={cn("size-4", hasFavorited && "fill-current")}
+            />
           </Button>
           <Button
             type="button"
@@ -237,7 +257,9 @@ export function SetupCardFooter({
             {/* Accessible name = visible label + this suffix (WCAG label-in-
                 name); the count stays visible text, not a hidden label. */}
             <span className="sr-only">
-              {hasUpvoted ? "\u00A0— remove your upvote" : "\u00A0— upvote this setup"}
+              {hasUpvoted
+                ? "\u00A0— remove your upvote"
+                : "\u00A0— upvote this setup"}
             </span>
           </Button>
         </div>
@@ -260,7 +282,10 @@ export function SetupCardFooter({
               {myRating ? "Update your rating" : "Rate this setup"}
             </span>
             <ChevronDown
-              className={cn("size-3.5 motion-safe:motion-transform", showRateWidget && "rotate-180")}
+              className={cn(
+                "size-3.5 motion-safe:motion-transform",
+                showRateWidget && "rotate-180",
+              )}
             />
           </Button>
 
@@ -268,10 +293,15 @@ export function SetupCardFooter({
             <div className="mt-2 flex flex-col gap-2 rounded-md border border-border/60 px-3 py-2.5">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-muted-foreground">Pace</span>
-                <StarRating value={myRating?.pace ?? 0} onChange={(value) => onRate("pace", value)} />
+                <StarRating
+                  value={myRating?.pace ?? 0}
+                  onChange={(value) => onRate("pace", value)}
+                />
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-muted-foreground">Predictability</span>
+                <span className="text-xs text-muted-foreground">
+                  Predictability
+                </span>
                 <StarRating
                   value={myRating?.predictability ?? 0}
                   onChange={(value) => onRate("predictability", value)}

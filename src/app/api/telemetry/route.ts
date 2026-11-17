@@ -38,8 +38,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function safePath(value: unknown): string | null {
-  if (typeof value !== "string" || value.length > 160 || !value.startsWith("/")) return null;
-  if (value.startsWith("//") || /[?#\u0000-\u001f\u007f]/.test(value)) return null;
+  if (typeof value !== "string" || value.length > 160 || !value.startsWith("/"))
+    return null;
+  if (value.startsWith("//") || /[?#\u0000-\u001f\u007f]/.test(value))
+    return null;
 
   const path = value.length > 1 ? value.replace(/\/$/, "") : value;
   if (STATIC_PATHS.has(path)) return path;
@@ -51,7 +53,8 @@ function safePath(value: unknown): string | null {
 function sanitizeEvent(input: unknown): SafeEvent | null {
   if (!isRecord(input)) return null;
   const path = safePath(input.path);
-  if (!path || typeof input.kind !== "string" || typeof input.name !== "string") return null;
+  if (!path || typeof input.kind !== "string" || typeof input.name !== "string")
+    return null;
 
   if (input.kind === "pageview" && input.name === "pageview") {
     return { kind: "pageview", name: "pageview", path };
@@ -61,8 +64,19 @@ function sanitizeEvent(input: unknown): SafeEvent | null {
     const value = input.value;
     const rating = input.rating;
     const max = input.name === "CLS" ? 10 : 300_000;
-    if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > max) return null;
-    if (rating !== "good" && rating !== "needs-improvement" && rating !== "poor") return null;
+    if (
+      typeof value !== "number" ||
+      !Number.isFinite(value) ||
+      value < 0 ||
+      value > max
+    )
+      return null;
+    if (
+      rating !== "good" &&
+      rating !== "needs-improvement" &&
+      rating !== "poor"
+    )
+      return null;
     return {
       kind: "metric",
       name: input.name,
@@ -74,7 +88,9 @@ function sanitizeEvent(input: unknown): SafeEvent | null {
 
   if (
     input.kind === "error" &&
-    ["window.error", "unhandledrejection", "react.error-boundary"].includes(input.name)
+    ["window.error", "unhandledrejection", "react.error-boundary"].includes(
+      input.name,
+    )
   ) {
     // Do not store raw exception text, stack traces, URLs, or user-provided data.
     return { kind: "error", name: input.name, path };
@@ -86,7 +102,8 @@ function sanitizeEvent(input: unknown): SafeEvent | null {
 /** Read a bounded request body so an unauthenticated reporter cannot submit an unbounded log payload. */
 async function readBoundedBody(request: Request): Promise<string | null> {
   const contentLength = Number(request.headers.get("content-length"));
-  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) return null;
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES)
+    return null;
   if (!request.body) return null;
 
   const reader = request.body.getReader();
@@ -145,9 +162,10 @@ export async function POST(request: Request) {
     return new NextResponse(null, { status: 400 });
   }
 
-  const events = payload.events.slice(0, MAX_EVENTS).map(sanitizeEvent).filter(
-    (event): event is SafeEvent => event !== null
-  );
+  const events = payload.events
+    .slice(0, MAX_EVENTS)
+    .map(sanitizeEvent)
+    .filter((event): event is SafeEvent => event !== null);
 
   if (events.length > 0) logger.info("client telemetry", { events });
   return new NextResponse(null, {

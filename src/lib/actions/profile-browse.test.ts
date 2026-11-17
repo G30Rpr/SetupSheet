@@ -19,14 +19,8 @@ describe("loadMoreProfileSetups", () => {
   });
 
   it("rejects malformed profile ids and cursors before querying", async () => {
-    await expect(loadMoreProfileSetups("not-a-uuid", validCursor)).resolves.toEqual({
-      setups: [],
-      nextCursor: null,
-      error: "That profile page request is invalid.",
-    });
-
     await expect(
-      loadMoreProfileSetups(validProfileId, { ...validCursor, createdAt: "not-a-date" })
+      loadMoreProfileSetups("not-a-uuid", validCursor),
     ).resolves.toEqual({
       setups: [],
       nextCursor: null,
@@ -34,7 +28,21 @@ describe("loadMoreProfileSetups", () => {
     });
 
     await expect(
-      loadMoreProfileSetups(validProfileId, { ...validCursor, id: "not-a-uuid" })
+      loadMoreProfileSetups(validProfileId, {
+        ...validCursor,
+        createdAt: "not-a-date",
+      }),
+    ).resolves.toEqual({
+      setups: [],
+      nextCursor: null,
+      error: "That profile page request is invalid.",
+    });
+
+    await expect(
+      loadMoreProfileSetups(validProfileId, {
+        ...validCursor,
+        id: "not-a-uuid",
+      }),
     ).resolves.toEqual({
       setups: [],
       nextCursor: null,
@@ -48,14 +56,23 @@ describe("loadMoreProfileSetups", () => {
     const page = { setups: [], nextCursor: null, error: null };
     vi.mocked(getSetupsByUserPage).mockResolvedValue(page);
 
-    await expect(loadMoreProfileSetups(validProfileId, validCursor)).resolves.toEqual(page);
-    expect(getSetupsByUserPage).toHaveBeenCalledWith(validProfileId, validCursor);
+    await expect(
+      loadMoreProfileSetups(validProfileId, validCursor),
+    ).resolves.toEqual(page);
+    expect(getSetupsByUserPage).toHaveBeenCalledWith(
+      validProfileId,
+      validCursor,
+    );
   });
 
   it("turns unexpected database failures into a recoverable error", async () => {
-    vi.mocked(getSetupsByUserPage).mockRejectedValue(new Error("network failure"));
+    vi.mocked(getSetupsByUserPage).mockRejectedValue(
+      new Error("network failure"),
+    );
 
-    await expect(loadMoreProfileSetups(validProfileId, validCursor)).resolves.toEqual({
+    await expect(
+      loadMoreProfileSetups(validProfileId, validCursor),
+    ).resolves.toEqual({
       setups: [],
       nextCursor: null,
       error: "Couldn't load more profile setups right now.",

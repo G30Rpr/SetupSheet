@@ -13,7 +13,9 @@ describe("isSameOriginRequest", () => {
     });
 
     expect(isSameOriginRequest(request, "https://setupsheet.app")).toBe(true);
-    expect(isSameOriginRequest(request, "https://attacker.example")).toBe(false);
+    expect(isSameOriginRequest(request, "https://attacker.example")).toBe(
+      false,
+    );
   });
 
   it("falls back to Host and the request scheme when forwarded headers are absent", () => {

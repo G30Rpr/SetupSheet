@@ -6,7 +6,9 @@ import { getCurrentUser } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/utils";
 
-export async function markNotificationRead(id: string): Promise<{ error: string | null }> {
+export async function markNotificationRead(
+  id: string,
+): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
 
@@ -25,13 +27,17 @@ export async function markNotificationRead(id: string): Promise<{ error: string 
 
   if (error) {
     logger.error("markNotificationRead: mutation failed", error);
-    return { error: getActionError(error, "Couldn't update notifications right now.") };
+    return {
+      error: getActionError(error, "Couldn't update notifications right now."),
+    };
   }
 
   return { error: null };
 }
 
-export async function markAllNotificationsRead(): Promise<{ error: string | null }> {
+export async function markAllNotificationsRead(): Promise<{
+  error: string | null;
+}> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
 
@@ -47,14 +53,18 @@ export async function markAllNotificationsRead(): Promise<{ error: string | null
 
   if (error) {
     logger.error("markAllNotificationsRead: mutation failed", error);
-    return { error: getActionError(error, "Couldn't update notifications right now.") };
+    return {
+      error: getActionError(error, "Couldn't update notifications right now."),
+    };
   }
 
   return { error: null };
 }
 
 /** Deletes the current user's already-read notifications, so the list doesn't grow forever with no way to prune it. */
-export async function clearReadNotifications(): Promise<{ error: string | null }> {
+export async function clearReadNotifications(): Promise<{
+  error: string | null;
+}> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
 
@@ -70,7 +80,9 @@ export async function clearReadNotifications(): Promise<{ error: string | null }
 
   if (error) {
     logger.error("clearReadNotifications: delete failed", error);
-    return { error: getActionError(error, "Couldn't clear notifications right now.") };
+    return {
+      error: getActionError(error, "Couldn't clear notifications right now."),
+    };
   }
 
   return { error: null };

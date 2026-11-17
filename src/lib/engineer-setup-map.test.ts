@@ -17,7 +17,14 @@ describe("ENGINEER_SETUP_MAP (the editable table)", () => {
       expect(mapping, symptom.id).toBeDefined();
       expect(mapping.rationale.length).toBeGreaterThan(10);
       for (const tag of mapping.tags) {
-        expect(["Safe", "Beginner", "Quali", "Race", "Aggressive", "Wet Weather"]).toContain(tag);
+        expect([
+          "Safe",
+          "Beginner",
+          "Quali",
+          "Race",
+          "Aggressive",
+          "Wet Weather",
+        ]).toContain(tag);
       }
       expect(["safest", "fastest", "bestMatch"]).toContain(mapping.lead);
     }
@@ -58,7 +65,12 @@ describe("setupsForSymptom", () => {
       ratingCount: 4,
       predictability: 4.8,
     }),
-    makeSetup({ id: "unrelated", tags: ["Race"], condition: "Dry", ratingCount: 50 }),
+    makeSetup({
+      id: "unrelated",
+      tags: ["Race"],
+      condition: "Dry",
+      ratingCount: 50,
+    }),
   ];
 
   it("surfaces tag-matched setups, most predictable first for stability symptoms", () => {
@@ -78,7 +90,9 @@ describe("setupsForSymptom", () => {
   });
 
   it("tyre-pressure symptoms rank by evidence across all setups", () => {
-    const matches = setupsForSymptom(setups, "hot-tyre-pressure-high", false, { limit: 2 });
+    const matches = setupsForSymptom(setups, "hot-tyre-pressure-high", false, {
+      limit: 2,
+    });
     expect(matches.map((s) => s.id)).toEqual(["unrelated", "safe-calm"]);
   });
 
@@ -98,12 +112,16 @@ describe("setupsForSymptom", () => {
       game: "Assetto Corsa Competizione",
     });
     expect(accOnly.map((s) => s.id)).toEqual(["safe-calm", "safe-faster"]);
-    const lmuOnly = setupsForSymptom(mixed, "front-locking", false, { game: "Le Mans Ultimate" });
+    const lmuOnly = setupsForSymptom(mixed, "front-locking", false, {
+      game: "Le Mans Ultimate",
+    });
     expect(lmuOnly.map((s) => s.id)).toEqual(["other-game-safe"]);
   });
 
   it("returns nothing honest when the game has no match -- never crosses games", () => {
-    const matches = setupsForSymptom(setups, "front-locking", false, { game: "Le Mans Ultimate" });
+    const matches = setupsForSymptom(setups, "front-locking", false, {
+      game: "Le Mans Ultimate",
+    });
     expect(matches).toEqual([]);
   });
 
@@ -114,7 +132,10 @@ describe("setupsForSymptom", () => {
 
 describe("browseLinkForSymptom", () => {
   it("points Browse at the mapping's tag and ordering", () => {
-    expect(browseLinkForSymptom("front-locking", false)).toEqual({ tag: "Safe", sort: "safest" });
+    expect(browseLinkForSymptom("front-locking", false)).toEqual({
+      tag: "Safe",
+      sort: "safest",
+    });
     expect(browseLinkForSymptom("mid-corner-understeer", false)).toEqual({
       tag: "Quali",
       sort: "fastest",
@@ -128,7 +149,7 @@ describe("browseLinkForSymptom", () => {
   it("has no link when the mapping has no representative tag", () => {
     expect(browseLinkForSymptom("hot-tyre-pressure-low", false)).toBeNull();
     expect(mappingForSymptom("hot-tyre-pressure-low", false)).toBe(
-      ENGINEER_SETUP_MAP["hot-tyre-pressure-low"]
+      ENGINEER_SETUP_MAP["hot-tyre-pressure-low"],
     );
     expect(mappingForSymptom("front-locking", true)).toBe(WET_SETUP_MAPPING);
   });

@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 
 import { ALL } from "@/lib/filter-setups";
 import type { Setup } from "@/lib/types";
@@ -16,7 +22,9 @@ vi.mock("next/navigation", () => ({
 // The card is a heavy client subtree (auth context, four lazy panels); the
 // browse pagination contract only needs to know which setups are mounted.
 vi.mock("@/components/setup-card", () => ({
-  SetupCard: ({ setup }: { setup: { car: string } }) => <div data-testid="card">{setup.car}</div>,
+  SetupCard: ({ setup }: { setup: { car: string } }) => (
+    <div data-testid="card">{setup.car}</div>
+  ),
 }));
 
 import { SetupsBrowser } from "@/components/setups-browser";
@@ -55,8 +63,16 @@ function makeSetup(id: string, car: string, createdAt: string): Setup {
 }
 
 const INDEX = [
-  makeSetup("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "Newest", "2026-08-30T10:00:00.000Z"),
-  makeSetup("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "Oldest", "2026-08-29T10:00:00.000Z"),
+  makeSetup(
+    "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "Newest",
+    "2026-08-30T10:00:00.000Z",
+  ),
+  makeSetup(
+    "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "Oldest",
+    "2026-08-29T10:00:00.000Z",
+  ),
 ];
 
 const EMPTY_FILTERS = {
@@ -71,7 +87,11 @@ const EMPTY_FILTERS = {
 
 function renderBrowser(setups = INDEX) {
   return render(
-    <SetupsBrowser setups={setups} totalCount={500} initialFilters={EMPTY_FILTERS} />
+    <SetupsBrowser
+      setups={setups}
+      totalCount={500}
+      initialFilters={EMPTY_FILTERS}
+    />,
   );
 }
 
@@ -84,7 +104,13 @@ afterEach(() => {
 describe("SetupsBrowser remote paging", () => {
   it("cursors older pages from the last row of the current index", async () => {
     loadMoreSetups.mockResolvedValue({
-      setups: [makeSetup("cccccccc-cccc-4ccc-8ccc-cccccccccccc", "Older", "2026-08-28T10:00:00.000Z")],
+      setups: [
+        makeSetup(
+          "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "Older",
+          "2026-08-28T10:00:00.000Z",
+        ),
+      ],
       nextCursor: null,
       error: null,
     });
@@ -102,8 +128,17 @@ describe("SetupsBrowser remote paging", () => {
 
   it("loads a new first page when a filter changes", async () => {
     loadMoreSetups.mockResolvedValue({
-      setups: [makeSetup("cccccccc-cccc-4ccc-8ccc-cccccccccccc", "Older", "2026-08-28T10:00:00.000Z")],
-      nextCursor: { createdAt: "2026-08-28T10:00:00.000Z", id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" },
+      setups: [
+        makeSetup(
+          "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          "Older",
+          "2026-08-28T10:00:00.000Z",
+        ),
+      ],
+      nextCursor: {
+        createdAt: "2026-08-28T10:00:00.000Z",
+        id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      },
       error: null,
     });
     renderBrowser();
@@ -120,10 +155,16 @@ describe("SetupsBrowser remote paging", () => {
 
     expect(screen.queryByText("Older")).not.toBeInTheDocument();
 
-    loadMoreSetups.mockResolvedValue({ setups: [], nextCursor: null, error: null });
+    loadMoreSetups.mockResolvedValue({
+      setups: [],
+      nextCursor: null,
+      error: null,
+    });
     await waitFor(() => expect(loadMoreSetups).toHaveBeenCalledTimes(2));
     expect(loadMoreSetups.mock.calls[1][0]).toBeNull();
-    expect(loadMoreSetups.mock.calls[1][1]).toMatchObject({ search: "porsche" });
+    expect(loadMoreSetups.mock.calls[1][1]).toMatchObject({
+      search: "porsche",
+    });
   });
 });
 
@@ -142,14 +183,16 @@ describe("SetupsBrowser empty-combo handoff", () => {
           rig: "Gamepad",
           tag: ALL,
         }}
-      />
+      />,
     );
 
-    expect(screen.getByText("No setup for this combo yet.")).toBeInTheDocument();
+    expect(
+      screen.getByText("No setup for this combo yet."),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Nobody has shared a Gamepad setup for Phantom GT at Spa-Francorchamps in the Dry."
-      )
+        "Nobody has shared a Gamepad setup for Phantom GT at Spa-Francorchamps in the Dry.",
+      ),
     ).toBeInTheDocument();
 
     const ask = screen.getByRole("link", { name: "Ask for this combo" });
@@ -157,7 +200,7 @@ describe("SetupsBrowser empty-combo handoff", () => {
     expect(ask.getAttribute("href")).toContain("car=Phantom+GT");
     expect(ask.getAttribute("href")).toContain("rig=Gamepad");
     expect(
-      screen.getByRole("link", { name: "Get a first change to test" })
+      screen.getByRole("link", { name: "Get a first change to test" }),
     ).toHaveAttribute("href", "/engineer");
     // Never a blank list alongside the handoff.
     expect(screen.queryAllByTestId("card")).toHaveLength(0);
@@ -169,33 +212,42 @@ describe("SetupsBrowser empty-combo handoff", () => {
         setups={INDEX}
         totalCount={500}
         initialFilters={{ ...EMPTY_FILTERS, search: "spaceship" }}
-      />
+      />,
     );
 
     expect(
-      screen.getByText("Nobody has shared a setup matching “spaceship” yet.")
+      screen.getByText("Nobody has shared a setup matching “spaceship” yet."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ask for this combo" })).toHaveAttribute(
-      "href",
-      "/requests"
-    );
+    expect(
+      screen.getByRole("link", { name: "Ask for this combo" }),
+    ).toHaveAttribute("href", "/requests");
   });
 });
 
 describe("SetupsBrowser mobile filters", () => {
   it("allows removing an applied filter without opening the filter panel", async () => {
-    loadMoreSetups.mockResolvedValue({ setups: INDEX, nextCursor: null, error: null });
+    loadMoreSetups.mockResolvedValue({
+      setups: INDEX,
+      nextCursor: null,
+      error: null,
+    });
     render(
       <SetupsBrowser
         setups={INDEX}
         totalCount={500}
         initialFilters={{ ...EMPTY_FILTERS, rig: "Wheel + 3 Pedals" }}
-      />
+      />,
     );
-    const remove = screen.getByRole("button", { name: /Remove uploader rig filter/ });
+    const remove = screen.getByRole("button", {
+      name: /Remove uploader rig filter/,
+    });
     expect(remove).toBeInTheDocument();
     fireEvent.click(remove);
-    await waitFor(() => expect(screen.queryByRole("button", { name: /Remove uploader rig filter/ })).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: /Remove uploader rig filter/ }),
+      ).not.toBeInTheDocument(),
+    );
   });
 
   it("toggles the accessible filter region without clearing selections", () => {
@@ -204,7 +256,7 @@ describe("SetupsBrowser mobile filters", () => {
         setups={INDEX}
         totalCount={500}
         initialFilters={{ ...EMPTY_FILTERS, rig: "Wheel + 3 Pedals" }}
-      />
+      />,
     );
     const toggle = screen.getByRole("button", { name: "Hide filters" });
     expect(toggle).toHaveAttribute("aria-expanded", "true");
@@ -214,50 +266,77 @@ describe("SetupsBrowser mobile filters", () => {
     expect(reopen).toHaveAttribute("aria-expanded", "false");
     expect(reopen).toHaveAttribute("aria-controls", "browse-filter-fields");
     fireEvent.click(reopen);
-    expect(screen.getByRole("button", { name: "Hide filters" })).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getByRole("button", { name: "Hide filters" }),
+    ).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("1 active")).toBeInTheDocument();
   });
 });
 
 describe("SetupsBrowser hidden rigs", () => {
   const MIXED = [
-    makeSetup("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "Matched", "2026-08-30T10:00:00.000Z"),
-    { ...makeSetup("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "Gamepad One", "2026-08-29T10:00:00.000Z"), rigProfile: "Gamepad" as const },
-    { ...makeSetup("cccccccc-cccc-4ccc-8ccc-cccccccccccc", "Gamepad Two", "2026-08-28T10:00:00.000Z"), rigProfile: "Gamepad" as const },
+    makeSetup(
+      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "Matched",
+      "2026-08-30T10:00:00.000Z",
+    ),
+    {
+      ...makeSetup(
+        "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "Gamepad One",
+        "2026-08-29T10:00:00.000Z",
+      ),
+      rigProfile: "Gamepad" as const,
+    },
+    {
+      ...makeSetup(
+        "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "Gamepad Two",
+        "2026-08-28T10:00:00.000Z",
+      ),
+      rigProfile: "Gamepad" as const,
+    },
   ];
 
   it("names the hidden rig categories and lets them be shown", async () => {
-    loadMoreSetups.mockResolvedValue({ setups: MIXED, nextCursor: null, error: null });
+    loadMoreSetups.mockResolvedValue({
+      setups: MIXED,
+      nextCursor: null,
+      error: null,
+    });
     render(
       <SetupsBrowser
         setups={MIXED}
         totalCount={500}
         initialFilters={{ ...EMPTY_FILTERS, rig: "Wheel + 3 Pedals" }}
-      />
+      />,
     );
 
     // Rig filter active: only the matching card is listed...
     expect(screen.getAllByTestId("card")).toHaveLength(1);
     // ...and the hidden category is named in a quiet line.
     expect(
-      screen.getByText(/Hiding setups from other uploader rig categories \(Gamepad\)\./)
+      screen.getByText(
+        /Hiding setups from other uploader rig categories \(Gamepad\)\./,
+      ),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Show them" }));
     expect(await screen.findAllByTestId("card")).toHaveLength(3);
-    expect(
-      screen.queryByText(/Hiding Gamepad setups/)
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Hiding Gamepad setups/)).not.toBeInTheDocument();
   });
 
   it("says nothing when no other rigs are hidden", () => {
-    const allGamepad = MIXED.map((setup) => ({ ...setup, rigProfile: "Gamepad" as const }));
+    const allGamepad = MIXED.map((setup) => ({
+      ...setup,
+      rigProfile: "Gamepad" as const,
+    }));
     render(
       <SetupsBrowser
         setups={allGamepad}
         totalCount={500}
         initialFilters={{ ...EMPTY_FILTERS, rig: "Gamepad" }}
-      />
+      />,
     );
 
     expect(screen.getAllByTestId("card")).toHaveLength(3);

@@ -11,7 +11,7 @@ import { isUuid } from "@/lib/utils";
 /** Favorites or unfavorites a setup as the current user, mirroring toggleUpvote/toggleFollow. */
 export async function toggleFavorite(
   setupId: string,
-  isCurrentlyFavorited: boolean
+  isCurrentlyFavorited: boolean,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const user = await getCurrentUser(supabase);
@@ -29,7 +29,9 @@ export async function toggleFavorite(
         .delete()
         .eq("user_id", user.id)
         .eq("setup_id", setupId)
-    : await supabase.from("setup_favorites").insert({ user_id: user.id, setup_id: setupId });
+    : await supabase
+        .from("setup_favorites")
+        .insert({ user_id: user.id, setup_id: setupId });
 
   if (error) {
     logger.error("toggleFavorite: mutation failed", error);

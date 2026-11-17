@@ -21,7 +21,9 @@ describe("isKnownOption", () => {
   });
 
   it("returns false for a value absent from every group", () => {
-    const groups: SelectOptionGroup[] = [{ label: "GT3", options: ["BMW M4 GT3"] }];
+    const groups: SelectOptionGroup[] = [
+      { label: "GT3", options: ["BMW M4 GT3"] },
+    ];
     expect(isKnownOption(groups, "Something Else")).toBe(false);
   });
 });

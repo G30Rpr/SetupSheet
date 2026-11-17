@@ -1,8 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import {
-  GAME_VERSION_STALE_HINT,
-  gameVersionState,
-} from "@/lib/game-version";
+import { GAME_VERSION_STALE_HINT, gameVersionState } from "@/lib/game-version";
 
 /**
  * The setup's reported game patch on the detail page. Renders nothing when

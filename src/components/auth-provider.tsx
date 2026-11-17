@@ -72,14 +72,20 @@ export function AuthProvider({
       isLoading,
       async signInWithDiscord(nextPath) {
         try {
-          const returnPath = nextPath ?? `${window.location.pathname}${window.location.search}${window.location.hash}`;
+          const returnPath =
+            nextPath ??
+            `${window.location.pathname}${window.location.search}${window.location.hash}`;
           const { error } = await supabase.auth.signInWithOAuth({
             provider: "discord",
             options: {
-              redirectTo: buildAuthCallbackUrl(window.location.origin, returnPath),
+              redirectTo: buildAuthCallbackUrl(
+                window.location.origin,
+                returnPath,
+              ),
             },
           });
-          if (error) logger.error("AuthProvider: Discord sign-in failed", error);
+          if (error)
+            logger.error("AuthProvider: Discord sign-in failed", error);
         } catch (error) {
           logger.error("AuthProvider: Discord sign-in failed", error);
         }
@@ -93,7 +99,7 @@ export function AuthProvider({
         }
       },
     }),
-    [supabase, user, session, isLoading]
+    [supabase, user, session, isLoading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

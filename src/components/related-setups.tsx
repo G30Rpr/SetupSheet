@@ -13,7 +13,10 @@ export async function RelatedSetups({ self }: { self: RelatedSetupSelf }) {
     <section aria-labelledby="related-setups-heading" className="mt-10">
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
-          <h2 id="related-setups-heading" className="text-xl font-semibold tracking-tight">
+          <h2
+            id="related-setups-heading"
+            className="text-xl font-semibold tracking-tight"
+          >
             Same car + track
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -34,7 +37,9 @@ export async function RelatedSetups({ self }: { self: RelatedSetupSelf }) {
               href={`/setups/${encodeURIComponent(related.id)}`}
               className="block min-h-11 rounded-lg border border-border/80 bg-card px-3.5 py-3 hover:bg-accent/50"
             >
-              <span className="block truncate font-medium">{related.rigProfile}</span>
+              <span className="block truncate font-medium">
+                {related.rigProfile}
+              </span>
               <span className="block truncate text-sm text-muted-foreground">
                 {related.tags.length > 0
                   ? `${related.condition} · ${related.tags.join(" · ")}`

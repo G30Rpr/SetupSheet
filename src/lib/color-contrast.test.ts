@@ -16,7 +16,11 @@ import { describe, expect, it } from "vitest";
 const CSS_PATH = path.join(process.cwd(), "src", "app", "globals.css");
 
 /** OKLCH -> linear sRGB, clamped to the displayable gamut. */
-function oklchToLinearSrgb(L: number, C: number, hDeg: number): [number, number, number] {
+function oklchToLinearSrgb(
+  L: number,
+  C: number,
+  hDeg: number,
+): [number, number, number] {
   const h = (hDeg * Math.PI) / 180;
   const a = C * Math.cos(h);
   const b = C * Math.sin(h);
@@ -49,9 +53,13 @@ function contrastRatio(fg: Token, bg: Token): number {
 
 type Token = [L: number, C: number, h: number];
 
-const OKLCH_PATTERN = /--([\w-]+):\s*oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)/g;
+const OKLCH_PATTERN =
+  /--([\w-]+):\s*oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)/g;
 
-function parseThemeTokens(css: string, selector: RegExp): Record<string, Token> {
+function parseThemeTokens(
+  css: string,
+  selector: RegExp,
+): Record<string, Token> {
   const match = selector.exec(css);
   if (!match) throw new Error(`Could not find theme block for ${selector}`);
 
@@ -101,8 +109,16 @@ describe("theme token contrast (WCAG 2.2 AA)", () => {
     ["light", light, LIGHT_SURFACES],
   ])("%s theme", (themeName, tokens, surfaces) => {
     it("parses every expected token from globals.css", () => {
-      for (const token of [...TEXT_TOKENS, ...surfaces, "ring", "primary-foreground"]) {
-        expect(tokens[token], `${themeName} --${token} not found in globals.css`).toBeDefined();
+      for (const token of [
+        ...TEXT_TOKENS,
+        ...surfaces,
+        "ring",
+        "primary-foreground",
+      ]) {
+        expect(
+          tokens[token],
+          `${themeName} --${token} not found in globals.css`,
+        ).toBeDefined();
       }
     });
 
@@ -113,10 +129,10 @@ describe("theme token contrast (WCAG 2.2 AA)", () => {
           const ratio = contrastRatio(tokens[token], tokens[surface]);
           expect(
             ratio,
-            `${themeName}: --${token} on --${surface} is ${ratio.toFixed(2)}:1`
+            `${themeName}: --${token} on --${surface} is ${ratio.toFixed(2)}:1`,
           ).toBeGreaterThanOrEqual(4.5);
         }
-      }
+      },
     );
 
     it("renders the primary button label at >= 4.5:1 on the primary fill", () => {
@@ -125,12 +141,18 @@ describe("theme token contrast (WCAG 2.2 AA)", () => {
     });
 
     it("renders the solid red badge label at >= 4.5:1 on the red fill", () => {
-      const ratio = contrastRatio(tokens["racing-red-foreground"], tokens["racing-red"]);
+      const ratio = contrastRatio(
+        tokens["racing-red-foreground"],
+        tokens["racing-red"],
+      );
       expect(ratio).toBeGreaterThanOrEqual(4.5);
     });
 
     it("keeps the destructive button label at >= 4.5:1 on the destructive fill", () => {
-      const ratio = contrastRatio(tokens["destructive-foreground"], tokens.destructive);
+      const ratio = contrastRatio(
+        tokens["destructive-foreground"],
+        tokens.destructive,
+      );
       expect(ratio).toBeGreaterThanOrEqual(4.5);
     });
 
@@ -139,7 +161,7 @@ describe("theme token contrast (WCAG 2.2 AA)", () => {
         const ratio = contrastRatio(tokens.ring, tokens[surface]);
         expect(
           ratio,
-          `${themeName}: focus ring on --${surface} is ${ratio.toFixed(2)}:1`
+          `${themeName}: focus ring on --${surface} is ${ratio.toFixed(2)}:1`,
         ).toBeGreaterThanOrEqual(3);
       }
     });
@@ -148,8 +170,11 @@ describe("theme token contrast (WCAG 2.2 AA)", () => {
       // A translucent ring was the original defect: it composited to 1.56:1 in
       // light mode even though the token itself looked fine in isolation.
       expect(tokens.ring).toBeDefined();
-      const block = css.slice(css.indexOf(themeName === "dark" ? ":root," : ".light {"));
-      const ringDeclaration = block.match(/--ring:\s*oklch\([^)]*\)/)?.[0] ?? "";
+      const block = css.slice(
+        css.indexOf(themeName === "dark" ? ":root," : ".light {"),
+      );
+      const ringDeclaration =
+        block.match(/--ring:\s*oklch\([^)]*\)/)?.[0] ?? "";
       expect(ringDeclaration).not.toContain("/");
     });
   });

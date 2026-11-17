@@ -21,23 +21,34 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { parseStorageSweepArgs, validateCleanupPaths } from "./storage-gc-options.mjs";
+import {
+  parseStorageSweepArgs,
+  validateCleanupPaths,
+} from "./storage-gc-options.mjs";
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseUrl =
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 let options;
 try {
   options = parseStorageSweepArgs(process.argv.slice(2));
 } catch (error) {
-  console.error("[Storage GC] Invalid arguments:", error instanceof Error ? error.message : String(error));
+  console.error(
+    "[Storage GC] Invalid arguments:",
+    error instanceof Error ? error.message : String(error),
+  );
   process.exit(2);
 }
 const { dryRun: isDryRun, grace: graceArg, targetUser, batchSize } = options;
 
 if (!supabaseUrl || !serviceKey) {
-  console.error("Error: Missing SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) or SUPABASE_SERVICE_ROLE_KEY.");
-  console.error("This script requires service-role privileges to inspect and prune Storage objects.");
+  console.error(
+    "Error: Missing SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) or SUPABASE_SERVICE_ROLE_KEY.",
+  );
+  console.error(
+    "This script requires service-role privileges to inspect and prune Storage objects.",
+  );
   process.exit(1);
 }
 
@@ -60,25 +71,37 @@ async function run() {
     });
 
     if (error) {
-      console.error("[Storage GC] Failed to query setup_files_for_user:", error.message);
+      console.error(
+        "[Storage GC] Failed to query setup_files_for_user:",
+        error.message,
+      );
       process.exit(1);
     }
 
     pathsToDelete = (data || []).map((row) => row.object_name);
-    console.log(`[Storage GC] Found ${pathsToDelete.length} object(s) for selected account.`);
+    console.log(
+      `[Storage GC] Found ${pathsToDelete.length} object(s) for selected account.`,
+    );
   } else {
-    console.log(`[Storage GC] Querying orphaned setup files older than grace window "${graceArg}"...`);
+    console.log(
+      `[Storage GC] Querying orphaned setup files older than grace window "${graceArg}"...`,
+    );
     const { data, error } = await supabase.rpc("orphaned_setup_files", {
       p_grace: graceArg,
     });
 
     if (error) {
-      console.error("[Storage GC] Failed to query orphaned_setup_files:", error.message);
+      console.error(
+        "[Storage GC] Failed to query orphaned_setup_files:",
+        error.message,
+      );
       process.exit(1);
     }
 
     pathsToDelete = (data || []).map((row) => row.object_name);
-    console.log(`[Storage GC] Found ${pathsToDelete.length} orphaned object(s).`);
+    console.log(
+      `[Storage GC] Found ${pathsToDelete.length} orphaned object(s).`,
+    );
   }
 
   // Treat malformed RPC output as a hard failure, not a partial cleanup.
@@ -91,33 +114,48 @@ async function run() {
   }
 
   if (isDryRun) {
-    console.log("[Storage GC] Dry-run complete; no files deleted. Object paths are omitted from CI logs.");
+    console.log(
+      "[Storage GC] Dry-run complete; no files deleted. Object paths are omitted from CI logs.",
+    );
     return;
   }
 
-  console.log(`[Storage GC] Deleting ${pathsToDelete.length} object(s) in batches of ${batchSize}...`);
+  console.log(
+    `[Storage GC] Deleting ${pathsToDelete.length} object(s) in batches of ${batchSize}...`,
+  );
   let deletedCount = 0;
   let errorCount = 0;
 
   for (let i = 0; i < pathsToDelete.length; i += batchSize) {
     const batch = pathsToDelete.slice(i, i + batchSize);
-    const { data, error } = await supabase.storage.from("setup-files").remove(batch);
+    const { data, error } = await supabase.storage
+      .from("setup-files")
+      .remove(batch);
 
     if (error) {
-      console.error(`[Storage GC] Batch delete error at offset ${i}:`, error.message);
+      console.error(
+        `[Storage GC] Batch delete error at offset ${i}:`,
+        error.message,
+      );
       errorCount += batch.length;
     } else {
       const successfulDeletes = data?.length ?? 0;
       if (successfulDeletes !== batch.length) {
-        console.error(`[Storage GC] Batch ${Math.floor(i / batchSize) + 1}: only ${successfulDeletes}/${batch.length} objects confirmed removed.`);
+        console.error(
+          `[Storage GC] Batch ${Math.floor(i / batchSize) + 1}: only ${successfulDeletes}/${batch.length} objects confirmed removed.`,
+        );
         errorCount += batch.length - successfulDeletes;
       }
       deletedCount += successfulDeletes;
-      console.log(`[Storage GC] Pruned batch ${Math.floor(i / batchSize) + 1} (${successfulDeletes} files)`);
+      console.log(
+        `[Storage GC] Pruned batch ${Math.floor(i / batchSize) + 1} (${successfulDeletes} files)`,
+      );
     }
   }
 
-  console.log(`[Storage GC] Finished: ${deletedCount} deleted, ${errorCount} errors.`);
+  console.log(
+    `[Storage GC] Finished: ${deletedCount} deleted, ${errorCount} errors.`,
+  );
   if (errorCount > 0) process.exitCode = 1;
 }
 

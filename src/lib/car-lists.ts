@@ -147,7 +147,12 @@ export const carLists: Partial<Record<Game, SelectOptionGroup[]>> = {
     },
     {
       label: "LMP3",
-      options: ["Ligier JS P325", "Ginetta G61-LT-P3 Evo", "Duqueine D09", "Adess AD25"],
+      options: [
+        "Ligier JS P325",
+        "Ginetta G61-LT-P3 Evo",
+        "Duqueine D09",
+        "Adess AD25",
+      ],
     },
   ],
 };

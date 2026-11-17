@@ -3,17 +3,24 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 
 import SetupCardComments from "@/components/setup-card-comments";
 import type { Setup, SetupComment } from "@/lib/types";
 
 const { useAuthMock } = vi.hoisted(() => ({ useAuthMock: vi.fn() }));
-const { getSetupCommentsActionMock, createCommentMock, deleteCommentMock } = vi.hoisted(() => ({
-  getSetupCommentsActionMock: vi.fn(),
-  createCommentMock: vi.fn(),
-  deleteCommentMock: vi.fn(),
-}));
+const { getSetupCommentsActionMock, createCommentMock, deleteCommentMock } =
+  vi.hoisted(() => ({
+    getSetupCommentsActionMock: vi.fn(),
+    createCommentMock: vi.fn(),
+    deleteCommentMock: vi.fn(),
+  }));
 const { toastErrorMock } = vi.hoisted(() => ({ toastErrorMock: vi.fn() }));
 
 vi.mock("@/components/auth-provider", () => ({
@@ -57,13 +64,23 @@ describe("SetupCardComments", () => {
     render(<SetupCardComments setup={baseSetup} />);
 
     expect(await screen.findByText("No comments yet.")).toBeInTheDocument();
-    expect(screen.getByText("Log in to join the conversation.")).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("Add a comment...")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Log in to join the conversation."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByPlaceholderText("Add a comment..."),
+    ).not.toBeInTheDocument();
   });
 
   it("lists fetched comments and lets the owner delete one", async () => {
-    useAuthMock.mockReturnValue({ user: { id: "user-1" }, signInWithDiscord: vi.fn() });
-    getSetupCommentsActionMock.mockResolvedValue({ comments: [comment], error: null });
+    useAuthMock.mockReturnValue({
+      user: { id: "user-1" },
+      signInWithDiscord: vi.fn(),
+    });
+    getSetupCommentsActionMock.mockResolvedValue({
+      comments: [comment],
+      error: null,
+    });
     deleteCommentMock.mockResolvedValue({ error: null });
 
     render(<SetupCardComments setup={baseSetup} />);
@@ -74,7 +91,9 @@ describe("SetupCardComments", () => {
 
     // Optimistically removed from the list the instant delete is clicked,
     // ahead of the undoable-delete grace period actually committing.
-    await waitFor(() => expect(screen.queryByText(comment.body)).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByText(comment.body)).not.toBeInTheDocument(),
+    );
   });
 
   it("posts a new comment and clears the composer on success", async () => {
@@ -90,8 +109,12 @@ describe("SetupCardComments", () => {
     fireEvent.change(textarea, { target: { value: "Nice setup!" } });
     fireEvent.click(screen.getByRole("button", { name: /post/i }));
 
-    await waitFor(() => expect(createCommentMock).toHaveBeenCalledWith("setup-1", "Nice setup!"));
-    await waitFor(() => expect((textarea as HTMLTextAreaElement).value).toBe(""));
+    await waitFor(() =>
+      expect(createCommentMock).toHaveBeenCalledWith("setup-1", "Nice setup!"),
+    );
+    await waitFor(() =>
+      expect((textarea as HTMLTextAreaElement).value).toBe(""),
+    );
     // Refetches after a successful post.
     expect(getSetupCommentsActionMock).toHaveBeenCalledTimes(2);
   });
@@ -99,12 +122,17 @@ describe("SetupCardComments", () => {
   it("distinguishes a failed read from an empty thread and can retry", async () => {
     useAuthMock.mockReturnValue({ user: null, signInWithDiscord: vi.fn() });
     getSetupCommentsActionMock
-      .mockResolvedValueOnce({ comments: [], error: "Couldn't load comments right now." })
+      .mockResolvedValueOnce({
+        comments: [],
+        error: "Couldn't load comments right now.",
+      })
       .mockResolvedValueOnce({ comments: [], error: null });
 
     render(<SetupCardComments setup={baseSetup} />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load comments right now.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Couldn't load comments right now.",
+    );
     fireEvent.click(screen.getByRole("button", { name: /try again/i }));
 
     expect(await screen.findByText("No comments yet.")).toBeInTheDocument();
@@ -112,7 +140,10 @@ describe("SetupCardComments", () => {
   });
 
   it("surfaces the server error and keeps the draft when posting fails", async () => {
-    useAuthMock.mockReturnValue({ user: { id: "user-1" }, signInWithDiscord: vi.fn() });
+    useAuthMock.mockReturnValue({
+      user: { id: "user-1" },
+      signInWithDiscord: vi.fn(),
+    });
     getSetupCommentsActionMock.mockResolvedValue({ comments: [], error: null });
     createCommentMock.mockResolvedValue({ error: "Comment is too long." });
 

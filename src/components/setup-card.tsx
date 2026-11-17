@@ -68,9 +68,15 @@ import type { Setup } from "@/lib/types";
 // code (and the per-game setupSchemas/installGuides data each one imports)
 // until then keeps that data out of every SetupCard's initial bundle.
 const SetupCardValues = dynamic(() => import("@/components/setup-card-values"));
-const SetupCardInstallGuide = dynamic(() => import("@/components/setup-card-install-guide"));
-const SetupCardHistory = dynamic(() => import("@/components/setup-card-history"));
-const SetupCardComments = dynamic(() => import("@/components/setup-card-comments"));
+const SetupCardInstallGuide = dynamic(
+  () => import("@/components/setup-card-install-guide"),
+);
+const SetupCardHistory = dynamic(
+  () => import("@/components/setup-card-history"),
+);
+const SetupCardComments = dynamic(
+  () => import("@/components/setup-card-comments"),
+);
 
 function parseVideoEmbed(urlStr?: string | null) {
   const safeUrl = normalizeVideoUrl(urlStr);
@@ -78,9 +84,13 @@ function parseVideoEmbed(urlStr?: string | null) {
 
   try {
     const url = new URL(safeUrl);
-    const isYouTube = ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be", "www.youtu.be"].includes(
-      url.hostname.toLowerCase()
-    );
+    const isYouTube = [
+      "youtube.com",
+      "www.youtube.com",
+      "m.youtube.com",
+      "youtu.be",
+      "www.youtu.be",
+    ].includes(url.hostname.toLowerCase());
     if (!isYouTube) return null;
 
     let id = "";
@@ -98,7 +108,10 @@ function parseVideoEmbed(urlStr?: string | null) {
     // YouTube's id alphabet; malformed/hostile links remain ordinary safe
     // external links instead of becoming an iframe URL.
     if (!/^[A-Za-z0-9_-]{6,64}$/.test(id)) return null;
-    return { type: "youtube", src: `https://www.youtube-nocookie.com/embed/${id}` };
+    return {
+      type: "youtube",
+      src: `https://www.youtube-nocookie.com/embed/${id}`,
+    };
   } catch {
     return null;
   }
@@ -230,8 +243,9 @@ export function SetupCard({
       // viewer is rating for the first time, use the neutral 3-star value
       // for the dimension they have not clicked yet instead of sending 0
       // and guaranteeing a database constraint error.
-      pace: field === "pace" ? value : myRating?.pace ?? 3,
-      predictability: field === "predictability" ? value : myRating?.predictability ?? 3,
+      pace: field === "pace" ? value : (myRating?.pace ?? 3),
+      predictability:
+        field === "predictability" ? value : (myRating?.predictability ?? 3),
     };
     setMyRating(next);
 
@@ -241,7 +255,12 @@ export function SetupCard({
 
     startTransition(async () => {
       try {
-        const result = await rateSetup(setup.id, next.pace, next.predictability, raterRig);
+        const result = await rateSetup(
+          setup.id,
+          next.pace,
+          next.predictability,
+          raterRig,
+        );
         if (result.error) {
           setMyRating(setup.myRating);
           toast.error(result.error);
@@ -296,7 +315,7 @@ export function SetupCard({
         if (!setup.fileUrl) {
           triggerBlobDownload(
             new Blob([buildSetupExportText(setup)], { type: "text/plain" }),
-            buildSetupExportFilename(setup)
+            buildSetupExportFilename(setup),
           );
           setDownloads((n) => n + 1);
           await recordSetupExport(setup.id);
@@ -355,7 +374,10 @@ export function SetupCard({
   if (isDeleted) return null;
 
   return (
-    <Card as="article" className="content-auto group relative overflow-hidden border-border/80 py-0 shadow-card transition-[border-color,box-shadow,transform] duration-200 hover:border-border hover:shadow-popover motion-safe:hover:-translate-y-0.5">
+    <Card
+      as="article"
+      className="content-auto group relative overflow-hidden border-border/80 py-0 shadow-card transition-[border-color,box-shadow,transform] duration-200 hover:border-border hover:shadow-popover motion-safe:hover:-translate-y-0.5"
+    >
       <div className="flex flex-col gap-4 p-4 sm:p-5">
         {/* Top row: game + condition + owner controls */}
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -379,14 +401,23 @@ export function SetupCard({
                 <Checkbox
                   checked={compareSelected}
                   onCheckedChange={() => onToggleCompare()}
-                  aria-label={compareSelected ? "Remove from comparison" : "Select for comparison"}
+                  aria-label={
+                    compareSelected
+                      ? "Remove from comparison"
+                      : "Select for comparison"
+                  }
                 />
                 Compare
               </label>
             )}
             {setup.isOwner && (
               <div className="flex items-center gap-1">
-                <Button asChild variant="ghost" size="icon" aria-label="Edit setup">
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Edit setup"
+                >
                   <Link href={`/setups/${setup.id}/edit`}>
                     <Pencil className="size-4" />
                   </Link>
@@ -408,7 +439,12 @@ export function SetupCard({
                 rather than competing with Download for attention. */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button type="button" variant="ghost" size="icon" aria-label="More actions">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="More actions"
+                >
                   <Ellipsis className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -418,7 +454,9 @@ export function SetupCard({
                   Share setup
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href={`/report?type=setup&id=${encodeURIComponent(setup.id)}`}>
+                  <Link
+                    href={`/report?type=setup&id=${encodeURIComponent(setup.id)}`}
+                  >
                     <Flag />
                     Report setup
                   </Link>
@@ -432,7 +470,8 @@ export function SetupCard({
                   title="Public self-reported field tests derived from logged Garage laps and changes."
                 >
                   <ClipboardList aria-hidden="true" />
-                  {fieldTestCount} field {fieldTestCount === 1 ? "test" : "tests"}
+                  {fieldTestCount} field{" "}
+                  {fieldTestCount === 1 ? "test" : "tests"}
                 </Link>
               </Badge>
             )}
@@ -463,21 +502,29 @@ export function SetupCard({
         <div>
           <Title className="text-xl font-semibold leading-snug tracking-tight text-foreground">
             {linkTitle ? (
-              <Link href={`/setups/${setup.id}`} className="rounded-sm underline-offset-4 hover:text-racing-coral hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+              <Link
+                href={`/setups/${setup.id}`}
+                className="rounded-sm underline-offset-4 hover:text-racing-coral hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
                 {setup.car}
               </Link>
             ) : (
               setup.car
             )}
           </Title>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{setup.track}</p>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            {setup.track}
+          </p>
         </div>
 
         {/* Lap time — mono/tabular everywhere; every lap on the site is
             author-reported, so it carries the label that says so. */}
         {(setup.lapTime || setup.fileUrl) && (
           <div className="flex flex-wrap items-center gap-x-2 gap-y-2 rounded-lg border border-border/60 bg-secondary/50 px-3 py-3">
-            <Timer className="size-5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+            <Timer
+              className="size-5 shrink-0 text-muted-foreground"
+              strokeWidth={1.5}
+            />
             {setup.lapTime && (
               <>
                 <span className="font-mono text-xl font-bold tabular-nums tracking-tight text-foreground sm:text-2xl">
@@ -525,7 +572,10 @@ export function SetupCard({
         )}
 
         {/* Tags */}
-        <div className="flex flex-wrap gap-1.5" aria-label="Setup characteristics">
+        <div
+          className="flex flex-wrap gap-1.5"
+          aria-label="Setup characteristics"
+        >
           {setup.tags.map((tag) => (
             <TagBadge key={tag} tag={tag} />
           ))}
@@ -535,8 +585,15 @@ export function SetupCard({
         {!isDetail && (
           <>
             <div className="flex items-center gap-1.5 rounded-md bg-secondary/30 px-3 py-2 text-xs font-medium text-muted-foreground">
-              <Gauge className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
-              <span className="font-semibold text-foreground">Uploader rig:</span> {setup.rigProfile}
+              <Gauge
+                className="size-3.5"
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+              <span className="font-semibold text-foreground">
+                Uploader rig:
+              </span>{" "}
+              {setup.rigProfile}
             </div>
             <ScoreMeters
               pace={setup.pace}
@@ -562,7 +619,10 @@ export function SetupCard({
                 Watch Hotlap Proof Video
               </span>
               <ChevronDown
-                className={cn("size-3.5 motion-transform", showVideo && "rotate-180")}
+                className={cn(
+                  "size-3.5 motion-transform",
+                  showVideo && "rotate-180",
+                )}
               />
             </Button>
 
@@ -582,7 +642,9 @@ export function SetupCard({
                   </div>
                 ) : (
                   <div className="flex items-center justify-between p-3 text-xs">
-                    <span className="text-muted-foreground truncate">{safeVideoUrl}</span>
+                    <span className="text-muted-foreground truncate">
+                      {safeVideoUrl}
+                    </span>
                     <a
                       href={safeVideoUrl}
                       target="_blank"
@@ -603,7 +665,9 @@ export function SetupCard({
           <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-md border border-border/80 bg-secondary/30 px-3 py-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5 min-w-0 font-medium">
               <Activity className="size-3.5 shrink-0" />
-              <span className="truncate">Telemetry: {setup.telemetryFileName ?? "telemetry.ld"}</span>
+              <span className="truncate">
+                Telemetry: {setup.telemetryFileName ?? "telemetry.ld"}
+              </span>
             </span>
             <a
               href={setup.telemetryFileUrl}
@@ -628,7 +692,10 @@ export function SetupCard({
             >
               Setup values
               <ChevronDown
-                className={cn("size-3.5 motion-safe:motion-transform", showValues && "rotate-180")}
+                className={cn(
+                  "size-3.5 motion-safe:motion-transform",
+                  showValues && "rotate-180",
+                )}
               />
             </Button>
 
@@ -637,39 +704,43 @@ export function SetupCard({
         )}
 
         {/* Export formats for setups with values */}
-        {isDetail && setup.setupValues && Object.keys(setup.setupValues).length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="font-mono text-xs uppercase tracking-wide text-muted-foreground">
-              Export format:
-            </span>
-            {getAvailableExportFormats(setup).map((fmt) => (
-              <Button
-                key={fmt.id}
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const content = fmt.generate(setup);
-                  triggerBlobDownload(
-                    new Blob([content], { type: fmt.mime }),
-                    buildSetupExportFilename(setup, fmt.ext)
-                  );
-                  toast.success(`Exported as ${fmt.ext}`);
-                }}
-                className="gap-1"
-              >
-                <FileDown className="size-4 text-muted-foreground" />
-                {fmt.label}
-              </Button>
-            ))}
-          </div>
-        )}
+        {isDetail &&
+          setup.setupValues &&
+          Object.keys(setup.setupValues).length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="font-mono text-xs uppercase tracking-wide text-muted-foreground">
+                Export format:
+              </span>
+              {getAvailableExportFormats(setup).map((fmt) => (
+                <Button
+                  key={fmt.id}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const content = fmt.generate(setup);
+                    triggerBlobDownload(
+                      new Blob([content], { type: fmt.mime }),
+                      buildSetupExportFilename(setup, fmt.ext),
+                    );
+                    toast.success(`Exported as ${fmt.ext}`);
+                  }}
+                  className="gap-1"
+                >
+                  <FileDown className="size-4 text-muted-foreground" />
+                  {fmt.label}
+                </Button>
+              ))}
+            </div>
+          )}
 
         {/* Download: the original uploaded file if there is one, otherwise
             a generated text export of the manually-entered values */}
         {(setup.fileUrl || setup.setupValues) && (
           <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-secondary/20 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Get this setup</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Get this setup
+            </p>
             <div className="flex items-stretch gap-2">
               <Button
                 type="button"
@@ -690,7 +761,9 @@ export function SetupCard({
                       no "Be the first" bait. The count appears once it's real. */}
                   {downloads > 0 ? (
                     <>
-                      <span className="font-mono tabular-nums">{downloads}</span>{" "}
+                      <span className="font-mono tabular-nums">
+                        {downloads}
+                      </span>{" "}
                       {downloads === 1 ? "download" : "downloads"}
                     </>
                   ) : null}
@@ -711,7 +784,10 @@ export function SetupCard({
               )}
             </div>
             {isDetail && (
-              <p className="text-xs text-muted-foreground">Free download · No account required. Use the installation guide below to get on track.</p>
+              <p className="text-xs text-muted-foreground">
+                Free download · No account required. Use the installation guide
+                below to get on track.
+              </p>
             )}
           </div>
         )}
@@ -732,7 +808,10 @@ export function SetupCard({
                 How to install this setup
               </span>
               <ChevronDown
-                className={cn("size-3.5 motion-safe:motion-transform", showInstallGuide && "rotate-180")}
+                className={cn(
+                  "size-3.5 motion-safe:motion-transform",
+                  showInstallGuide && "rotate-180",
+                )}
               />
             </Button>
 
@@ -756,7 +835,10 @@ export function SetupCard({
                 Version history
               </span>
               <ChevronDown
-                className={cn("size-3.5 motion-safe:motion-transform", showHistory && "rotate-180")}
+                className={cn(
+                  "size-3.5 motion-safe:motion-transform",
+                  showHistory && "rotate-180",
+                )}
               />
             </Button>
 
@@ -780,7 +862,10 @@ export function SetupCard({
                 Comments
               </span>
               <ChevronDown
-                className={cn("size-3.5 motion-safe:motion-transform", showComments && "rotate-180")}
+                className={cn(
+                  "size-3.5 motion-safe:motion-transform",
+                  showComments && "rotate-180",
+                )}
               />
             </Button>
 

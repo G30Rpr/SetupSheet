@@ -16,15 +16,21 @@ describe("setupOgImageSegment", () => {
     expect(setupOgImageSegment(`/setups/${UUID}`)).toBeNull();
     expect(setupOgImageSegment(`/setups/${UUID}/edit`)).toBeNull();
     expect(setupOgImageSegment("/opengraph-image")).toBeNull();
-    expect(setupOgImageSegment("/profile/not-a-uuid/opengraph-image")).toBeNull();
+    expect(
+      setupOgImageSegment("/profile/not-a-uuid/opengraph-image"),
+    ).toBeNull();
   });
 
   it("lets the middleware reject junk ids without rendering them", () => {
     // The guard is "segment present but not a UUID". Both halves matter: a junk
     // id must be refused, and a real one must never be, or the card images for
     // shared setups stop working.
-    expect(isUuid(setupOgImageSegment("/setups/not-a-uuid/opengraph-image") ?? "")).toBe(false);
-    expect(isUuid(setupOgImageSegment(`/setups/${UUID}/opengraph-image`) ?? "")).toBe(true);
+    expect(
+      isUuid(setupOgImageSegment("/setups/not-a-uuid/opengraph-image") ?? ""),
+    ).toBe(false);
+    expect(
+      isUuid(setupOgImageSegment(`/setups/${UUID}/opengraph-image`) ?? ""),
+    ).toBe(true);
   });
 
   it("does not treat a nested path as an OG request", () => {
