@@ -17,7 +17,7 @@ async function loadPendingPromptPicks(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   limit: number,
-  setupId?: string
+  setupId?: string,
 ): Promise<{ setupId: string; downloadedAt: string }[]> {
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
@@ -41,30 +41,48 @@ async function loadPendingPromptPicks(
   const candidateIds = Array.from(new Set(events.map((e) => e.setupId)));
   if (candidateIds.length === 0) return [];
 
-  const [{ data: ratedRows }, { data: setupRows }, dismissals] = await Promise.all([
-    supabase.from("setup_ratings").select("setup_id").eq("user_id", userId).in("setup_id", candidateIds),
-    supabase
-      .from("setups")
-      .select("id, game, car, track, user_id")
-      .in("id", candidateIds),
-    supabase.from("rating_prompt_dismissals").select("setup_id").eq("user_id", userId).in("setup_id", candidateIds),
-  ]);
+  const [{ data: ratedRows }, { data: setupRows }, dismissals] =
+    await Promise.all([
+      supabase
+        .from("setup_ratings")
+        .select("setup_id")
+        .eq("user_id", userId)
+        .in("setup_id", candidateIds),
+      supabase
+        .from("setups")
+        .select("id, game, car, track, user_id")
+        .in("id", candidateIds),
+      supabase
+        .from("rating_prompt_dismissals")
+        .select("setup_id")
+        .eq("user_id", userId)
+        .in("setup_id", candidateIds),
+    ]);
 
   const ratedSetupIds = new Set((ratedRows ?? []).map((row) => row.setup_id));
   const authorSetupIds = new Set(
-    (setupRows ?? []).filter((row) => row.user_id === userId).map((row) => row.id)
+    (setupRows ?? [])
+      .filter((row) => row.user_id === userId)
+      .map((row) => row.id),
   );
 
   if (dismissals.error) return [];
   const dismissedIds = new Set(dismissals.data.map((row) => row.setup_id));
-  return pickPendingPrompts(events.filter((event) => !dismissedIds.has(event.setupId)), ratedSetupIds, authorSetupIds, limit);
+  return pickPendingPrompts(
+    events.filter((event) => !dismissedIds.has(event.setupId)),
+    ratedSetupIds,
+    authorSetupIds,
+    limit,
+  );
 }
 
 /**
  * Up to `limit` setups the viewer downloaded 24h+ ago and hasn't rated or
  * dismissed. Never throws.
  */
-export async function getPendingRatingPrompts(limit = PROMPT_LIMIT): Promise<RatingPrompt[]> {
+export async function getPendingRatingPrompts(
+  limit = PROMPT_LIMIT,
+): Promise<RatingPrompt[]> {
   try {
     const supabase = await createClient();
     const {
@@ -80,7 +98,7 @@ export async function getPendingRatingPrompts(limit = PROMPT_LIMIT): Promise<Rat
       .select("id, game, car, track")
       .in(
         "id",
-        picks.map((p) => p.setupId)
+        picks.map((p) => p.setupId),
       );
     if (error || !setupRows) return [];
 
@@ -104,7 +122,9 @@ export async function getPendingRatingPrompts(limit = PROMPT_LIMIT): Promise<Rat
 }
 
 /** Whether this specific setup is awaiting the viewer's take. Never throws. */
-export async function hasPendingRatingPrompt(setupId: string): Promise<boolean> {
+export async function hasPendingRatingPrompt(
+  setupId: string,
+): Promise<boolean> {
   try {
     const supabase = await createClient();
     const {

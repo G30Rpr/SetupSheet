@@ -34,7 +34,10 @@ export function unwrapCount(result: CountResult, message: string): number {
 }
 
 /** Unwraps a single-row query; a missing row is expected and remains null. */
-export function unwrapSingle<T>(result: SingleResult<T>, message: string): T | null {
+export function unwrapSingle<T>(
+  result: SingleResult<T>,
+  message: string,
+): T | null {
   if (result.error || !result.data) {
     if (result.error) logger.error(message, result.error);
     return null;
@@ -48,7 +51,10 @@ export function unwrapSingle<T>(result: SingleResult<T>, message: string): T | n
  * full revalidation window. These helpers deliberately use static thrown
  * messages so raw PostgREST details stay in server logs only.
  */
-export function unwrapCachedList<T>(result: ListResult<T>, message: string): T[] {
+export function unwrapCachedList<T>(
+  result: ListResult<T>,
+  message: string,
+): T[] {
   if (result.error || !result.data) {
     logger.error(message, result.error);
     throw new Error("Cached database read failed");
@@ -56,7 +62,10 @@ export function unwrapCachedList<T>(result: ListResult<T>, message: string): T[]
   return result.data;
 }
 
-export function unwrapCachedCount(result: CountResult, message: string): number {
+export function unwrapCachedCount(
+  result: CountResult,
+  message: string,
+): number {
   if (result.error) {
     logger.error(message, result.error);
     throw new Error("Cached database read failed");
@@ -64,7 +73,10 @@ export function unwrapCachedCount(result: CountResult, message: string): number 
   return result.count ?? 0;
 }
 
-export function unwrapCachedSingle<T>(result: SingleResult<T>, message: string): T | null {
+export function unwrapCachedSingle<T>(
+  result: SingleResult<T>,
+  message: string,
+): T | null {
   if (result.error) {
     logger.error(message, result.error);
     throw new Error("Cached database read failed");

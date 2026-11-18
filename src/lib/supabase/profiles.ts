@@ -25,10 +25,13 @@ const getCachedProfileRow = unstable_cache(
       .eq("id", userId)
       .maybeSingle();
 
-    return unwrapCachedSingle(result, "getCachedProfileRow: failed to load profile");
+    return unwrapCachedSingle(
+      result,
+      "getCachedProfileRow: failed to load profile",
+    );
   },
   ["profile-by-id"],
-  { revalidate: 60, tags: [CACHE_TAG.publicProfiles] }
+  { revalidate: 60, tags: [CACHE_TAG.publicProfiles] },
 );
 
 /**
@@ -36,15 +39,17 @@ const getCachedProfileRow = unstable_cache(
  * query fails. The public row is cached briefly across requests; private
  * viewer/follow state remains outside this cache in the calling route.
  */
-export const getProfile = cache(async (userId: string): Promise<Profile | null> => {
-  const row = await getCachedProfileRow(userId);
-  if (!row) return null;
+export const getProfile = cache(
+  async (userId: string): Promise<Profile | null> => {
+    const row = await getCachedProfileRow(userId);
+    if (!row) return null;
 
-  return {
-    id: row.id,
-    username: sanitizeDisplayName(row.username),
-    avatarUrl: normalizeHttpsUrl(row.avatar_url),
-    memberSince: row.created_at,
-    followerCount: row.follower_count,
-  };
-});
+    return {
+      id: row.id,
+      username: sanitizeDisplayName(row.username),
+      avatarUrl: normalizeHttpsUrl(row.avatar_url),
+      memberSince: row.created_at,
+      followerCount: row.follower_count,
+    };
+  },
+);

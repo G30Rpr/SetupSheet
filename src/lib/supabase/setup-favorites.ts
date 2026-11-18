@@ -21,7 +21,10 @@ export async function getFavoritedSetups(userId: string): Promise<Setup[]> {
     .order("created_at", { ascending: false })
     .limit(FAVORITES_LIMIT);
 
-  const rows = unwrapList(result, "getFavoritedSetups: failed to load favorites");
+  const rows = unwrapList(
+    result,
+    "getFavoritedSetups: failed to load favorites",
+  );
   const setupIds = rows.map((row) => row.setup_id as string);
   if (setupIds.length === 0) return [];
 
@@ -30,5 +33,7 @@ export async function getFavoritedSetups(userId: string): Promise<Setup[]> {
   // getSetupsByIds doesn't guarantee row order matches the ids passed in --
   // restore the most-recently-favorited-first order fetched above.
   const orderIndex = new Map(setupIds.map((id, i) => [id, i]));
-  return setups.sort((a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0));
+  return setups.sort(
+    (a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0),
+  );
 }

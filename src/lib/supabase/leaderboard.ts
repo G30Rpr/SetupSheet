@@ -4,7 +4,10 @@ import { CACHE_TAG, SETUP_ROW_TAGS } from "@/lib/cache-tags";
 
 import { normalizeHttpsUrl } from "@/lib/safe-url";
 import { createPublicClient } from "@/lib/supabase/public";
-import { unwrapCachedCount, unwrapCachedList } from "@/lib/supabase/query-helpers";
+import {
+  unwrapCachedCount,
+  unwrapCachedList,
+} from "@/lib/supabase/query-helpers";
 import { sanitizeDisplayName } from "@/lib/user-display";
 
 export interface LeaderboardEntry {
@@ -29,7 +32,7 @@ const getCachedLeaderboardRows = unstable_cache(
     const result = await supabase
       .from("leaderboard")
       .select(
-        "user_id, username, avatar_url, setup_count, total_upvotes, laps_driven_by_others, field_tested_setup_count"
+        "user_id, username, avatar_url, setup_count, total_upvotes, laps_driven_by_others, field_tested_setup_count",
       )
       .order("laps_driven_by_others", { ascending: false })
       .order("field_tested_setup_count", { ascending: false })
@@ -37,10 +40,13 @@ const getCachedLeaderboardRows = unstable_cache(
       .order("setup_count", { ascending: false })
       .limit(Math.min(Math.max(limit, 1), 100));
 
-    return unwrapCachedList(result, "getCachedLeaderboardRows: failed to load leaderboard");
+    return unwrapCachedList(
+      result,
+      "getCachedLeaderboardRows: failed to load leaderboard",
+    );
   },
   ["leaderboard"],
-  { revalidate: 60, tags: [...SETUP_ROW_TAGS, CACHE_TAG.publicProfiles] }
+  { revalidate: 60, tags: [...SETUP_ROW_TAGS, CACHE_TAG.publicProfiles] },
 );
 
 /**
@@ -61,7 +67,7 @@ const getCachedContributorCount = unstable_cache(
     return unwrapCachedCount(result, "getCachedContributorCount: failed");
   },
   ["contributor-count"],
-  { revalidate: 60, tags: [...SETUP_ROW_TAGS, CACHE_TAG.publicProfiles] }
+  { revalidate: 60, tags: [...SETUP_ROW_TAGS, CACHE_TAG.publicProfiles] },
 );
 
 /** Count of people who have shared at least one setup. Never throws. */
