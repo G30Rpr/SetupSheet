@@ -5,9 +5,9 @@ import {
 } from "./storage-gc-options.mjs";
 
 describe("Storage cleanup command safety", () => {
-  it("defaults to the existing weekly 24h policy", () => {
+  it("defaults to read-only inventory with the existing 24h grace period", () => {
     expect(parseStorageSweepArgs([])).toEqual({
-      dryRun: false,
+      dryRun: true,
       grace: "24 hours",
       targetUser: null,
       batchSize: 50,
@@ -40,6 +40,9 @@ describe("Storage cleanup command safety", () => {
     ["--batch-size", "NaN"],
     ["--user", "other-users-id"],
     ["--not-a-real-option"],
+    ["--apply", "--dry-run"],
+    ["--dry-run", "--apply"],
+    ["--apply", "--apply"],
     ["--grace"],
     ["--grace", "24 hours", "--grace", "24 hours"],
   ])("rejects invalid or dangerous arguments: %j", (...args) => {
@@ -48,15 +51,20 @@ describe("Storage cleanup command safety", () => {
 
   it("requires explicit user-deletion confirmation for destructive account cleanup", () => {
     const id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-    expect(() => parseStorageSweepArgs(["--user", id])).toThrow(
+    expect(() => parseStorageSweepArgs(["--apply", "--user", id])).toThrow(
       /--confirm-user-delete/,
     );
     expect(parseStorageSweepArgs(["--user", id, "--dry-run"]).dryRun).toBe(
       true,
     );
     expect(
-      parseStorageSweepArgs(["--user", id, "--confirm-user-delete"]).targetUser,
+      parseStorageSweepArgs(["--apply", "--user", id, "--confirm-user-delete"])
+        .targetUser,
     ).toBe(id);
+    expect(parseStorageSweepArgs(["--user", id]).dryRun).toBe(true);
+    expect(() =>
+      parseStorageSweepArgs(["--user", id, "--confirm-user-delete"]),
+    ).toThrow(/requires --apply/);
     expect(() => parseStorageSweepArgs(["--confirm-user-delete"])).toThrow(
       /requires --user/,
     );

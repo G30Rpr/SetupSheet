@@ -1,11 +1,17 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { loggerInfo } = vi.hoisted(() => ({ loggerInfo: vi.fn() }));
+const { loggerInfo, sampleLog } = vi.hoisted(() => ({
+  loggerInfo: vi.fn(),
+  sampleLog: vi.fn((): number | null => 1),
+}));
+vi.mock("@/lib/report-log-sampling", () => ({ sampleReportLog: sampleLog }));
 vi.mock("@/lib/logger", () => ({
   logger: { info: loggerInfo, warn: vi.fn(), error: vi.fn() },
 }));
 
 const { POST } = await import("@/app/api/telemetry/route");
+
+beforeEach(() => sampleLog.mockReturnValue(1));
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -21,6 +27,18 @@ function request(body: unknown, headers: Record<string, string> = {}) {
 }
 
 describe("POST /api/telemetry", () => {
+  it("does not log an unsampled batch even if the client requests full sampling", async () => {
+    sampleLog.mockReturnValue(null);
+    const response = await POST(
+      request({
+        sampleRate: 1,
+        events: [{ kind: "pageview", name: "pageview", path: "/" }],
+      }),
+    );
+    expect(response.status).toBe(204);
+    expect(loggerInfo).not.toHaveBeenCalled();
+  });
+
   it("returns an uncached 408 for a stalled body and logs no partial events", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
     const body = new ReadableStream<Uint8Array>({

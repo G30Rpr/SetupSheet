@@ -2,7 +2,7 @@ name: Storage Garbage Collection
 
 on:
   schedule:
-    # Weekly orphan pruning after the database's 24h upload grace period.
+    # Weekly read-only inventory after the database's 24h upload grace period.
     - cron: "0 4 * * 0"
   workflow_dispatch:
     inputs:
@@ -40,7 +40,9 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL || secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GC_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+          GC_APPLY: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run == false }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
           GC_GRACE: ${{ github.event_name == 'workflow_dispatch' && inputs.grace || '24 hours' }}
         run: |
           set -euo pipefail
@@ -49,7 +51,18 @@ jobs:
             exit 1
           fi
           args=(--grace "$GC_GRACE")
-          if [[ "$GC_DRY_RUN" == "true" ]]; then
+          if [[ "$GC_APPLY" == "true" ]]; then
+            if [[ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]]; then
+              echo "::error::Storage deletion must select the default branch."
+              exit 1
+            fi
+            current_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$DEFAULT_BRANCH" --jq '.object.sha')
+            if [[ "$current_sha" != "$GITHUB_SHA" ]]; then
+              echo "::error::Default branch advanced; review and dispatch its current revision."
+              exit 1
+            fi
+            args+=(--apply)
+          else
             args+=(--dry-run)
           fi
           npm run storage:sweep -- "${args[@]}"
