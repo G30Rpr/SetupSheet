@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { readBoundedRequestBody } from "@/lib/bounded-request-body";
 import { logger } from "@/lib/logger";
 import { isSameOriginRequest } from "@/lib/request-origin";
 
@@ -50,40 +51,6 @@ function sanitizeUri(value: unknown, requestUrl: string): string {
   }
 }
 
-async function readBoundedBody(request: Request): Promise<string | null> {
-  const length = request.headers.get("content-length");
-  if (length && Number(length) > MAX_BODY_BYTES) return null;
-  if (!request.body) return null;
-
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      total += value.byteLength;
-      if (total > MAX_BODY_BYTES) {
-        await reader.cancel();
-        return null;
-      }
-      chunks.push(value);
-    }
-  } catch {
-    return null;
-  } finally {
-    reader.releaseLock();
-  }
-
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return new TextDecoder().decode(bytes);
-}
-
 export async function POST(request: Request) {
   // Browsers may omit Origin for reporting uploads, but if present it must be
   // same-origin. This is not a replacement for rate limiting, just a cheap
@@ -92,22 +59,35 @@ export async function POST(request: Request) {
   if (origin) {
     try {
       if (!isSameOriginRequest(request, origin)) {
-        return new NextResponse(null, { status: 204 });
+        return new NextResponse(null, {
+          status: 204,
+          headers: { "Cache-Control": "no-store" },
+        });
       }
     } catch {
-      return new NextResponse(null, { status: 204 });
+      return new NextResponse(null, {
+        status: 204,
+        headers: { "Cache-Control": "no-store" },
+      });
     }
   }
 
-  const raw = await readBoundedBody(request);
-  if (raw === null) return new NextResponse(null, { status: 204 });
+  const bodyResult = await readBoundedRequestBody(request, MAX_BODY_BYTES);
+  if (!bodyResult.ok)
+    return new NextResponse(null, {
+      status: 204,
+      headers: { "Cache-Control": "no-store" },
+    });
 
   let payload: unknown;
   try {
-    payload = JSON.parse(raw);
+    payload = JSON.parse(bodyResult.text);
   } catch {
     // Reporting endpoints must not trigger client retries or expose parser errors.
-    return new NextResponse(null, { status: 204 });
+    return new NextResponse(null, {
+      status: 204,
+      headers: { "Cache-Control": "no-store" },
+    });
   }
 
   const body = payload as {

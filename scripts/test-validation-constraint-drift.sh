@@ -2,10 +2,8 @@
 # Integration tests for missing/conflicting constraints and incompatible data.
 set -euo pipefail
 DB_NAME="${1:?Usage: test-validation-constraint-drift.sh <scratch-database>}"
-if ! [[ "$DB_NAME" =~ ^setupsheet_migration_test_[0-9]+$ ]]; then
-  echo "Refusing to run outside the migration test database." >&2
-  exit 1
-fi
+source "$(dirname "${BASH_SOURCE[0]}")/assert-local-test-db.sh"
+assert_local_test_db "$DB_NAME"
 cd "$(dirname "$0")/.."
 MIGRATION=supabase/migrations/20261116211420_reconcile_validation_constraints.sql
 TMP_DIR=$(mktemp -d)

@@ -32,7 +32,34 @@ describe("POST /api/csp-report", () => {
     warn = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
-  afterEach(() => warn.mockRestore());
+  afterEach(() => {
+    warn.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it("discards a stalled report with an uncached 204 even if cancellation stalls", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('{"csp-report":'));
+      },
+      cancel: () => new Promise<void>(() => {}),
+    });
+    const pending = POST(
+      new Request("https://setupsheet.app/api/csp-report", {
+        method: "POST",
+        body,
+        duplex: "half",
+      } as RequestInit & { duplex: "half" }),
+    );
+    await vi.advanceTimersByTimeAsync(5_000);
+    const response = await pending;
+    expect(response.status).toBe(204);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(warn).not.toHaveBeenCalled();
+    expect(body.locked).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
 
   it("accepts a legacy csp-report payload with a 204 and logs the directive", async () => {
     const response = await postJson({

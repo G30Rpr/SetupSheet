@@ -3,7 +3,8 @@ import { sanitizeDisplayName } from "@/lib/user-display";
 import { unwrapCount, unwrapList } from "@/lib/supabase/query-helpers";
 import { createClient } from "@/lib/supabase/server";
 
-export type NotificationType = "new_setup" | "request_fulfilled" | "new_comment" | "field_test";
+export type NotificationType =
+  "new_setup" | "request_fulfilled" | "new_comment" | "field_test";
 
 export interface NotificationItem {
   id: string;
@@ -34,47 +35,83 @@ interface NotificationRow {
  * Deliberately flat queries + in-memory joins, same reasoning as
  * getSetups in lib/supabase/setups.ts.
  */
-export async function getNotifications(userId: string, limit = 20): Promise<NotificationItem[]> {
+export async function getNotifications(
+  userId: string,
+  limit = 20,
+): Promise<NotificationItem[]> {
   const supabase = await createClient();
 
   const result = await supabase
     .from("notifications")
-    .select("id, type, actor_id, setup_id, field_test_report_id, read, created_at")
+    .select(
+      "id, type, actor_id, setup_id, field_test_report_id, read, created_at",
+    )
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  const rows = unwrapList(result, "getNotifications: failed to load notifications");
+  const rows = unwrapList(
+    result,
+    "getNotifications: failed to load notifications",
+  );
 
   const typedRows = rows as NotificationRow[];
-  const actorIds = Array.from(new Set(
-    typedRows.filter((row) => row.type !== "field_test").map((row) => row.actor_id)
-  ));
-  const setupIds = Array.from(new Set(typedRows.map((r) => r.setup_id).filter((id): id is string => Boolean(id))));
-  const fieldTestReportIds = Array.from(new Set(
-    typedRows
-      .filter((row) => row.type === "field_test" && row.field_test_report_id)
-      .map((row) => row.field_test_report_id as string)
-  ));
+  const actorIds = Array.from(
+    new Set(
+      typedRows
+        .filter((row) => row.type !== "field_test")
+        .map((row) => row.actor_id),
+    ),
+  );
+  const setupIds = Array.from(
+    new Set(
+      typedRows
+        .map((r) => r.setup_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+  const fieldTestReportIds = Array.from(
+    new Set(
+      typedRows
+        .filter((row) => row.type === "field_test" && row.field_test_report_id)
+        .map((row) => row.field_test_report_id as string),
+    ),
+  );
 
-  const [{ data: actors }, { data: setups }, { data: fieldTestReports }] = await Promise.all([
-    actorIds.length > 0
-      ? supabase.from("profiles").select("id, username, avatar_url").in("id", actorIds)
-      : Promise.resolve({ data: [] as { id: string; username: string; avatar_url: string | null }[] }),
-    setupIds.length > 0
-      ? supabase.from("setups").select("id, car, track").in("id", setupIds)
-      : Promise.resolve({ data: [] as { id: string; car: string; track: string }[] }),
-    fieldTestReportIds.length > 0
-      ? supabase
-          .from("field_test_reports_public")
-          .select("report_id, display_name")
-          .in("report_id", fieldTestReportIds)
-      : Promise.resolve({ data: [] as { report_id: string; display_name: string | null }[] }),
-  ]);
+  const [{ data: actors }, { data: setups }, { data: fieldTestReports }] =
+    await Promise.all([
+      actorIds.length > 0
+        ? supabase
+            .from("profiles")
+            .select("id, username, avatar_url")
+            .in("id", actorIds)
+        : Promise.resolve({
+            data: [] as {
+              id: string;
+              username: string;
+              avatar_url: string | null;
+            }[],
+          }),
+      setupIds.length > 0
+        ? supabase.from("setups").select("id, car, track").in("id", setupIds)
+        : Promise.resolve({
+            data: [] as { id: string; car: string; track: string }[],
+          }),
+      fieldTestReportIds.length > 0
+        ? supabase
+            .from("field_test_reports_public")
+            .select("report_id, display_name")
+            .in("report_id", fieldTestReportIds)
+        : Promise.resolve({
+            data: [] as { report_id: string; display_name: string | null }[],
+          }),
+    ]);
 
   const actorById = new Map((actors ?? []).map((a) => [a.id, a]));
   const setupById = new Map((setups ?? []).map((s) => [s.id, s]));
-  const fieldTestReportById = new Map((fieldTestReports ?? []).map((report) => [report.report_id, report]));
+  const fieldTestReportById = new Map(
+    (fieldTestReports ?? []).map((report) => [report.report_id, report]),
+  );
 
   return typedRows.map((row) => {
     const fieldTest = row.type === "field_test";
@@ -103,7 +140,9 @@ export async function getNotifications(userId: string, limit = 20): Promise<Noti
 }
 
 /** Count of unread notifications, for the bell badge. */
-export async function getUnreadNotificationCount(userId: string): Promise<number> {
+export async function getUnreadNotificationCount(
+  userId: string,
+): Promise<number> {
   const supabase = await createClient();
 
   const result = await supabase
@@ -112,5 +151,8 @@ export async function getUnreadNotificationCount(userId: string): Promise<number
     .eq("user_id", userId)
     .eq("read", false);
 
-  return unwrapCount(result, "getUnreadNotificationCount: failed to count notifications");
+  return unwrapCount(
+    result,
+    "getUnreadNotificationCount: failed to count notifications",
+  );
 }

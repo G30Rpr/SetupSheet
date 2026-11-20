@@ -1,10 +1,39 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 
 const { updateSession } = vi.hoisted(() => ({ updateSession: vi.fn() }));
 vi.mock("@/lib/supabase/proxy", () => ({ updateSession }));
 
-const { proxy } = await import("@/proxy");
+const { proxy, config } = await import("@/proxy");
+
+describe("reporting route proxy exclusions", () => {
+  it.each([
+    "/api/telemetry",
+    "/api/telemetry/",
+    "/api/telemetry?source=browser",
+    "/api/csp-report",
+    "/api/csp-report/",
+  ])("lets %s receive its upload without proxy buffering", (url) => {
+    expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(
+      false,
+    );
+  });
+
+  it.each([
+    "/",
+    "/upload",
+    "/auth/callback",
+    "/api/telemetry-settings",
+    "/api/telemetry/private",
+    "/api/csp-report-settings",
+    "/api/health",
+  ])("keeps %s inside the proxy", (url) => {
+    expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(
+      true,
+    );
+  });
+});
 
 describe("proxy malformed-ID response", () => {
   beforeEach(() => {

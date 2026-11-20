@@ -9,26 +9,24 @@
 # Connection is via the standard PG* environment variables (PGHOST, PGPORT,
 # PGUSER, PGPASSWORD, ...) -- defaults below match a local Postgres running
 # as the `postgres` superuser; override them to point at a CI service
-# container or a different local setup.
+# container. Remote targets and alternate host/service selectors are refused.
 set -euo pipefail
-
-export PGHOST="${PGHOST:-localhost}"
-export PGPORT="${PGPORT:-5432}"
-export PGUSER="${PGUSER:-postgres}"
 
 cd "$(dirname "$0")/.."
 
 DB_NAME="setupsheet_migration_test_$$"
+source scripts/assert-local-test-db.sh
+assert_local_test_db "$DB_NAME"
 
 cleanup() {
-  psql -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"$DB_NAME\";" >/dev/null
+  psql -X -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"$DB_NAME\";" >/dev/null
 }
 trap cleanup EXIT
 
-psql -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$DB_NAME\";" >/dev/null
+psql -X -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"$DB_NAME\";" >/dev/null
 echo "Created scratch database $DB_NAME"
 
-psql -d "$DB_NAME" -v ON_ERROR_STOP=1 -f supabase/testing/shim.sql >/dev/null
+psql -X -d "$DB_NAME" -v ON_ERROR_STOP=1 -f supabase/testing/shim.sql >/dev/null
 
 # Supabase migration versions are the numeric filename prefix, not the full
 # filename. Two files with the same prefix can appear to work in this raw
@@ -58,12 +56,12 @@ done
 
 for migration in supabase/migrations/*.sql; do
   echo "Applying $migration"
-  psql -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
+  psql -X -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
 done
 
 for test_file in supabase/testing/*.test.sql; do
   echo "Running $test_file"
-  psql -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$test_file"
+  psql -X -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$test_file"
 done
 
 bash scripts/test-validation-constraint-drift.sh "$DB_NAME"

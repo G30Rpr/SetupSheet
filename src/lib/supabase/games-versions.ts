@@ -7,7 +7,9 @@ import { createPublicClient } from "@/lib/supabase/public";
  * it. Degrades to null on any read failure so a missing table or a flaky
  * read never breaks the detail page.
  */
-export async function getGameCurrentVersion(game: string): Promise<string | null> {
+export async function getGameCurrentVersion(
+  game: string,
+): Promise<string | null> {
   if (!game) return null;
   const supabase = createPublicClient();
   const { data, error } = await supabase
