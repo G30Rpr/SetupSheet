@@ -64,6 +64,7 @@ for test_file in supabase/testing/*.test.sql; do
   psql -X -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$test_file"
 done
 
+bash scripts/test-validation-constraint-drift.sh "$DB_NAME"
 bash scripts/test-field-test-concurrency.sh "$DB_NAME"
 
 echo "All migrations and regression checks passed."
