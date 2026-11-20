@@ -59,9 +59,26 @@ not dispatch an apply. No database release is authorized by this document.
    `dry_run=false`. The apply job uses the protected Environment and refuses
    another branch, a mismatched SHA, or a default branch that advanced while
    awaiting approval. Keep merges paused for the duration of the release.
-6. Verify hosted catalogs and anonymous/cross-user denial cases, then promote
-   the matching Vercel deployment. Check `/api/health`, public reporting,
-   downloads, login, upload and private Garage flows. Stop on failed checks.
+6. **Before promoting the matching Vercel deployment**, run the public
+   reporting contract check against the live database from an authorized,
+   read-only operator connection:
+
+   ```bash
+   psql -X -v ON_ERROR_STOP=1 -f scripts/check-public-reporting-contract.sql
+   ```
+
+   Configure libpq connection settings privately outside command history or
+   GitHub logs. The SQL starts a read-only transaction, impersonates `anon`,
+   and probes the public reporting views with `LIMIT 0` (no rows disclosed).
+   It fails closed on missing underlying table privileges; a merely present
+   view is not enough. **Do not grant `anon` direct access to private field
+   reports as a workaround**: fix the public reporting projection instead.
+   On November 20, 2026 this check failed on both `field_test_reports_public`
+   and `field_test_counts` (SQLSTATE 42501), so that app promotion was held.
+7. Verify hosted catalogs and anonymous/cross-user denial cases, then promote
+   the matching validated Vercel deployment. Check `/api/health`, public
+   reporting, downloads, login, upload and private Garage flows. Stop on any
+   failed check.
 
 Each file and its history entry are committed atomically, but the whole batch
 is not one transaction. On failure, earlier files can already be applied;
