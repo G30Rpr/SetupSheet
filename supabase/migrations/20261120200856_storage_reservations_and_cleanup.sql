@@ -1,3 +1,6 @@
+-- Deployment and modern-migration tests wrap this whole file transactionally.
+set local lock_timeout = '5s';
+
 -- DRAFT: deploy only with the matching application/worker and isolated Storage
 -- integration evidence. Ordinary client writes are intentionally closed.
 -- Proposed account budget: 100 objects / 1 GiB, charged at the full 10 MiB
