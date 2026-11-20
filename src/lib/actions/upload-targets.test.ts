@@ -85,6 +85,18 @@ describe("createUploadTarget", () => {
     expect(result.path).toBeNull();
     expect(result.token).toBeNull();
   });
+  it("reports a closed rollout gate as temporarily unavailable", async () => {
+    adminRpc.mockResolvedValue({
+      data: null,
+      error: {
+        code: "55000",
+        message: "Storage lifecycle rollout gate is closed",
+      },
+    });
+    const result = await createUploadTarget("setup", "test.json", 1);
+    expect(result.token).toBeNull();
+    expect(result.error).toContain("temporarily unavailable");
+  });
   it("does not immediately delete abandoned files that another save may reference", async () => {
     await discardUploadedFiles([`${USER_ID}/test.json`]);
     expect(adminRpc).not.toHaveBeenCalled();

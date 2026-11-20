@@ -6,6 +6,25 @@
 create schema setupsheet_storage_private;
 revoke all on schema setupsheet_storage_private from public, anon, authenticated, service_role;
 
+-- Existing signed upload capabilities can outlive an RLS cutover. Activation
+-- requires an operator-verified drain; elapsed token TTL alone is not evidence
+-- that already-started provider streams have finished. Fail closed by default.
+create table setupsheet_storage_private.rollout (
+  singleton boolean primary key default true check (singleton),
+  legacy_drained_at timestamptz
+);
+insert into setupsheet_storage_private.rollout(singleton) values (true);
+alter table setupsheet_storage_private.rollout enable row level security;
+revoke all on setupsheet_storage_private.rollout from public, anon, authenticated, service_role;
+create function setupsheet_storage_private.ensure_active()
+returns void language plpgsql security invoker set search_path = '' as $$
+begin
+  if not exists (select 1 from setupsheet_storage_private.rollout where legacy_drained_at is not null) then
+    raise exception 'Storage lifecycle rollout gate is closed' using errcode = '55000';
+  end if;
+end $$;
+revoke all on function setupsheet_storage_private.ensure_active() from public, anon, authenticated, service_role;
+
 create table setupsheet_storage_private.objects (
   path text primary key check (char_length(path) between 1 and 512),
   owner_id uuid not null,
@@ -36,6 +55,7 @@ declare
   unknown_size boolean;
   result uuid;
 begin
+  perform setupsheet_storage_private.ensure_active();
   if p_kind is null or p_kind not in ('setup','telemetry')
      or p_owner is null or not exists (select 1 from public.profiles where id = p_owner)
      or p_path is null or char_length(p_path) > 512
@@ -83,6 +103,7 @@ create function public.begin_storage_upload(p_reservation uuid, p_owner uuid)
 returns jsonb language plpgsql security definer set search_path = '' set lock_timeout = '5s' as $$
 declare result jsonb;
 begin
+  perform setupsheet_storage_private.ensure_active();
   update setupsheet_storage_private.objects
   set state = 'issuing', upload_deadline = 'infinity'
   where reservation_id = p_reservation and owner_id = p_owner
@@ -185,6 +206,7 @@ declare
   object_capacity bigint;
   result uuid;
 begin
+  perform setupsheet_storage_private.ensure_active();
   if p_path is null or char_length(p_path) > 512
      or p_path !~ '^[0-9a-f-]{36}/[^/]+$' or p_path ~ '[\\[:cntrl:]]'
      or (p_user is not null and split_part(p_path, '/', 1) <> p_user::text)

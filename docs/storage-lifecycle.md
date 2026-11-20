@@ -6,6 +6,32 @@ extension-policy reconciliation from #68 and adapts its disposable test to run
 before the new write restrictions. Do not merge or deploy this branch until the
 staging and exact-SHA release gates below are met.
 
+## Closed rollout gate
+
+The migration creates a private rollout row with `legacy_drained_at = NULL`.
+Reservations, ticket consumption and deletion claims fail closed (SQLSTATE 55000) until that gate is deliberately activated. Inventory remains read-only;
+completion/finalization of previously acknowledged operations can still finish.
+No API role, including service_role, can change the gate directly.
+
+Before activation, stop legacy URL issuance and workers, invalidate/drain all
+previously issued provider capabilities using a verified provider procedure,
+and establish that already-started uploads have finished. Merely waiting the
+documented signed-token lifetime is insufficient. If this cannot be established,
+leave the gate closed; do not claim universal quota or safe legacy cleanup.
+
+After the verified drain, isolated staging acceptance and exact-SHA approval,
+the privileged release operator may execute this **separate reviewed activation**:
+
+```sql
+-- Never run as part of automatic migration or before verifying legacy drain.
+update setupsheet_storage_private.rollout
+set legacy_drained_at = clock_timestamp()
+where singleton and legacy_drained_at is null;
+```
+
+This is not authorization to run the statement on any hosted environment.
+Disposable SQL tests activate only their synthetic fixtures.
+
 ## Upload protocol
 
 The proposed default budget is **100 upload slots and 1 GiB of reserved
@@ -121,7 +147,9 @@ legacy workers and prevent out-of-protocol privileged deletion at cutover.
    Use project-scoped server secrets; never NEXT_PUBLIC privileged credentials.
 4. `verify_jwt=false` in the proposed function config is intentional: the handler
    always verifies the actual bearer token with Auth.getUser, supporting current
-   signing keys. Confirm anonymous/expired/revoked and cross-account denials.
+   signing keys. Confirm anonymous/expired and cross-account denials. Measure
+   session-revocation behavior; do not assume logout immediately invalidates
+   already-issued access tokens.
 5. Confirm hosted 5/10 MiB request delivery, content/metadata/byte round-trips,
    browser CORS, supported formats, rate/quota boundaries, one-use tickets,
    duplicate requests, network/process failures and claim retries. Verify that
@@ -133,7 +161,8 @@ legacy workers and prevent out-of-protocol privileged deletion at cutover.
 7. Approve the final default SHA and controlled release. Pause legacy cleanup
    workers, apply the complete SQL transaction, deploy the matching Edge/app/
    worker revisions and origins, and verify catalogs and real flows before
-   reopening uploads. Do not restore client write policies as an ad hoc
+   activating the closed rollout gate and reopening uploads. Confirm the legacy
+   provider-capability drain before activation. Do not restore client write policies as an ad hoc
    rollback while continuing to claim quota enforcement.
 
 ## Local validation commands

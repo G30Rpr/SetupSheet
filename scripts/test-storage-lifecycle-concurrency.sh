@@ -20,6 +20,8 @@ wait_for_sleep() {
 }
 # Unique actors keep this fixture independent of all preceding test files.
 q <<'SQL' >/dev/null
+-- Disposable fixture only; hosted activation requires verified legacy drain.
+update setupsheet_storage_private.rollout set legacy_drained_at=clock_timestamp();
 insert into auth.users(id,email) values
  ('73000000-0000-4000-8000-000000000001','storage-race-quota@test.local'),
  ('73000000-0000-4000-8000-000000000002','storage-race-attach@test.local');
