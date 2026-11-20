@@ -2,8 +2,9 @@
 
 # Next.js version note
 
-This project runs a standard, published Next.js release — `next ^16.3.3`
-(App Router, with `src/proxy.ts` as the middleware entry point) — and there is
+This project runs a standard, published Next.js 16 release. Read `package.json`
+and `package-lock.json` for its current range and resolved version. It uses the
+App Router, with `src/proxy.ts` as the middleware entry point, and there is
 no custom fork and no `node_modules/next/dist/docs/` folder to consult; that
 path does not exist in this package. If you're unsure about an API, check the
 version pinned in `package.json` against the public Next.js docs for that
