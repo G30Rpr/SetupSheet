@@ -3,7 +3,7 @@
  * scripts/sweep-orphaned-files.mjs
  *
  * Operational tool to detect and prune orphaned objects in the public `setup-files` bucket.
- * Uses public.orphaned_setup_files() or public.setup_files_for_user() (from migration 0028).
+ * Uses the draft claim-based lifecycle RPCs; refuses legacy inventory-only deletion.
  *
  * Usage:
  *   # Dry run (list orphans older than 24 hours without deleting):
@@ -12,7 +12,7 @@
  *   # Explicitly delete reviewed orphans older than 48 hours:
  *   node scripts/sweep-orphaned-files.mjs --apply --grace "48 hours"
  *
- *   # Delete all files for an account undergoing deletion:
+ *   # Delete eligible, unreferenced files for an account undergoing deletion:
  *   node scripts/sweep-orphaned-files.mjs --user <user-uuid> --apply --confirm-user-delete
  *
  * Environment variables:
@@ -21,6 +21,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { cleanupStoragePaths } from "./storage-cleanup-protocol.mjs";
 import {
   parseStorageSweepArgs,
   validateCleanupPaths,
@@ -64,45 +65,17 @@ async function run() {
 
   let pathsToDelete = [];
 
-  if (targetUser) {
-    console.log("[Storage GC] Enumerating files for selected account...");
-    const { data, error } = await supabase.rpc("setup_files_for_user", {
-      p_user_id: targetUser,
-    });
-
-    if (error) {
-      console.error(
-        "[Storage GC] Failed to query setup_files_for_user:",
-        error.message,
-      );
-      process.exit(1);
-    }
-
-    pathsToDelete = (data || []).map((row) => row.object_name);
-    console.log(
-      `[Storage GC] Found ${pathsToDelete.length} object(s) for selected account.`,
-    );
-  } else {
-    console.log(
-      `[Storage GC] Querying orphaned setup files older than grace window "${graceArg}"...`,
-    );
-    const { data, error } = await supabase.rpc("orphaned_setup_files", {
-      p_grace: graceArg,
-    });
-
-    if (error) {
-      console.error(
-        "[Storage GC] Failed to query orphaned_setup_files:",
-        error.message,
-      );
-      process.exit(1);
-    }
-
-    pathsToDelete = (data || []).map((row) => row.object_name);
-    console.log(
-      `[Storage GC] Found ${pathsToDelete.length} orphaned object(s).`,
-    );
-  }
+  // Read-only inventory includes expired, never-uploaded reservations as
+  // well as legacy blobs. Eligibility is rechecked atomically before removal.
+  const { data, error } = await supabase.rpc("storage_cleanup_candidates", {
+    p_grace: graceArg,
+    p_user: targetUser,
+  });
+  if (error) throw new Error("Claim-based Storage inventory is unavailable");
+  pathsToDelete = (data || []).map((row) => row.object_name);
+  console.log(
+    `[Storage GC] Found ${pathsToDelete.length} eligible candidate(s).`,
+  );
 
   // Treat malformed RPC output as a hard failure, not a partial cleanup.
   // Only Storage objects under valid user folders may be removed.
@@ -128,29 +101,15 @@ async function run() {
 
   for (let i = 0; i < pathsToDelete.length; i += batchSize) {
     const batch = pathsToDelete.slice(i, i + batchSize);
-    const { data, error } = await supabase.storage
-      .from("setup-files")
-      .remove(batch);
-
-    if (error) {
-      console.error(
-        `[Storage GC] Batch delete error at offset ${i}:`,
-        error.message,
-      );
-      errorCount += batch.length;
-    } else {
-      const successfulDeletes = data?.length ?? 0;
-      if (successfulDeletes !== batch.length) {
-        console.error(
-          `[Storage GC] Batch ${Math.floor(i / batchSize) + 1}: only ${successfulDeletes}/${batch.length} objects confirmed removed.`,
-        );
-        errorCount += batch.length - successfulDeletes;
-      }
-      deletedCount += successfulDeletes;
-      console.log(
-        `[Storage GC] Pruned batch ${Math.floor(i / batchSize) + 1} (${successfulDeletes} files)`,
-      );
-    }
+    const result = await cleanupStoragePaths(supabase, batch, {
+      grace: graceArg,
+      targetUser,
+    });
+    deletedCount += result.deleted;
+    errorCount += result.errors;
+    console.log(
+      `[Storage GC] Batch ${Math.floor(i / batchSize) + 1}: ${result.deleted} completed, ${result.skipped} no longer eligible, ${result.errors} errors.`,
+    );
   }
 
   console.log(
