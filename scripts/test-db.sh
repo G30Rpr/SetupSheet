@@ -56,7 +56,13 @@ done
 
 for migration in supabase/migrations/*.sql; do
   echo "Applying $migration"
-  psql -X -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
+  version=${migration##*/}
+  version=${version%%_*}
+  apply_flags=()
+  # Modern migrations rely on atomic delivery and SET LOCAL, just like the
+  # manual release runner. Historical files may contain their own BEGIN/COMMIT.
+  if (( 10#$version >= 41 )); then apply_flags+=(--single-transaction); fi
+  psql -X -d "$DB_NAME" -v ON_ERROR_STOP=1 "${apply_flags[@]}" -f "$migration" >/dev/null
 done
 
 for test_file in supabase/testing/*.test.sql; do

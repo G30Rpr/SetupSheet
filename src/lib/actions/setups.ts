@@ -208,7 +208,9 @@ export async function createUploadTarget(
     return {
       ...empty,
       error:
-        "Couldn't reserve storage. Your account may be at its upload limit.",
+        reserveError?.code === "55000"
+          ? "Uploads are temporarily unavailable."
+          : "Couldn't reserve storage. Your account may be at its upload limit.",
     };
   }
   // Preserve the response shape; token now means an owner-bound, one-use

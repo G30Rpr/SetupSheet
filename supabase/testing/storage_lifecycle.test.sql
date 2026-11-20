@@ -1,5 +1,15 @@
 -- Metadata fixtures only. Hosted signed-token/blob behavior remains a release gate.
 begin;
+-- The deployed migration must not accidentally enable a legacy-capability
+-- cutover. Only this disposable fixture activates it after proving the gate.
+do $$
+begin
+  begin
+    perform public.claim_storage_cleanup('72000000-0000-4000-8000-000000000001/legacy.json');
+    raise exception 'REGRESSION: rollout gate opened automatically';
+  exception when object_not_in_prerequisite_state then null; end;
+end $$;
+update setupsheet_storage_private.rollout set legacy_drained_at=clock_timestamp();
 insert into auth.users(id,email) values
  ('72000000-0000-4000-8000-000000000001','storage-lifecycle@test.local');
 create or replace function auth.uid() returns uuid language sql stable as
