@@ -110,11 +110,15 @@ select count(*) from public.orphaned_setup_files('7 days');   -- audit first
 - Deletion is intentionally not implemented in SQL. Run the list, then delete via the
   Storage API above; re-running the query afterwards should return 0 rows.
 - Automated CLI tool: run `npm run storage:sweep -- --dry-run` to audit orphans without
-  deleting, or `npm run storage:sweep` to delete in batches via the Storage API.
-  For completed account deletions: first preview with `npm run storage:sweep -- --user <user-uuid> --dry-run`, then (only after verifying the account deletion request) `npm run storage:sweep -- --user <user-uuid> --confirm-user-delete`. Unconfirmed account-folder deletion is rejected.
-- The existing Sunday GitHub Actions scheduled sweep remains destructive; manual workflow dispatch defaults to **dry-run**. The job now fails loudly when credentials are missing, validates paths and parameters, and reports partial deletions as failures. Never place user IDs or Storage object paths into CI logs.
-- Scheduled sweeps: configure a scheduled workflow (or cron) running `npm run storage:sweep`
-  with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to automate weekly maintenance.
+  deleting, or `npm run storage:sweep -- --apply` to explicitly delete reviewed candidates via the Storage API.
+  For completed account deletions: first preview with `npm run storage:sweep -- --user <user-uuid> --dry-run`, then (only after verifying the account deletion request) `npm run storage:sweep -- --user <user-uuid> --apply --confirm-user-delete`. Unconfirmed account-folder deletion is rejected.
+- The checked-in Sunday workflow and bare `npm run storage:sweep` inventory only.
+  Manual deletion requires explicitly selecting `dry_run=false` on the current
+  default branch revision. Configure external schedulers for read-only inventory
+  until the attachment/cleanup race has a verified atomic protocol.
+- The job fails when credentials are missing, validates paths and parameters,
+  and reports partial deletions as failures. Never place user IDs or Storage
+  object paths into CI logs.
 
 ### Per-account listing
 
@@ -257,7 +261,7 @@ Remove or hide violating content using the existing owner/admin process, and pre
      ```bash
      npm run storage:sweep -- --user <USER_UUID> --dry-run
      # After confirming the deletion request and file ownership:
-     npm run storage:sweep -- --user <USER_UUID> --confirm-user-delete
+     npm run storage:sweep -- --user <USER_UUID> --apply --confirm-user-delete
      ```
   4. Complete request and delete user from `auth.users` (cascading public profiles, setups, versions, ratings, comments, and upvotes):
      ```sql
@@ -288,7 +292,7 @@ Remove or hide violating content using the existing owner/admin process, and pre
      - For `comment`: `select * from public.setup_comments where id = '<TARGET_ID>'::uuid;`
      - For `profile`: `select * from public.profiles where id = '<TARGET_ID>'::uuid;`
   3. Action:
-     - If violating: delete the offending comment or setup (followed by `npm run storage:sweep`), and suspend/ban the author if malicious.
+     - If violating: delete the offending comment or setup (followed by reviewed cleanup using `npm run storage:sweep -- --apply`), and suspend/ban the author if malicious.
      - Update report status:
        ```sql
        update public.content_reports
@@ -356,3 +360,38 @@ The workflow reference alone does not configure required Environment reviewers.
   Missing credentials fail the corresponding job rather than silently skipping.
 - Keep migrations compatible with the running app and the target app. Coordinate
   the database release and Vercel promotion; an app rollback does not undo SQL.
+
+## Public report logs
+
+Telemetry and CSP request bodies retain their byte limits and five-second read
+deadline. Accepted reports are sampled per request before logging. The server
+configuration `REPORT_LOG_SAMPLE_RATE` accepts a finite value from 0 through 1:
+`0` disables these logs, `1` retains every accepted batch, and the default is
+`0.1` (10%). Missing, blank or invalid settings use that default. This setting
+is server-only; a value in a client payload cannot override it.
+
+Each sampled CSP batch produces one `CSP violation` log entry with up to 20
+sanitized reports, rather than one entry per violation. Its structured payload
+is `error.reports[]`; both reporting routes include `error.sampleRate`. Use the
+recorded rate when interpreting sampled counts; they are not total traffic.
+Directive details, non-scalar line numbers, unknown same-origin paths, and
+individual asset names are omitted or replaced with fixed labels. External URL
+origins remain available for diagnosis; query strings and external paths do not.
+
+Sampling reduces expected log volume. It does not impose a global request quota
+or prevent function invocations; shared edge/WAF rate limiting remains a
+separate deployment control. Changing the setting requires a new deployment.
+
+### Storage cleanup deletion boundary
+
+The CLI defaults to dry-run. Orphan cleanup requires `--apply`; account-folder
+cleanup additionally requires `--user <uuid> --confirm-user-delete`. The weekly
+GitHub workflow inventories only. A manual destructive dispatch must explicitly
+select `dry_run=false`, the default branch, and its current revision.
+
+The eligibility lookup and Storage API deletion are separate operations. This
+change does not make reference checking atomic with deletion. Before applying,
+review the candidate inventory, coordinate an application write pause and confirm
+that files are neither referenced nor in flight. Shared upload quotas, compatible
+Storage policies, and an atomic cleanup/attachment protocol remain tracked in
+issue #43. No scheduled deletion is enabled by this default.
