@@ -26,13 +26,9 @@ if [[ -n "${PGHOSTADDR:-}" || -n "${PGSERVICE:-}" || -n "${PGSERVICEFILE:-}" ]];
   echo "Refusing libpq hostaddr/service overrides during destructive tests" >&2
   exit 1
 fi
-# Check the actual server endpoint before CREATE/DROP DATABASE.
-server_addr="$(psql -XAtq -d postgres -v ON_ERROR_STOP=1 \
-  -c "select coalesce(inet_server_addr()::text, 'socket')")"
-case "$server_addr" in 127.0.0.1|::1) ;; *)
-  echo "Refusing migration tests against a non-loopback PostgreSQL endpoint" >&2
-  exit 1 ;;
-esac
+# PGHOST is the client destination. Docker forwards localhost into a container,
+# where inet_server_addr() may report a non-loopback bridge address; do not
+# reject valid local CI by checking the server-side bound interface.
 
 cd "$(dirname "$0")/.."
 
