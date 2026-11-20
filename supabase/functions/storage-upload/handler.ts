@@ -61,8 +61,10 @@ export function createUploadHandler(options: {
   admin: UploadAdmin;
   origins: string[];
   bodyTimeoutMs?: number;
+  inFlight?: { active: number };
 }) {
   const { admin, origins, bodyTimeoutMs = 20_000 } = options;
+  const inFlight = options.inFlight ?? { active: 0 };
   return async (request: Request): Promise<Response> => {
     const origin = request.headers.get("origin");
     const allowed = origin !== null && origins.includes(origin);
@@ -99,6 +101,13 @@ export function createUploadHandler(options: {
     ) {
       return reply(401, "Authentication and upload ticket required");
     }
+    // Bound raw buffers, Blob copies and parsing work within one Edge isolate.
+    // Refuse before consuming a ticket, so the same ticket can be retried.
+    if (inFlight.active >= 2) {
+      headers.set("Retry-After", "1");
+      return reply(429, "Upload gateway is busy; retry shortly");
+    }
+    inFlight.active++;
     try {
       // Verify against Auth. A decoded JWT or user_metadata is never authority.
       const { data: auth, error: authError } = await admin.auth.getUser(
@@ -150,6 +159,7 @@ export function createUploadHandler(options: {
       // in responses/logs. An uncertain provider request stays charged/blocked.
       return reply(502, "Upload could not be confirmed");
     } finally {
+      inFlight.active--;
       void request.body?.cancel().catch(() => {});
     }
   };

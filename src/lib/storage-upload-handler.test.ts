@@ -70,6 +70,21 @@ describe("trusted upload Edge handler", () => {
     );
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
+  it("bounds isolate concurrency before consuming a ticket or reading bytes", async () => {
+    const getUser = vi.fn();
+    const inFlight = { active: 2 };
+    const admin = { auth: { getUser } } as unknown as UploadAdmin;
+    const handle = createUploadHandler({
+      admin,
+      origins: ["https://app.example"],
+      inFlight,
+    });
+    const response = await handle(request());
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("1");
+    expect(getUser).not.toHaveBeenCalled();
+    expect(inFlight.active).toBe(2);
+  });
   it("denies unapproved origins before making privileged calls", async () => {
     const { handle, getUser, upload } = setup();
     expect(

@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { createUploadHandler } from "./handler.ts";
 
+const inFlight = { active: 0 };
+
 Deno.serve(async (request: Request) => {
   try {
     const url = Deno.env.get("SUPABASE_URL");
@@ -44,7 +46,7 @@ Deno.serve(async (request: Request) => {
           }),
       },
     });
-    return await createUploadHandler({ admin, origins })(request);
+    return await createUploadHandler({ admin, origins, inFlight })(request);
   } catch {
     return new Response("Uploads unavailable", {
       status: 503,

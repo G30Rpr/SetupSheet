@@ -29,7 +29,8 @@ objects but cannot reserve more. These are draft product limits for review.
    matching ticket with `begin_storage_upload`. It never trusts decoded claims,
    user_metadata, caller-supplied owners or caller-supplied object paths.
 3. The function bounds actual received bytes (5 MiB setup, 10 MiB telemetry)
-   and total body read time (20 seconds), checks the shared file-signature
+   and total body read time (20 seconds), bounds each isolate to two active
+   requests before consuming tickets, checks the shared file-signature
    rules, then performs one non-upsert privileged Storage upload. It forces
    `application/octet-stream` rather than trusting a browser MIME label.
 4. Only after Storage acknowledges completion and its metadata exists can
