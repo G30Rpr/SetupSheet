@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { readBoundedRequestBody } from "@/lib/bounded-request-body";
+import { sampleReportLog } from "@/lib/report-log-sampling";
+import { safeReportPath } from "@/lib/reporting-paths";
 import { logger } from "@/lib/logger";
 import { isSameOriginRequest } from "@/lib/request-origin";
 
@@ -12,17 +14,58 @@ import { isSameOriginRequest } from "@/lib/request-origin";
  * enforce a reliable global per-IP quota on its own.
  */
 const MAX_BODY_BYTES = 16 * 1024;
-const MAX_FIELD_LENGTH = 500;
 const MAX_REPORTS_PER_REQUEST = 20;
 const UUID =
   /[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
+const DIRECTIVES = new Set([
+  "default-src",
+  "script-src",
+  "script-src-elem",
+  "script-src-attr",
+  "style-src",
+  "style-src-elem",
+  "style-src-attr",
+  "img-src",
+  "connect-src",
+  "font-src",
+  "object-src",
+  "media-src",
+  "child-src",
+  "frame-src",
+  "worker-src",
+  "manifest-src",
+  "base-uri",
+  "form-action",
+  "frame-ancestors",
+  "navigate-to",
+  "prefetch-src",
+  "sandbox",
+  "upgrade-insecure-requests",
+  "block-all-mixed-content",
+  "require-trusted-types-for",
+  "trusted-types",
+  "report-uri",
+  "report-to",
+]);
 
-function truncate(value: unknown): string {
-  if (typeof value !== "string") return "";
-  const safe = value.replace(/[\u0000-\u001f\u007f]/g, " ");
-  return safe.length > MAX_FIELD_LENGTH
-    ? `${safe.slice(0, MAX_FIELD_LENGTH)}…`
-    : safe;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function safeDirective(value: unknown): string {
+  if (typeof value !== "string") return "unknown";
+  const directive = value.trim().split(/\s+/, 1)[0];
+  return DIRECTIVES.has(directive) ? directive : "unknown";
+}
+
+function safeLineNumber(value: unknown): number | undefined {
+  if (typeof value !== "number" && typeof value !== "string") return undefined;
+  if (typeof value === "string" && !/^[0-9]{1,9}$/.test(value))
+    return undefined;
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 0 && number <= 999_999_999
+    ? number
+    : undefined;
 }
 
 /** Keep same-origin path context, but never log query strings, fragments or raw external paths. */
@@ -35,17 +78,31 @@ function sanitizeUri(value: unknown, requestUrl: string): string {
       raw,
     )
   ) {
-    return truncate(raw);
+    return raw;
   }
 
   try {
     const base = new URL(requestUrl);
     const url = new URL(raw, base);
-    if (url.protocol !== "http:" && url.protocol !== "https:")
-      return `${url.protocol}`;
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return [
+        "data:",
+        "blob:",
+        "about:",
+        "javascript:",
+        "chrome-extension:",
+        "moz-extension:",
+        "safari-extension:",
+      ].includes(url.protocol)
+        ? url.protocol
+        : "other:";
+    }
     if (url.origin !== base.origin) return url.origin;
     const path = url.pathname.replace(UUID, ":id");
-    return truncate(`${url.origin}${path}`);
+    const safe = path.startsWith("/_next/static/")
+      ? "/_next/static/:asset"
+      : safeReportPath(path);
+    return `${url.origin}${safe ?? "/:redacted"}`;
   } catch {
     return "";
   }
@@ -90,42 +147,45 @@ export async function POST(request: Request) {
     });
   }
 
-  const body = payload as {
-    "csp-report"?: Record<string, unknown>;
-    "csp-violation"?: Record<string, unknown>;
-  } | null;
-
   const reports: Record<string, unknown>[] = [];
-  if (body?.["csp-report"]) reports.push(body["csp-report"]);
-  if (body?.["csp-violation"]) reports.push(body["csp-violation"]);
+  if (isRecord(payload)) {
+    if (isRecord(payload["csp-report"])) reports.push(payload["csp-report"]);
+    if (isRecord(payload["csp-violation"]))
+      reports.push(payload["csp-violation"]);
+  }
   if (Array.isArray(payload)) {
     for (const entry of payload.slice(0, MAX_REPORTS_PER_REQUEST)) {
-      const report = (entry as { body?: Record<string, unknown> })?.body;
-      if (report) reports.push(report);
+      if (isRecord(entry) && isRecord(entry.body)) reports.push(entry.body);
     }
   }
 
-  for (const report of reports.slice(0, MAX_REPORTS_PER_REQUEST)) {
-    logger.warn("CSP violation", {
-      blockedURI: sanitizeUri(
-        report["blocked-uri"] ?? report["blockedURI"],
-        request.url,
-      ),
-      violatedDirective: truncate(
-        report["violated-directive"] ?? report["effectiveDirective"],
-      ),
-      documentURI: sanitizeUri(
-        report["document-uri"] ?? report["documentURL"],
-        request.url,
-      ),
-      sourceFile: sanitizeUri(
-        report["source-file"] ?? report["sourceFile"],
-        request.url,
-      ),
-      lineNumber: truncate(
-        String(report["line-number"] ?? report["lineNumber"] ?? ""),
-      ),
-    });
+  if (reports.length > 0) {
+    const sampleRate = sampleReportLog();
+    if (sampleRate !== null) {
+      logger.warn("CSP violation", {
+        sampleRate,
+        reports: reports.slice(0, MAX_REPORTS_PER_REQUEST).map((report) => ({
+          blockedURI: sanitizeUri(
+            report["blocked-uri"] ?? report["blockedURI"],
+            request.url,
+          ),
+          violatedDirective: safeDirective(
+            report["violated-directive"] ?? report["effectiveDirective"],
+          ),
+          documentURI: sanitizeUri(
+            report["document-uri"] ?? report["documentURL"],
+            request.url,
+          ),
+          sourceFile: sanitizeUri(
+            report["source-file"] ?? report["sourceFile"],
+            request.url,
+          ),
+          lineNumber: safeLineNumber(
+            report["line-number"] ?? report["lineNumber"],
+          ),
+        })),
+      });
+    }
   }
 
   return new NextResponse(null, {

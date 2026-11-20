@@ -1,5 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
+const { sampleLog } = vi.hoisted(() => ({
+  sampleLog: vi.fn((): number | null => 1),
+}));
+vi.mock("@/lib/report-log-sampling", () => ({ sampleReportLog: sampleLog }));
+
 import { POST } from "@/app/api/csp-report/route";
 
 /**
@@ -29,6 +34,7 @@ describe("POST /api/csp-report", () => {
   let warn: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    sampleLog.mockReturnValue(1);
     warn = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
@@ -60,6 +66,74 @@ describe("POST /api/csp-report", () => {
     expect(body.locked).toBe(false);
     expect(vi.getTimerCount()).toBe(0);
   });
+
+  it("does not log an unsampled report", async () => {
+    sampleLog.mockReturnValue(null);
+    const response = await postJson({
+      "csp-report": { "violated-directive": "script-src" },
+    });
+    expect(response.status).toBe(204);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("redacts unknown paths, asset names, directive details and non-scalar line numbers", async () => {
+    const response = await postJson({
+      "csp-report": {
+        "violated-directive":
+          "script-src 'nonce-private-nonce' https://example.com/private-token",
+        "document-uri": "https://setupsheet.app/private-token?code=oauth-code",
+        "source-file":
+          "https://setupsheet.app/_next/static/chunks/private-filename.js",
+        "line-number": { toString: null, secret: "private-line-value" },
+      },
+    });
+    expect(response.status).toBe(204);
+    const logged = loggedPayload(warn.mock.calls[0]);
+    expect(logged).toContain("script-src");
+    expect(logged).toContain("/:redacted");
+    expect(logged).toContain("/_next/static/:asset");
+    expect(logged).not.toMatch(/private-|oauth-code/);
+  });
+
+  it.each(["42", 42])("accepts a scalar line number %j", async (lineNumber) => {
+    await postJson({ "csp-report": { "line-number": lineNumber } });
+    expect(loggedPayload(warn.mock.calls[0])).toContain('"lineNumber":42');
+  });
+
+  it("normalizes public IDs and drops arbitrary protocol labels", async () => {
+    await postJson({
+      "csp-report": {
+        "document-uri":
+          "https://setupsheet.app/profile/11111111-1111-4111-8111-111111111111",
+        "blocked-uri": "private-secret-token:payload",
+      },
+    });
+    const logged = loggedPayload(warn.mock.calls[0]);
+    expect(logged).toContain("/profile/:id");
+    expect(logged).toContain("other:");
+    expect(logged).not.toContain("11111111");
+    expect(logged).not.toContain("private-secret-token");
+  });
+
+  it.each([true, -4, "12secret", null, { toString: null }])(
+    "drops an invalid line number %j",
+    async (lineNumber) => {
+      const response = await postJson({
+        "csp-report": { "line-number": lineNumber },
+      });
+      expect(response.status).toBe(204);
+      expect(loggedPayload(warn.mock.calls[0])).not.toContain('"lineNumber"');
+    },
+  );
+
+  it.each(["text", 17, [], true])(
+    "ignores a non-object report %j",
+    async (report) => {
+      const response = await postJson({ "csp-report": report });
+      expect(response.status).toBe(204);
+      expect(warn).not.toHaveBeenCalled();
+    },
+  );
 
   it("accepts a legacy csp-report payload with a 204 and logs the directive", async () => {
     const response = await postJson({
@@ -109,7 +183,8 @@ describe("POST /api/csp-report", () => {
 
     const logged = loggedPayload(warn.mock.calls[0]);
     expect(logged.length).toBeLessThan(2000);
-    expect(logged).toContain("…");
+    expect(logged).toContain("unknown");
+    expect(logged).not.toContain(longButBounded.slice(0, 50));
 
     warn.mockClear();
     const oversized = await postJson({
@@ -158,7 +233,11 @@ describe("POST /api/csp-report", () => {
 
     const response = await postJson(entries);
     expect(response.status).toBe(204);
-    expect(warn.mock.calls.length).toBeGreaterThan(0);
-    expect(warn.mock.calls.length).toBeLessThanOrEqual(20);
+    expect(warn).toHaveBeenCalledOnce();
+    const logged = JSON.parse(loggedPayload(warn.mock.calls[0])) as {
+      error: { reports: unknown[]; sampleRate: number };
+    };
+    expect(logged.error.reports).toHaveLength(20);
+    expect(logged.error.sampleRate).toBe(1);
   });
 });

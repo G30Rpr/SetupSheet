@@ -171,6 +171,9 @@ supabase/
 
 ## Getting started
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for validation commands, disposable SQL
+testing and the migration/release review process.
+
 Use Node.js 24.x, matching CI and the Vercel project runtime. The checked-in
 `.nvmrc` selects that major with nvm; Node type definitions also target 24.
 
