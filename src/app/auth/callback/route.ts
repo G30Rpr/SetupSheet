@@ -18,7 +18,14 @@ export async function GET(request: Request) {
   if (code) {
     try {
       const supabase = await createClient();
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      // Bind callbacks to the verifier for this OAuth attempt. Pass an
+      // explicitly empty/invalid ID through too: the SDK must fail closed,
+      // rather than falling back to another in-flight attempt's verifier.
+      const flowId = searchParams.get("sb_flow_id");
+      const { error } =
+        flowId === null
+          ? await supabase.auth.exchangeCodeForSession(code)
+          : await supabase.auth.exchangeCodeForSession(code, { flowId });
 
       if (!error) {
         // Do not reflect x-forwarded-host here. Unless a deployment proxy
