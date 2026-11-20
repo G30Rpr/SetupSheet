@@ -7,6 +7,19 @@ if ! [[ "$DB_NAME" =~ ^setupsheet_migration_test_[0-9]+$ ]]; then
   echo "Refusing to run outside the migration test database." >&2
   exit 1
 fi
+# This helper mutates fixtures and can run standalone, so repeat the endpoint
+# guard rather than trusting the caller's scratch-looking database name.
+case "${PGHOST:-localhost}" in localhost|127.0.0.1|::1) ;; *)
+  echo "Refusing concurrency test on non-loopback PGHOST" >&2; exit 1 ;;
+esac
+if [[ -n "${PGHOSTADDR:-}" || -n "${PGSERVICE:-}" || -n "${PGSERVICEFILE:-}" ]]; then
+  echo "Refusing libpq hostaddr/service overrides" >&2; exit 1
+fi
+server_addr="$(psql -XAtq -d "$DB_NAME" -v ON_ERROR_STOP=1 \
+  -c "select coalesce(inet_server_addr()::text, 'socket')")"
+case "$server_addr" in 127.0.0.1|::1) ;; *)
+  echo "Refusing concurrency test against non-loopback PostgreSQL" >&2; exit 1 ;;
+esac
 TMP_DIR=$(mktemp -d)
 cleanup() {
   if [[ -n "${PID_ONE:-}" ]]; then kill "$PID_ONE" 2>/dev/null || true; fi
