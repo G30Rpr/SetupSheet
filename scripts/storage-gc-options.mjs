@@ -13,7 +13,7 @@ function parsePositiveInteger(text, flag, upperBound) {
 }
 
 export function parseStorageSweepArgs(args) {
-  let dryRun = false;
+  let dryRun = true;
   let grace = DEFAULT_GRACE;
   let targetUser = null;
   let batchSize = 50;
@@ -25,6 +25,7 @@ export function parseStorageSweepArgs(args) {
     if (
       ![
         "--dry-run",
+        "--apply",
         "--grace",
         "--user",
         "--batch-size",
@@ -37,6 +38,8 @@ export function parseStorageSweepArgs(args) {
     seen.add(flag);
     if (flag === "--dry-run") {
       dryRun = true;
+    } else if (flag === "--apply") {
+      dryRun = false;
     } else if (flag === "--confirm-user-delete") {
       confirmUserDelete = true;
     } else {
@@ -68,8 +71,14 @@ export function parseStorageSweepArgs(args) {
     }
   }
 
+  if (seen.has("--apply") && seen.has("--dry-run")) {
+    throw new Error("--apply and --dry-run are mutually exclusive");
+  }
   if (confirmUserDelete && !targetUser) {
     throw new Error("--confirm-user-delete requires --user");
+  }
+  if (confirmUserDelete && dryRun) {
+    throw new Error("--confirm-user-delete requires --apply");
   }
   if (targetUser && !dryRun && !confirmUserDelete) {
     throw new Error(

@@ -9,11 +9,11 @@
  *   # Dry run (list orphans older than 24 hours without deleting):
  *   node scripts/sweep-orphaned-files.mjs --dry-run
  *
- *   # Delete orphans older than 48 hours:
- *   node scripts/sweep-orphaned-files.mjs --grace "48 hours"
+ *   # Explicitly delete reviewed orphans older than 48 hours:
+ *   node scripts/sweep-orphaned-files.mjs --apply --grace "48 hours"
  *
  *   # Delete all files for an account undergoing deletion:
- *   node scripts/sweep-orphaned-files.mjs --user <user-uuid>
+ *   node scripts/sweep-orphaned-files.mjs --user <user-uuid> --apply --confirm-user-delete
  *
  * Environment variables:
  *   SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL
