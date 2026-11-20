@@ -356,3 +356,24 @@ The workflow reference alone does not configure required Environment reviewers.
   Missing credentials fail the corresponding job rather than silently skipping.
 - Keep migrations compatible with the running app and the target app. Coordinate
   the database release and Vercel promotion; an app rollback does not undo SQL.
+
+## Public report logs
+
+Telemetry and CSP request bodies retain their byte limits and five-second read
+deadline. Accepted reports are sampled per request before logging. The server
+configuration `REPORT_LOG_SAMPLE_RATE` accepts a finite value from 0 through 1:
+`0` disables these logs, `1` retains every accepted batch, and the default is
+`0.1` (10%). Missing, blank or invalid settings use that default. This setting
+is server-only; a value in a client payload cannot override it.
+
+Each sampled CSP batch produces one `CSP violation` log entry with up to 20
+sanitized reports, rather than one entry per violation. Its structured payload
+is `error.reports[]`; both reporting routes include `error.sampleRate`. Use the
+recorded rate when interpreting sampled counts; they are not total traffic.
+Directive details, non-scalar line numbers, unknown same-origin paths, and
+individual asset names are omitted or replaced with fixed labels. External URL
+origins remain available for diagnosis; query strings and external paths do not.
+
+Sampling reduces expected log volume. It does not impose a global request quota
+or prevent function invocations; shared edge/WAF rate limiting remains a
+separate deployment control. Changing the setting requires a new deployment.
