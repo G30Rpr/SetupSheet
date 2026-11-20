@@ -1,5 +1,8 @@
 -- Metadata-only disposable database test. This does not upload Storage blobs.
 begin;
+-- Exercise the earlier repair in an isolated transaction even when the later
+-- lifecycle migration has intentionally removed ordinary client write policies.
+\ir ../migrations/0019_storage_extension_hardening.sql
 create temporary table storage_policy_before as
 select * from pg_catalog.pg_policies where schemaname = 'storage' and tablename = 'objects';
 -- Reproduce the verified hosted drift, then reconcile it additively.

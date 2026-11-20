@@ -1,37 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-/**
- * Covers the security-relevant half of the direct-to-Storage upload flow:
- * who gets a signed URL, where it points, and what happens to the path
- * afterwards. The path is the whole boundary -- Supabase Storage policies key
- * off `<userId>/<object>` -- so every case below asserts either that no
- * signing happened, or that the signed path stayed inside the caller's folder.
- */
-
 const USER_ID = "7ec21b4c-4a9b-4044-b2be-f6929af9be6a";
-
-const createSignedUploadUrl = vi.fn();
+const TICKET = "71000000-0000-4000-8000-000000000001";
 const storageInfo = vi.fn();
 const consumeUploadTargetRateLimit = vi.fn();
 const getCurrentUser = vi.fn();
-
+const adminRpc = vi.fn();
+const createStorageAdminClient = vi.fn();
+vi.mock("@/lib/supabase/storage-admin", () => ({ createStorageAdminClient }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     rpc: consumeUploadTargetRateLimit,
-    storage: {
-      from: () => ({
-        createSignedUploadUrl,
-        info: storageInfo,
-      }),
-    },
+    storage: { from: () => ({ info: storageInfo }) },
   }),
 }));
-
 vi.mock("@/lib/supabase/auth", () => ({
   getCurrentUser: (...args: unknown[]) => getCurrentUser(...args),
 }));
-
-const { createUploadTarget, verifyUploadedFile } =
+const { createUploadTarget, verifyUploadedFile, discardUploadedFiles } =
   await import("@/lib/actions/setups");
 
 describe("createUploadTarget", () => {
@@ -39,96 +24,71 @@ describe("createUploadTarget", () => {
     vi.clearAllMocks();
     getCurrentUser.mockResolvedValue({ id: USER_ID });
     consumeUploadTargetRateLimit.mockResolvedValue({ data: true, error: null });
-    createSignedUploadUrl.mockResolvedValue({
-      data: { token: "signed-token" },
-      error: null,
-    });
+    adminRpc.mockResolvedValue({ data: TICKET, error: null });
+    // No Storage signer is available: this action must never mint provider URLs.
+    createStorageAdminClient.mockReturnValue({ rpc: adminRpc });
   });
-
-  it("returns an owner-scoped path and token for a valid, authenticated upload", async () => {
+  it("returns a generated owner path and opaque one-use application ticket", async () => {
     const result = await createUploadTarget("setup", "Monza Q.json", 1024);
-
     expect(result.error).toBeNull();
-    expect(result.token).toBe("signed-token");
+    expect(result.token).toBe(TICKET);
     expect(result.path?.startsWith(`${USER_ID}/`)).toBe(true);
     expect(result.fileName).toBe("Monza_Q.json");
-    expect(createSignedUploadUrl).toHaveBeenCalledWith(result.path);
-  });
-
-  it("refuses an anonymous caller without signing anything", async () => {
-    getCurrentUser.mockResolvedValue(null);
-
-    const result = await createUploadTarget("setup", "Monza.json", 1024);
-
-    expect(result.error).toContain("logged in");
-    expect(result.path).toBeNull();
-    expect(createSignedUploadUrl).not.toHaveBeenCalled();
-  });
-
-  it("refuses a disallowed extension without signing anything", async () => {
-    const result = await createUploadTarget("setup", "payload.html", 1024);
-
-    expect(result.error).toContain("Unsupported");
-    expect(createSignedUploadUrl).not.toHaveBeenCalled();
-  });
-
-  it("refuses a file over the limit without signing anything", async () => {
-    const result = await createUploadTarget(
-      "setup",
-      "big.json",
-      6 * 1024 * 1024,
-    );
-
-    expect(result.error).toContain("5 MB");
-    expect(createSignedUploadUrl).not.toHaveBeenCalled();
-  });
-
-  it("surfaces a signing failure as a retryable error and leaks no path", async () => {
-    createSignedUploadUrl.mockResolvedValue({
-      data: null,
-      error: { message: "nope" },
+    expect(adminRpc).toHaveBeenCalledExactlyOnceWith("reserve_storage_upload", {
+      p_owner: USER_ID,
+      p_path: result.path,
+      p_kind: "setup",
     });
-
-    const result = await createUploadTarget("setup", "Monza.json", 1024);
-
+  });
+  it.each([
+    { kind: "setup", name: "payload.html", size: 1 },
+    { kind: "setup", name: "large.json", size: 6 * 1024 * 1024 },
+    { kind: "avatar", name: "image.png", size: 1 },
+  ])(
+    "rejects invalid input before reserving capacity: $name",
+    async ({ kind, name, size }) => {
+      const result = await createUploadTarget(kind as "setup", name, size);
+      expect(result.error).not.toBeNull();
+      expect(adminRpc).not.toHaveBeenCalled();
+    },
+  );
+  it("does not reserve for an anonymous caller", async () => {
+    getCurrentUser.mockResolvedValue(null);
+    expect(
+      (await createUploadTarget("setup", "test.json", 1)).token,
+    ).toBeNull();
+    expect(adminRpc).not.toHaveBeenCalled();
+  });
+  it.each([
+    { data: false, error: null },
+    { data: null, error: { message: "unavailable" } },
+  ])(
+    "checks shared issuance rate limits before the quota RPC: %j",
+    async (response) => {
+      consumeUploadTargetRateLimit.mockResolvedValue(response);
+      expect(
+        (await createUploadTarget("setup", "test.json", 1)).token,
+      ).toBeNull();
+      expect(adminRpc).not.toHaveBeenCalled();
+    },
+  );
+  it("fails closed without a server credential", async () => {
+    createStorageAdminClient.mockReturnValue(null);
+    expect(
+      (await createUploadTarget("setup", "test.json", 1)).token,
+    ).toBeNull();
+    expect(adminRpc).not.toHaveBeenCalled();
+  });
+  it("withholds paths and tickets when quota reservation fails", async () => {
+    adminRpc.mockResolvedValue({ data: null, error: { message: "quota" } });
+    const result = await createUploadTarget("setup", "test.json", 1);
     expect(result.path).toBeNull();
     expect(result.token).toBeNull();
-    expect(result.error).toContain("try again");
   });
-
-  it("rejects an unknown upload kind", async () => {
-    // @ts-expect-error deliberately invalid at the type level too
-    const result = await createUploadTarget("avatar", "a.png", 10);
-
-    expect(result.error).toContain("Unsupported upload type");
-    expect(createSignedUploadUrl).not.toHaveBeenCalled();
-  });
-
-  it("uses the shared database limit before minting a signed URL", async () => {
-    consumeUploadTargetRateLimit.mockResolvedValue({
-      data: false,
-      error: null,
-    });
-
-    const result = await createUploadTarget("setup", "overflow.json", 1024);
-
-    expect(result.error).toContain("Upload rate limit reached");
-    expect(result.path).toBeNull();
-    expect(consumeUploadTargetRateLimit).toHaveBeenCalledOnce();
-    expect(createSignedUploadUrl).not.toHaveBeenCalled();
-  });
-
-  it("fails closed if the shared rate-limit service is unavailable", async () => {
-    consumeUploadTargetRateLimit.mockResolvedValue({
-      data: null,
-      error: { message: "database unavailable" },
-    });
-
-    const result = await createUploadTarget("setup", "Monza.json", 1024);
-
-    expect(result.path).toBeNull();
-    expect(result.error).toContain("try again");
-    expect(createSignedUploadUrl).not.toHaveBeenCalled();
+  it("does not immediately delete abandoned files that another save may reference", async () => {
+    await discardUploadedFiles([`${USER_ID}/test.json`]);
+    expect(adminRpc).not.toHaveBeenCalled();
+    expect(storageInfo).not.toHaveBeenCalled();
   });
 });
 

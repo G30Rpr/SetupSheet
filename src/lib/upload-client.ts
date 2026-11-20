@@ -12,19 +12,9 @@ export interface DirectUploadResult {
 
 export type UploadProgressHandler = (percent: number) => void;
 
-/**
- * Uploads a file straight from the browser to Supabase Storage, using a
- * short-lived signed URL minted by the Server Action.
- *
- * The bytes never touch the Next.js server, which is what makes the 5 MB
- * setup / 10 MB telemetry limits actually reachable (the Server Action body
- * limit is 1 MB and Vercel's function request ceiling is ~4.5 MB).
- *
- * Order of operations is deliberate: cheap local checks first (extension,
- * size, content signature), then the signed URL, then the binary, then a
- * server-side re-verification of what actually landed. Each step fails with a
- * message the user can act on.
- */
+/** Upload through the authenticated Supabase Edge gateway. Keeping the binary
+ * outside Vercel preserves the 5/10 MiB limits without exposing a provider
+ * capability that could outlive cleanup. The ticket is owner-bound and one-use. */
 export async function uploadFileDirectly(
   kind: UploadKind,
   file: File,
@@ -64,30 +54,34 @@ export async function uploadFileDirectly(
   }
 
   const supabase = createClient();
-  // `x-upsert: false` so a path collision (which would mean a UUID collision)
-  // surfaces as an error instead of silently overwriting another object.
-  const upload = supabase.storage
-    .from("setup-files")
-    .uploadToSignedUrl(target.path, target.token, file, { upsert: false });
-
-  if (onProgress) {
-    // supabase-js exposes no upload progress callback over fetch, so this
-    // reports "in flight" rather than a byte count: a determinate bar would
-    // be a lie. It exists so a slow 10 MB telemetry pack shows visible
-    // movement instead of a frozen button.
-    onProgress(0);
-    const uploadWithProgress = upload.then((result) => {
-      onProgress(100);
-      return result;
-    });
-    void uploadWithProgress.catch(() => undefined);
-  } else {
-    void upload.catch(() => undefined);
-  }
-
-  const { error: uploadError } = await upload;
-  if (uploadError) {
-    logger.error("uploadFileDirectly: storage upload failed", uploadError);
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const backend = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!session?.access_token || !backend)
+    return { path: null, fileName: null, error: "Sign in to upload." };
+  onProgress?.(0);
+  try {
+    const response = await fetch(
+      new URL("/functions/v1/storage-upload", backend),
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+          "Content-Type": "application/octet-stream",
+          "x-upload-ticket": target.token,
+        },
+        body: file,
+        signal: AbortSignal.timeout(145_000),
+      },
+    );
+    if (!response.ok) throw new Error("Upload gateway rejected the request");
+    onProgress?.(100);
+  } catch {
+    logger.warn(
+      "uploadFileDirectly: upload gateway did not confirm completion",
+    );
     return {
       path: null,
       fileName: null,

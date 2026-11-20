@@ -26,12 +26,16 @@ Run the checks relevant to the change and record their results in the PR:
 npm run format:check
 npm run lint
 npm run typecheck
+npm run typecheck:edge
 npm run test
 npm run build:budget
 ```
 
 - `npm run format` applies the pinned Prettier rules. The pre-commit hook also
   runs ESLint/Prettier on supported staged files; CI checks the full tree.
+- Edge entrypoints use the pinned Deno runtime and frozen function lockfile.
+  Next.js typechecking excludes the Deno entrypoint; `typecheck:edge` checks it
+  and CI runs both checks. See `docs/storage-lifecycle.md` for isolated testing.
 - Unit tests live under `src/` and `scripts/` with `.test.ts`, `.test.tsx` or
   `.test.mjs` names. Add regression coverage for changed security/data behavior.
 - Browser tests live in `e2e/`. Run `npx playwright install chromium`, then

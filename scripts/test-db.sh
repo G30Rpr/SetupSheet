@@ -67,5 +67,6 @@ done
 bash scripts/test-validation-constraint-drift.sh "$DB_NAME"
 bash scripts/test-field-test-concurrency.sh "$DB_NAME"
 bash scripts/test-fulfillment-concurrency.sh "$DB_NAME"
+bash scripts/test-storage-lifecycle-concurrency.sh "$DB_NAME"
 
 echo "All migrations and regression checks passed."

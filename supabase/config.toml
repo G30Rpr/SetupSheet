@@ -45,3 +45,8 @@ file_size_limit = "10MiB"
 public = true
 file_size_limit = "10MiB"
 allowed_mime_types = []
+
+# DRAFT upload gateway: handler verifies the bearer token with Auth.getUser.
+# Manual verification supports current JWT signing keys; never trust claims alone.
+[functions.storage-upload]
+verify_jwt = false

@@ -13,6 +13,12 @@ export default defineConfig({
     globals: false,
   },
   resolve: {
-    alias: { "@": path.resolve(__dirname, "src") },
+    alias: {
+      "@": path.resolve(__dirname, "src"),
+      "server-only": path.resolve(
+        __dirname,
+        "src/lib/test-helpers/server-only.ts",
+      ),
+    },
   },
 });
