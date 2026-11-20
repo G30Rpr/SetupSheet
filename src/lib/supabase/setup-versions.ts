@@ -4,7 +4,13 @@ import type { Tables } from "@/lib/supabase/database.types";
 import { normalizeSetupValues } from "@/lib/setup-values";
 import { sanitizeStoredFileName } from "@/lib/storage";
 import { normalizeVideoUrl } from "@/lib/video-url";
-import type { Condition, Game, RigProfile, SetupTag, SetupVersion } from "@/lib/types";
+import type {
+  Condition,
+  Game,
+  RigProfile,
+  SetupTag,
+  SetupVersion,
+} from "@/lib/types";
 
 type SetupVersionRow = Tables<"setup_versions">;
 
@@ -23,7 +29,7 @@ const SETUP_VERSION_COLUMNS =
  * already known to the caller from the parent Setup.
  */
 export async function getSetupVersions(
-  setupId: string
+  setupId: string,
 ): Promise<{ versions: SetupVersion[]; error: string | null }> {
   const supabase = await createClient();
 
@@ -35,27 +41,32 @@ export async function getSetupVersions(
     .limit(200);
 
   if (result.error) {
-    logger.error("getSetupVersions: failed to load setup history", result.error);
+    logger.error(
+      "getSetupVersions: failed to load setup history",
+      result.error,
+    );
     return { versions: [], error: "Couldn't load history right now." };
   }
 
-  const versions = ((result.data ?? []) as unknown as SetupVersionRow[]).map((row) => ({
-    id: row.id,
-    createdAt: row.created_at,
-    game: row.game as Game,
-    car: row.car,
-    track: row.track,
-    condition: row.condition as Condition,
-    lapTime: row.lap_time ?? "",
-    gameVersion: row.game_version ?? null,
-    description: row.description,
-    tags: row.tags as SetupTag[],
-    rigProfile: row.rig_profile as RigProfile,
-    setupValues: normalizeSetupValues(row.setup_values),
-    fileName: sanitizeStoredFileName(row.file_name),
-    videoUrl: normalizeVideoUrl(row.video_url),
-    telemetryFileName: sanitizeStoredFileName(row.telemetry_file_name),
-  }));
+  const versions = ((result.data ?? []) as unknown as SetupVersionRow[]).map(
+    (row) => ({
+      id: row.id,
+      createdAt: row.created_at,
+      game: row.game as Game,
+      car: row.car,
+      track: row.track,
+      condition: row.condition as Condition,
+      lapTime: row.lap_time ?? "",
+      gameVersion: row.game_version ?? null,
+      description: row.description,
+      tags: row.tags as SetupTag[],
+      rigProfile: row.rig_profile as RigProfile,
+      setupValues: normalizeSetupValues(row.setup_values),
+      fileName: sanitizeStoredFileName(row.file_name),
+      videoUrl: normalizeVideoUrl(row.video_url),
+      telemetryFileName: sanitizeStoredFileName(row.telemetry_file_name),
+    }),
+  );
 
   return { versions, error: null };
 }

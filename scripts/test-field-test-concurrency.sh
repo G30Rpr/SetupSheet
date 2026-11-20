@@ -5,6 +5,8 @@
 set -euo pipefail
 
 DB_NAME="${1:?Usage: test-field-test-concurrency.sh <database-name>}"
+source "$(dirname "${BASH_SOURCE[0]}")/assert-local-test-db.sh"
+assert_local_test_db "$DB_NAME"
 REPORTER_ID="11111111-1111-4111-8111-111111111111"
 SETUP_ID="77777777-7777-4777-8777-777777777777"
 SESSION_ID="12121212-1212-4121-8121-121212121212"
@@ -13,9 +15,9 @@ TMP_DIR=$(mktemp -d)
 cleanup() {
   if [[ -n "${PID_ONE:-}" ]]; then kill "$PID_ONE" 2>/dev/null || true; fi
   if [[ -n "${PID_TWO:-}" ]]; then kill "$PID_TWO" 2>/dev/null || true; fi
-  psql -d "$DB_NAME" -v ON_ERROR_STOP=1 -c \
+  psql -X -d "$DB_NAME" -v ON_ERROR_STOP=1 -c \
     "drop trigger if exists test_delay_field_test_report_insert on public.field_test_reports;" >/dev/null 2>&1 || true
-  psql -d "$DB_NAME" -v ON_ERROR_STOP=1 -c \
+  psql -X -d "$DB_NAME" -v ON_ERROR_STOP=1 -c \
     "drop function if exists public.test_delay_field_test_report_insert();" >/dev/null 2>&1 || true
   rm -rf "$TMP_DIR"
 }
@@ -23,7 +25,7 @@ trap cleanup EXIT
 
 # Earlier SQL regression files pin auth.uid() to their own test user. Restore
 # the JWT-claim implementation used by the Supabase role/RLS harness.
-psql -d "$DB_NAME" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
+psql -X -d "$DB_NAME" -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 create or replace function auth.uid() returns uuid
 language sql stable
 as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;

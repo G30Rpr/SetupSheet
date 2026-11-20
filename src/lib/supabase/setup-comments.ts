@@ -23,7 +23,7 @@ interface SetupCommentRow {
  * activity rather than silently truncating to the oldest 200 comments.
  */
 export async function getSetupComments(
-  setupId: string
+  setupId: string,
 ): Promise<{ comments: SetupComment[]; error: string | null }> {
   const supabase = await createClient();
 
@@ -41,13 +41,24 @@ export async function getSetupComments(
     logger.error("getSetupComments: failed to load comments", result.error);
     return { comments: [], error: "Couldn't load comments right now." };
   }
-  const typedRows = ((result.data ?? []) as unknown as SetupCommentRow[]).slice().reverse();
+  const typedRows = ((result.data ?? []) as unknown as SetupCommentRow[])
+    .slice()
+    .reverse();
 
   const userIds = Array.from(new Set(typedRows.map((r) => r.user_id)));
   const { data: profiles } =
     userIds.length > 0
-      ? await supabase.from("profiles").select("id, username, avatar_url").in("id", userIds)
-      : { data: [] as { id: string; username: string; avatar_url: string | null }[] };
+      ? await supabase
+          .from("profiles")
+          .select("id, username, avatar_url")
+          .in("id", userIds)
+      : {
+          data: [] as {
+            id: string;
+            username: string;
+            avatar_url: string | null;
+          }[],
+        };
 
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
 

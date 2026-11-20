@@ -29,7 +29,8 @@ export async function getViewerRig(): Promise<ViewerRig> {
       .eq("user_id", user.id)
       .maybeSingle();
     if (error || !data) return { signedIn: true, axes: null };
-    if (!isRigInputDevice(data.input_device)) return { signedIn: true, axes: null };
+    if (!isRigInputDevice(data.input_device))
+      return { signedIn: true, axes: null };
 
     return {
       signedIn: true,

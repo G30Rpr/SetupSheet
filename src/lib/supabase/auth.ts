@@ -15,19 +15,21 @@ type ServerClient = Awaited<ReturnType<typeof createClient>>;
  * route, including public pages, and a dead Supabase project must not add a
  * timeout to every anonymous navigation.
  */
-export const getCurrentUser = cache(async (supabase: ServerClient): Promise<User | null> => {
-  const cookieStore = await cookies();
-  if (!hasSupabaseAuthCookie(cookieStore.getAll().map(({ name }) => name))) {
-    return null;
-  }
+export const getCurrentUser = cache(
+  async (supabase: ServerClient): Promise<User | null> => {
+    const cookieStore = await cookies();
+    if (!hasSupabaseAuthCookie(cookieStore.getAll().map(({ name }) => name))) {
+      return null;
+    }
 
-  try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    return user;
-  } catch (error) {
-    logger.error("getCurrentUser: failed to fetch current user", error);
-    return null;
-  }
-});
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      return user;
+    } catch (error) {
+      logger.error("getCurrentUser: failed to fetch current user", error);
+      return null;
+    }
+  },
+);

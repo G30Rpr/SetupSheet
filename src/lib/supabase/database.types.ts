@@ -171,8 +171,16 @@ export type Database = {
       };
       follows: {
         Row: { follower_id: string; followed_id: string; created_at: string };
-        Insert: { follower_id: string; followed_id: string; created_at?: string };
-        Update: { follower_id?: string; followed_id?: string; created_at?: string };
+        Insert: {
+          follower_id: string;
+          followed_id: string;
+          created_at?: string;
+        };
+        Update: {
+          follower_id?: string;
+          followed_id?: string;
+          created_at?: string;
+        };
         Relationships: Relationships;
       };
       notifications: {
@@ -838,6 +846,9 @@ export type Database = {
   };
 };
 
-export type Tables<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Row"];
-export type TablesInsert<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Insert"];
-export type TablesUpdate<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Update"];
+export type Tables<T extends keyof Database["public"]["Tables"]> =
+  Database["public"]["Tables"][T]["Row"];
+export type TablesInsert<T extends keyof Database["public"]["Tables"]> =
+  Database["public"]["Tables"][T]["Insert"];
+export type TablesUpdate<T extends keyof Database["public"]["Tables"]> =
+  Database["public"]["Tables"][T]["Update"];
