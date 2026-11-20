@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import {
   mkdtempSync,
+  readdirSync,
   readFileSync,
   existsSync,
   rmSync,
@@ -10,10 +11,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const scripts = [
-  "scripts/test-db.sh",
-  "scripts/test-field-test-concurrency.sh",
-];
+// Include new standalone concurrency/drift helpers automatically, so a scratch
+// name cannot become their only guard when they are introduced by another PR.
+const scripts = readdirSync("scripts")
+  .filter(
+    (name) => name === "test-db.sh" || /-(?:concurrency|drift)\.sh$/.test(name),
+  )
+  .map((name) => `scripts/${name}`);
 const rejectedEnvironments: Record<string, string>[] = [
   { PGHOST: "db.production.example" },
   { PGHOST: "127.0.0.1,db.production.example" },
@@ -43,6 +47,7 @@ function invoke(
       encoding: "utf8",
       timeout: 3_000,
       env: {
+        NODE_ENV: "test",
         PATH: `${directory}:${process.env.PATH ?? "/usr/bin:/bin"}`,
         TEST_PSQL_MARKER: marker,
         ...overrides,
@@ -74,18 +79,23 @@ describe.each(scripts)("%s destructive-target safeguards", (script) => {
       const result = invoke(script, { PGHOST });
       // The stand-in exits immediately; no real PostgreSQL server is contacted.
       expect(result.status, result.stderr).toBe(97);
-      expect(result.calls).toContain("-X\n");
+      expect(result.calls).toMatch(/(?:^|\n)-[A-Za-z]*X/);
     },
   );
 });
 
-it.each([
-  "postgres",
-  "host=production.example dbname=test",
-  "postgresql://production.example/test",
-  "setupsheet_migration_test_123;drop table profiles",
-])("rejects an unsafe standalone test database name: %s", (database) => {
-  const result = invoke("scripts/test-field-test-concurrency.sh", {}, database);
-  expect(result.status, result.stderr).toBe(1);
-  expect(result.calls).toBe("");
-});
+describe.each(scripts.filter((script) => script !== "scripts/test-db.sh"))(
+  "%s database-name validation",
+  (script) => {
+    it.each([
+      "postgres",
+      "host=production.example dbname=test",
+      "postgresql://production.example/test",
+      "setupsheet_migration_test_123;drop table profiles",
+    ])("rejects an unsafe standalone test database name: %s", (database) => {
+      const result = invoke(script, {}, database);
+      expect(result.status, result.stderr).toBe(1);
+      expect(result.calls).toBe("");
+    });
+  },
+);
