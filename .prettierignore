@@ -12,5 +12,5 @@ vendor/
 public/
 
 # SQL and shell scripts require their own language-aware tools.
-supabase/
+*.sql
 *.sh

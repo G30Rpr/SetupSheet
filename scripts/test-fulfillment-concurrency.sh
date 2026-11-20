@@ -3,20 +3,8 @@
 # This mutating test is only for the disposable database created by test-db.sh.
 set -euo pipefail
 DB_NAME="${1:?Usage: test-fulfillment-concurrency.sh <scratch-database>}"
-if ! [[ "$DB_NAME" =~ ^setupsheet_migration_test_[0-9]+$ ]]; then
-  echo "Refusing to run outside the migration test database." >&2
-  exit 1
-fi
-# This helper mutates fixtures and can run standalone, so repeat the endpoint
-# guard rather than trusting the caller's scratch-looking database name.
-case "${PGHOST:-localhost}" in localhost|127.0.0.1|::1) ;; *)
-  echo "Refusing concurrency test on non-loopback PGHOST" >&2; exit 1 ;;
-esac
-if [[ -n "${PGHOSTADDR:-}" || -n "${PGSERVICE:-}" || -n "${PGSERVICEFILE:-}" ]]; then
-  echo "Refusing libpq hostaddr/service overrides" >&2; exit 1
-fi
-# GitHub Actions forwards localhost through Docker; the server's bound
-# interface may be a bridge IP, so check client connection selectors instead.
+source "$(dirname "${BASH_SOURCE[0]}")/assert-local-test-db.sh"
+assert_local_test_db "$DB_NAME"
 TMP_DIR=$(mktemp -d)
 cleanup() {
   if [[ -n "${PID_ONE:-}" ]]; then kill "$PID_ONE" 2>/dev/null || true; fi

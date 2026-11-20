@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { readBoundedRequestBody } from "@/lib/bounded-request-body";
 import { logger } from "@/lib/logger";
 import { isSameOriginRequest } from "@/lib/request-origin";
 
@@ -99,67 +100,48 @@ function sanitizeEvent(input: unknown): SafeEvent | null {
   return null;
 }
 
-/** Read a bounded request body so an unauthenticated reporter cannot submit an unbounded log payload. */
-async function readBoundedBody(request: Request): Promise<string | null> {
-  const contentLength = Number(request.headers.get("content-length"));
-  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES)
-    return null;
-  if (!request.body) return null;
-
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      total += value.byteLength;
-      if (total > MAX_BODY_BYTES) {
-        await reader.cancel();
-        return null;
-      }
-      chunks.push(value);
-    }
-  } catch {
-    return null;
-  } finally {
-    reader.releaseLock();
-  }
-
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return new TextDecoder().decode(bytes);
-}
-
 /** Receives path-only performance and error-category events from the browser. */
 export async function POST(request: Request) {
   const origin = request.headers.get("origin");
   if (origin) {
     try {
       if (!isSameOriginRequest(request, origin)) {
-        return new NextResponse(null, { status: 403 });
+        return new NextResponse(null, {
+          status: 403,
+          headers: { "Cache-Control": "no-store" },
+        });
       }
     } catch {
-      return new NextResponse(null, { status: 403 });
+      return new NextResponse(null, {
+        status: 403,
+        headers: { "Cache-Control": "no-store" },
+      });
     }
   }
 
-  const raw = await readBoundedBody(request);
-  if (raw === null) return new NextResponse(null, { status: 413 });
+  const bodyResult = await readBoundedRequestBody(request, MAX_BODY_BYTES);
+  if (!bodyResult.ok) {
+    return new NextResponse(null, {
+      status: bodyResult.reason === "timeout" ? 408 : 413,
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
 
   let payload: unknown;
   try {
-    payload = JSON.parse(raw);
+    payload = JSON.parse(bodyResult.text);
   } catch {
-    return new NextResponse(null, { status: 400 });
+    return new NextResponse(null, {
+      status: 400,
+      headers: { "Cache-Control": "no-store" },
+    });
   }
 
   if (!isRecord(payload) || !Array.isArray(payload.events)) {
-    return new NextResponse(null, { status: 400 });
+    return new NextResponse(null, {
+      status: 400,
+      headers: { "Cache-Control": "no-store" },
+    });
   }
 
   const events = payload.events

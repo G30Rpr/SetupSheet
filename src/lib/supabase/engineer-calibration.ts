@@ -10,10 +10,16 @@ import type { Database } from "@/lib/supabase/database.types";
 const MAX_CALIBRATION_ROWS = 500;
 const CALIBRATION_COLUMNS =
   "game, condition, parameter, direction, supporting_setup_count, directions";
-type CalibrationRow = Database["public"]["Views"]["engineer_calibration_evidence"]["Row"];
+type CalibrationRow =
+  Database["public"]["Views"]["engineer_calibration_evidence"]["Row"];
 
-function isEngineerGame(value: unknown): value is (typeof ENGINEER_GAMES)[number] {
-  return typeof value === "string" && ENGINEER_GAMES.includes(value as (typeof ENGINEER_GAMES)[number]);
+function isEngineerGame(
+  value: unknown,
+): value is (typeof ENGINEER_GAMES)[number] {
+  return (
+    typeof value === "string" &&
+    ENGINEER_GAMES.includes(value as (typeof ENGINEER_GAMES)[number])
+  );
 }
 
 function isEngineerCondition(value: unknown): value is EngineerCondition {
@@ -26,7 +32,7 @@ function isEngineerCondition(value: unknown): value is EngineerCondition {
  */
 export async function getPublicEngineerCalibration(
   gameValue: unknown,
-  conditionValue: unknown
+  conditionValue: unknown,
 ): Promise<EngineerCalibrationQueryResult> {
   if (!isEngineerGame(gameValue) || !isEngineerCondition(conditionValue)) {
     return { status: "available", factors: [] };
@@ -48,7 +54,10 @@ export async function getPublicEngineerCalibration(
       result.count === null ||
       result.count !== result.data.length
     ) {
-      logger.error("getPublicEngineerCalibration: aggregate query failed or was incomplete", result.error);
+      logger.error(
+        "getPublicEngineerCalibration: aggregate query failed or was incomplete",
+        result.error,
+      );
       return { status: "unavailable", factors: [] };
     }
 
@@ -57,7 +66,7 @@ export async function getPublicEngineerCalibration(
       factors: mapPublicEngineerCalibrationRows(
         result.data as CalibrationRow[],
         gameValue,
-        conditionValue
+        conditionValue,
       ),
     };
   } catch (error) {

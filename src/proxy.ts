@@ -187,9 +187,10 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except static assets and image optimization
-     * files, so the auth cookie stays fresh on every page/route hit.
+     * Reporting routes are public and must receive the body stream directly:
+     * proxy body cloning can wait for the complete upload before the route's
+     * deadline starts. Keep page/auth routes under the session/CSP proxy.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api/(?:telemetry|csp-report)/?$|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

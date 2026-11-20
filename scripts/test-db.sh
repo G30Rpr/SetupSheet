@@ -9,30 +9,14 @@
 # Connection is via the standard PG* environment variables (PGHOST, PGPORT,
 # PGUSER, PGPASSWORD, ...) -- defaults below match a local Postgres running
 # as the `postgres` superuser; override them to point at a CI service
-# container. Remote Postgres hosts are refused because this test creates and
-# drops a database and runs destructive fixtures.
+# container. Remote targets and alternate host/service selectors are refused.
 set -euo pipefail
-
-export PGHOST="${PGHOST:-localhost}"
-export PGPORT="${PGPORT:-5432}"
-export PGUSER="${PGUSER:-postgres}"
-
-# A scratch database name is not enough: fail closed on non-local targets
-# and on alternate libpq connection selectors that bypass PGHOST.
-case "$PGHOST" in localhost|127.0.0.1|::1) ;; *)
-  echo "Refusing migration tests on non-loopback PGHOST" >&2; exit 1 ;;
-esac
-if [[ -n "${PGHOSTADDR:-}" || -n "${PGSERVICE:-}" || -n "${PGSERVICEFILE:-}" ]]; then
-  echo "Refusing libpq hostaddr/service overrides during destructive tests" >&2
-  exit 1
-fi
-# PGHOST is the client destination. Docker forwards localhost into a container,
-# where inet_server_addr() may report a non-loopback bridge address; do not
-# reject valid local CI by checking the server-side bound interface.
 
 cd "$(dirname "$0")/.."
 
 DB_NAME="setupsheet_migration_test_$$"
+source scripts/assert-local-test-db.sh
+assert_local_test_db "$DB_NAME"
 
 cleanup() {
   psql -X -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"$DB_NAME\";" >/dev/null
