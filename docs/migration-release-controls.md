@@ -72,3 +72,23 @@ closed rather than replaying the entire migration chain.
 Legacy four-digit versions and CLI-generated fourteen-digit timestamps are
 supported. Never edit a migration already applied to an environment to repair
 drift there: create a new forward migration.
+
+## Pre-promotion public reporting compatibility
+
+Run the following read-only preflight with an authorized database operator
+connection **before** promoting the matching application build:
+
+```bash
+psql -X -v ON_ERROR_STOP=1 -f scripts/check-public-reporting-contract.sql
+```
+
+Configure database credentials privately. The SQL uses `SET LOCAL ROLE anon`
+and `LIMIT 0`, so it tests public view permissions without reading records.
+If either reporting view fails, stop the promotion. Fix the public
+projection; **never** grant anonymous access to private field-test reports
+as a workaround.
+
+On November 20, 2026, production returned SQLSTATE 42501 for both
+`field_test_reports_public` and `field_test_counts`. The corresponding
+migration has not been applied. A successful build alone is not release
+approval.
