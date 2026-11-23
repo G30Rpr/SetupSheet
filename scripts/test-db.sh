@@ -65,5 +65,6 @@ for test_file in supabase/testing/*.test.sql; do
 done
 
 bash scripts/test-field-test-concurrency.sh "$DB_NAME"
+bash scripts/test-fulfillment-concurrency.sh "$DB_NAME"
 
 echo "All migrations and regression checks passed."
