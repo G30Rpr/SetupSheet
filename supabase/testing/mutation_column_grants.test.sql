@@ -134,3 +134,28 @@ begin
   end if;
 end $$;
 rollback;
+
+-- PUBLIC revocation must not silently remove a custom service-role capability.
+-- This fixture deliberately makes its protected-column INSERT depend on PUBLIC.
+begin;
+revoke insert on public.setup_requests from service_role;
+revoke insert(created_at) on public.setup_requests from service_role;
+grant insert(created_at) on public.setup_requests to public;
+savepoint service_probe;
+\set ON_ERROR_STOP off
+\ir ../migrations/20261123151059_reconcile_mutation_column_grants.sql
+\set service_sqlstate :SQLSTATE
+\set ON_ERROR_STOP on
+rollback to savepoint service_probe;
+select :'service_sqlstate'='P0001' as service_rejected \gset
+\if :service_rejected
+\else
+ do $$ begin raise exception 'REGRESSION: service privilege loss was not rejected'; end $$;
+\endif
+do $$
+begin
+  if not has_column_privilege('service_role','public.setup_requests','created_at','INSERT') then
+    raise exception 'REGRESSION: failed repair changed effective service privileges';
+  end if;
+end $$;
+rollback;
