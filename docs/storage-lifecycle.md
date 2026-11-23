@@ -159,7 +159,7 @@ legacy workers and prevent out-of-protocol privileged deletion at cutover.
    rotation and account deletion/retention. Disposable metadata tests do not
    establish these results.
 7. Approve the final default SHA and controlled release. Pause legacy cleanup
-   workers, apply the complete SQL transaction, deploy the matching Edge/app/
+   workers, apply the reviewed SQL batch (each file commits separately), deploy the matching Edge/app/
    worker revisions and origins, and verify catalogs and real flows before
    activating the closed rollout gate and reopening uploads. Confirm the legacy
    provider-capability drain before activation. Do not restore client write policies as an ad hoc
