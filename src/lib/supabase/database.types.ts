@@ -764,6 +764,15 @@ export type Database = {
         Args: { p_reservation: string };
         Returns: boolean;
       };
+      save_setup_rating: {
+        Args: {
+          p_setup_id: string;
+          p_pace: number;
+          p_predictability: number;
+          p_rater_rig?: string | null;
+        };
+        Returns: undefined;
+      };
       consume_upload_target_rate_limit: {
         Args: Record<PropertyKey, never>;
         Returns: boolean;

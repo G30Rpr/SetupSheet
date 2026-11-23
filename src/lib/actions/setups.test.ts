@@ -125,7 +125,7 @@ describe("rateSetup", () => {
 
   function makeRateSupabase(options: {
     setupOwnerId?: string;
-    upsertError?: unknown;
+    rpcError?: unknown;
   }) {
     const maybeSingle = vi.fn().mockResolvedValue({
       data: options.setupOwnerId ? { user_id: options.setupOwnerId } : null,
@@ -134,17 +134,15 @@ describe("rateSetup", () => {
     const eq2 = vi.fn().mockReturnValue({ maybeSingle });
     const select = vi.fn().mockReturnValue({ eq: eq2 });
 
-    const upsert = vi
-      .fn()
-      .mockResolvedValue({ error: options.upsertError ?? null });
+    const rpc = vi.fn().mockResolvedValue({ error: options.rpcError ?? null });
 
     return {
       from: vi.fn((table: string) => {
         if (table === "setups") return { select };
-        if (table === "setup_ratings") return { upsert };
+
         return {};
       }),
-      upsert,
+      rpc,
     };
   }
 
@@ -156,7 +154,7 @@ describe("rateSetup", () => {
     await expect(rateSetup(validSetupId, 4, 4)).resolves.toEqual({
       error: "You need to be logged in with Discord to rate a setup.",
     });
-    expect(supabase.upsert).not.toHaveBeenCalled();
+    expect(supabase.rpc).not.toHaveBeenCalled();
   });
 
   it("blocks authors from rating their own setups (DB is the backstop)", async () => {
@@ -167,7 +165,7 @@ describe("rateSetup", () => {
     await expect(rateSetup(validSetupId, 5, 5)).resolves.toEqual({
       error: "You can't rate your own setup.",
     });
-    expect(supabase.upsert).not.toHaveBeenCalled();
+    expect(supabase.rpc).not.toHaveBeenCalled();
   });
 
   it("accepts ratings from other drivers", async () => {
@@ -178,15 +176,12 @@ describe("rateSetup", () => {
     await expect(rateSetup(validSetupId, 4, 3)).resolves.toEqual({
       error: null,
     });
-    expect(supabase.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        user_id: "user-1",
-        setup_id: validSetupId,
-        pace: 4,
-        predictability: 3,
-      }),
-      { onConflict: "user_id,setup_id" },
-    );
+    expect(supabase.rpc).toHaveBeenCalledWith("save_setup_rating", {
+      p_setup_id: validSetupId,
+      p_pace: 4,
+      p_predictability: 3,
+      p_rater_rig: null,
+    });
   });
 
   it("rejects out-of-range ratings", async () => {
@@ -197,7 +192,7 @@ describe("rateSetup", () => {
     await expect(rateSetup(validSetupId, 0, 3)).resolves.toEqual({
       error: "Pace and Predictability must be whole numbers from 1 to 5.",
     });
-    expect(supabase.upsert).not.toHaveBeenCalled();
+    expect(supabase.rpc).not.toHaveBeenCalled();
   });
 
   it("stores the rater's rig alongside the rating", async () => {
@@ -208,9 +203,9 @@ describe("rateSetup", () => {
     await expect(rateSetup(validSetupId, 4, 3, "Gamepad")).resolves.toEqual({
       error: null,
     });
-    expect(supabase.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ user_id: "user-1", rater_rig: "Gamepad" }),
-      { onConflict: "user_id,setup_id" },
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      "save_setup_rating",
+      expect.objectContaining({ p_rater_rig: "Gamepad" }),
     );
   });
 
@@ -220,15 +215,15 @@ describe("rateSetup", () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
 
     await rateSetup(validSetupId, 4, 3, "Steering Wheel Only");
-    expect(supabase.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ rater_rig: null }),
-      { onConflict: "user_id,setup_id" },
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      "save_setup_rating",
+      expect.objectContaining({ p_rater_rig: null }),
     );
 
     await rateSetup(validSetupId, 4, 3);
-    expect(supabase.upsert).toHaveBeenLastCalledWith(
-      expect.objectContaining({ rater_rig: null }),
-      { onConflict: "user_id,setup_id" },
+    expect(supabase.rpc).toHaveBeenLastCalledWith(
+      "save_setup_rating",
+      expect.objectContaining({ p_rater_rig: null }),
     );
   });
 });

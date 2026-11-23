@@ -661,20 +661,15 @@ export async function rateSetup(
     return { error: "You can't rate your own setup." };
   }
 
-  const { error } = await supabase.from("setup_ratings").upsert(
-    {
-      user_id: user.id,
-      setup_id: setupId,
-      pace,
-      predictability,
-      rater_rig: normalizedRig,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,setup_id" },
-  );
+  const { error } = await supabase.rpc("save_setup_rating", {
+    p_setup_id: setupId,
+    p_pace: pace,
+    p_predictability: predictability,
+    p_rater_rig: normalizedRig,
+  });
 
   if (error) {
-    logger.error("rateSetup: upsert failed", error);
+    logger.error("rateSetup: rating RPC failed", error);
     return {
       error: getActionError(error, "Couldn't save your rating right now."),
     };
