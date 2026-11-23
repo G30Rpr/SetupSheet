@@ -79,6 +79,29 @@ placeholder backend and is not hosted acceptance.
    A generated Vercel preview using shared production configuration is not an
    isolated test environment. Do not run this matrix against it.
 
+### Concrete environment handoff
+
+November 23 read-only Vercel metadata still lists one
+`NEXT_PUBLIC_SUPABASE_URL` record and one `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+record shared by Production and Preview, with no Development records listed.
+Integration-managed private keys are Production-only. No values were decrypted
+or changed. Split/override the approved Preview scope without changing
+Production's values; validate branch overrides and create a fresh build because
+public variables are embedded at build time. Existing previews retain their
+old build configuration.
+
+| Consumer / scope                                | Exact configuration                                                                                           | Handoff requirement                                                                                                                                                                                                               |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vercel Preview frontend and server              | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`                                                   | Both belong to the same approved staging project. The app reads the ANON-named variable even when its value is a supported publishable key; setting only `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` does not configure these clients. |
+| Vercel Preview server only                      | `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY`                                                          | Staging-scoped privileged key for reservation/counter operations; no public prefix. If both exist, the current app chooses the service-role variable first; do not leave a mismatched key.                                        |
+| Staging Edge environment                        | `SUPABASE_URL`, `SUPABASE_SECRET_KEYS` default entry or `SUPABASE_SERVICE_ROLE_KEY`; `STORAGE_UPLOAD_ORIGINS` | Verify the project's injected secrets and exact HTTPS origin allowlist. These are Edge settings, not browser variables. Never copy Production secrets.                                                                            |
+| Development                                     | Same app variable names using `.env.local.example` as the template                                            | Use a separately approved local/nonproduction target; keep actual values in ignored local files. Do not pull Production secrets for convenience.                                                                                  |
+| GitHub production inventory / protected release | `SUPABASE_DB_URL` / `SUPABASE_RELEASE_DB_URL`                                                                 | Distinct credentials with the read/write scope and reviewer protections documented in migration-release-controls.md; neither belongs in Preview.                                                                                  |
+
+OAuth secrets belong in the approved staging Auth/provider configuration, not
+in `NEXT_PUBLIC_*` variables. Vercel supplies `VERCEL_ENV`/`VERCEL_URL`; do not
+manually force a Preview to identify itself as Production.
+
 ## 2. Rehearse the candidate
 
 Use the approved isolated target and synthetic users A/B only. Inspect its
