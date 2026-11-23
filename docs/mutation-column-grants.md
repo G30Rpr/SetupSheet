@@ -29,7 +29,9 @@ ratings. Derived axes stay database-owned. updated_at remains writable for
 compatibility with the established mutation contract; created_at does not.
 Profiles are deliberately left to #48. Setup content grants already inspected
 as restricted are untouched, as are SELECT, DELETE, service-role privileges,
-RLS policies and all existing rows.
+RLS policies and all existing rows. Effective service-role INSERT/UPDATE
+privileges are checked before and after the repair; conflicts abort instead
+of silently breaking a custom service-role inheritance setup.
 
 Table revocation does not remove old column grants. The migration removes both
 layers and checks effective privileges for every column/role afterward.

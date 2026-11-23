@@ -33,6 +33,7 @@ declare
   role_name text;
   permission text;
   allowed boolean;
+  service_before jsonb;
 begin
   for expected in select * from (values
     ('setup_requests', array['requester_id','game','car','track','notes'], array['notes']),
@@ -48,6 +49,11 @@ begin
                   where n.nspname='public' and c.relname=expected.table_name and c.relkind='r' and c.relrowsecurity) then
       raise exception 'Column grant preflight: missing/RLS-disabled table %',expected.table_name;
     end if;
+    select jsonb_object_agg(attname,jsonb_build_object(
+      'INSERT',has_column_privilege('service_role',attrelid,attnum,'INSERT'),
+      'UPDATE',has_column_privilege('service_role',attrelid,attnum,'UPDATE')))
+    into service_before from pg_catalog.pg_attribute
+    where attrelid=format('public.%I',expected.table_name)::regclass and attnum>0 and not attisdropped;
     select string_agg(format('%I',attname),', ' order by attnum) into column_names
     from pg_catalog.pg_attribute where attrelid=format('public.%I',expected.table_name)::regclass
       and attnum>0 and not attisdropped;
@@ -66,10 +72,12 @@ begin
     for col in select attname from pg_catalog.pg_attribute
       where attrelid=format('public.%I',expected.table_name)::regclass and attnum>0 and not attisdropped
     loop
-      foreach role_name in array array['anon','authenticated'] loop
+      foreach role_name in array array['anon','authenticated','service_role'] loop
         foreach permission in array array['INSERT','UPDATE'] loop
-          allowed := role_name='authenticated' and col.attname = any(
-            case permission when 'INSERT' then expected.insert_columns else expected.update_columns end);
+          allowed := case when role_name='service_role'
+            then (service_before->col.attname->>permission)::boolean
+            else role_name='authenticated' and col.attname = any(
+              case permission when 'INSERT' then expected.insert_columns else expected.update_columns end) end;
           if has_column_privilege(role_name,format('public.%I',expected.table_name),col.attname,permission) is distinct from allowed then
             raise exception 'Column grant postflight failed %.% % %',expected.table_name,col.attname,role_name,permission;
           end if;
