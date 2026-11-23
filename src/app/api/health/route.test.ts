@@ -1,56 +1,69 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-
-const { select, limit } = vi.hoisted(() => ({
-  select: vi.fn(),
-  limit: vi.fn(),
-}));
-
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+const { limit, select, from } = vi.hoisted(() => {
+  const limit = vi.fn();
+  const select = vi.fn(() => ({ limit }));
+  const from = vi.fn(() => ({ select }));
+  return { limit, select, from };
+});
 vi.mock("@/lib/supabase/public", () => ({
-  createPublicClient: () => ({
-    from: (name: string) => {
-      if (name !== "setups") throw new Error("unexpected table");
-      return { select };
-    },
-  }),
+  createPublicClient: () => ({ from }),
 }));
-
-const { GET } = await import("@/app/api/health/route");
-
-afterEach(() => {
+beforeEach(() => {
+  vi.resetModules();
   vi.clearAllMocks();
 });
+afterEach(() => vi.restoreAllMocks());
 
-describe("GET /api/health", () => {
-  it("returns a minimal uncached response when public Supabase reads succeed", async () => {
-    select.mockReturnValue({ limit });
+describe("public database readiness", () => {
+  it("accepts an empty database and queries one explicit public column", async () => {
     limit.mockResolvedValue({ data: [], error: null });
+    const { GET } = await import("./route");
     const response = await GET();
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "ok" });
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(from).toHaveBeenCalledWith("setups");
     expect(select).toHaveBeenCalledWith("id");
     expect(limit).toHaveBeenCalledWith(1);
-    expect(response.headers.get("cache-control")).toContain("no-store");
   });
-
-  it("fails closed without exposing backend error details", async () => {
-    select.mockReturnValue({ limit });
+  it("coalesces concurrent calls without sharing consumable response bodies", async () => {
+    let complete!: (value: { data: never[]; error: null }) => void;
+    limit.mockReturnValue(
+      new Promise((resolve) => {
+        complete = resolve;
+      }),
+    );
+    const { GET } = await import("./route");
+    const first = GET();
+    const second = GET();
+    expect(limit).toHaveBeenCalledOnce();
+    complete({ data: [], error: null });
+    expect(await (await first).json()).toEqual({ status: "ok" });
+    expect(await (await second).json()).toEqual({ status: "ok" });
+  });
+  it("does not leak backend error details and retries failures after a short cache", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(10_000);
     limit.mockResolvedValue({
       data: null,
-      error: { message: "sensitive-hostname and private query details" },
+      error: { message: "private connection details" },
     });
-    const response = await GET();
-    expect(response.status).toBe(503);
-    const body = await response.text();
-    expect(body).toContain("unavailable");
-    expect(body).not.toContain("sensitive-hostname");
+    const { GET } = await import("./route");
+    const failed = await GET();
+    expect(failed.status).toBe(503);
+    expect(await failed.json()).toEqual({ status: "unavailable" });
+    clock.mockReturnValue(10_500);
+    await GET();
+    expect(limit).toHaveBeenCalledOnce();
+    limit.mockResolvedValue({ data: [], error: null });
+    clock.mockReturnValue(11_100);
+    expect((await GET()).status).toBe(200);
+    expect(limit).toHaveBeenCalledTimes(2);
   });
-
-  it("handles unexpected client failures", async () => {
-    select.mockImplementation(() => {
-      throw new Error("connection secret");
-    });
+  it("turns thrown network failures into a non-cacheable unavailable response", async () => {
+    limit.mockRejectedValue(new Error("connection failed"));
+    const { GET } = await import("./route");
     const response = await GET();
     expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ status: "unavailable" });
+    expect(response.headers.get("cache-control")).toBe("no-store");
   });
 });
