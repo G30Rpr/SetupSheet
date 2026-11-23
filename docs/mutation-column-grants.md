@@ -68,7 +68,8 @@ cover community inserts, notes edits, rating creation/update with derived axes,
 owner deletes and privileged fulfillment. Negative cases cover forged request
 fulfillment, backdated requests/comments, rating target/timestamp/axis changes,
 self-rating, missing identity and invalid scores. An inherited grant on the last
-target table must abort and roll back earlier ACL repairs.
+target table must abort and roll back earlier ACL repairs. A separate fixture
+makes a service-role capability depend on PUBLIC; its removal must abort too.
 
 Read-only effective privileges can be inspected without user-row data:
 
