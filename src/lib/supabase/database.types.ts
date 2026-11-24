@@ -752,6 +752,27 @@ export type Database = {
       };
     };
     Functions: {
+      reserve_storage_upload: {
+        Args: { p_owner: string; p_path: string; p_kind: string };
+        Returns: string;
+      };
+      begin_storage_upload: {
+        Args: { p_reservation: string; p_owner: string };
+        Returns: Json;
+      };
+      complete_storage_upload: {
+        Args: { p_reservation: string };
+        Returns: boolean;
+      };
+      save_setup_rating: {
+        Args: {
+          p_setup_id: string;
+          p_pace: number;
+          p_predictability: number;
+          p_rater_rig?: string | null;
+        };
+        Returns: undefined;
+      };
       consume_upload_target_rate_limit: {
         Args: Record<PropertyKey, never>;
         Returns: boolean;

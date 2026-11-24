@@ -1,6 +1,6 @@
 # SetupSheet — Infrastructure security release status
 
-Last reviewed: November 18, 2026. **This is a historical rollout record and current release checklist, not authorization to apply production SQL.**
+Last reviewed: November 23, 2026. **This is a historical rollout record and current release checklist, not authorization to apply production SQL.**
 
 ## Repository state versus live database
 
@@ -22,6 +22,10 @@ Before releasing:
 
 Follow [migration-release-controls.md](migration-release-controls.md) for the authoritative workflow and refusal conditions.
 
+The [combined staging candidate](staging-release-candidate.md) pins all seven
+current database drafts, source checksums and the hosted acceptance matrix.
+It remains draft and does not establish isolated staging or release approval.
+
 ## Owner decision — backup verification omitted
 
 On November 18, the owner chose to **skip** the encrypted backup and isolated restore exercise; [issue #44](https://github.com/G30Rpr/SetupSheet/issues/44) was closed **not planned**, not completed. This removes it from the active work list; it does **not** establish a recoverable database. Production data loss from a failed release could be irreversible. An approved release still requires its own explicit acknowledgment of that risk. No automatic SQL release is approved by this decision.
@@ -31,7 +35,7 @@ On November 18, the owner chose to **skip** the encrypted backup and isolated re
 - Run live security and performance advisors after a controlled staged release; preserve RLS isolation semantics and do not drop unused indexes solely because of advisory counts.
 - Review Storage MIME support against actual client formats before tightening buckets; preserve existing download and uploader compatibility.
 - Validate Vercel preview versus production Supabase isolation and secrets.
-- Resolve [#58](https://github.com/G30Rpr/SetupSheet/issues/58), the high-severity picomatch advisory currently blocking the security audit gate. Do not suppress the gate solely to merge [#56](https://github.com/G30Rpr/SetupSheet/pull/56), [#57](https://github.com/G30Rpr/SetupSheet/pull/57) or [#59](https://github.com/G30Rpr/SetupSheet/pull/59).
+- #58 was closed after its advisory was withdrawn on November 18. The npm audit gate remains enabled; #56/#57/#59 are merged. Review new advisories and maintenance updates independently.
 - After every approved deployment, monitor Supabase/Vercel permission-denied errors and verify the production site’s key authenticated and anonymous flows.
 
 **Status:** These release instructions document required reviews and current known risks; no production migration, deployment, or recovery operation is authorized by this file.

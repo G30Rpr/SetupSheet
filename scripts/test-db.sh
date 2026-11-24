@@ -56,7 +56,12 @@ done
 
 for migration in supabase/migrations/*.sql; do
   echo "Applying $migration"
-  psql -X -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
+  version=${migration##*/}
+  version=${version%%_*}
+  apply_flags=()
+  # Modern migrations rely on atomic delivery and SET LOCAL, like the release runner.
+  if (( 10#$version >= 41 )); then apply_flags+=(--single-transaction); fi
+  psql -X -d "$DB_NAME" -v ON_ERROR_STOP=1 "${apply_flags[@]}" -f "$migration" >/dev/null
 done
 
 for test_file in supabase/testing/*.test.sql; do
@@ -64,6 +69,9 @@ for test_file in supabase/testing/*.test.sql; do
   psql -X -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$test_file"
 done
 
+bash scripts/test-validation-constraint-drift.sh "$DB_NAME"
 bash scripts/test-field-test-concurrency.sh "$DB_NAME"
+bash scripts/test-fulfillment-concurrency.sh "$DB_NAME"
+bash scripts/test-storage-lifecycle-concurrency.sh "$DB_NAME"
 
 echo "All migrations and regression checks passed."
