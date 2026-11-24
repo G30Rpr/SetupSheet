@@ -16,6 +16,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:db": "bash scripts/test-db.sh",
+    "test:db:managed": "bash scripts/test-managed-bootstrap.sh",
+    "test:bootstrap": "node --test scripts/testing/managed-bootstrap.unit.mjs",
     "storage:sweep": "node scripts/sweep-orphaned-files.mjs",
     "prepare": "husky",
     "format": "prettier --write .",
