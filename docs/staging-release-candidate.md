@@ -5,9 +5,9 @@ change hosted settings, apply SQL, activate Storage or promote production.**
 
 ## Frozen source
 
-Base default: `cc7c41e0df9a3a6435f6144d5f105401a91bb652`.
-Combined runtime/test revision: `f837724911002f6c5a0cdd1b1ac8e6469abab814`.
-Combined tree: `06707a61a94364d9be44ce82d11a40f465c94be4`.
+Base default: `80dc19aa8a354a323961c1d36f759be0565054d3`.
+Combined runtime/test revision: `71b3eb8b81327dcc8435ef10f935669d3cc9d72b`.
+Combined tree: `43507feb5dc34c0fa03517eaba975b77f2627471`.
 
 | Component | Reviewed head                              | Purpose                                   |
 | --------- | ------------------------------------------ | ----------------------------------------- |
@@ -18,6 +18,11 @@ Combined tree: `06707a61a94364d9be44ce82d11a40f465c94be4`.
 | #68       | `06f78714e11044d1fe141483e60ef8bba24a9dac` | Extension reconciliation; included in #71 |
 | #71       | `3cc3db4807a7eef0b22a43124e3fc7df131d9afc` | Quotas / Edge upload gateway / cleanup    |
 | #72       | `915cec0026e0febd46a19ca48cbba7114d3fe07c` | Mutation grants / safe rating RPC         |
+
+Merged tooling #75 is included: an offline managed-bootstrap preparer and
+PostgreSQL 16/17 non-superuser CI. This adds no source migration. All 54
+migration files and application files remain byte-identical to the prior
+`d79abe748f096a8e902c3a8d31068f7c6b4a6361` candidate.
 
 This candidate combines the drafts once, including their integration conflict
 resolutions. Do not apply #68 twice or merge all component PRs and this candidate
@@ -45,15 +50,17 @@ From the candidate checkout:
 
 ```sh
 sha256sum --check docs/staging-candidate-files.sha256
-git diff --exit-code f837724911002f6c5a0cdd1b1ac8e6469abab814 -- src scripts supabase vendor .github/workflows
+git diff --exit-code 71b3eb8b81327dcc8435ef10f935669d3cc9d72b -- src scripts supabase vendor .github/workflows
 git status --short
 ```
 
 Review untracked/new runtime files too. Record the final candidate commit and
-CI run URLs after these documentation files are committed. Earlier local
-evidence: 706 unit tests and TypeScript passed at the combined revision;
-PostgreSQL 17 SQL and real concurrency suites passed with the same SQL/test
-files. Fresh combined GitHub CI is required. Browser CI uses an unreachable
+CI run URLs after these documentation files are committed. The runtime tree matches local fixture
+`8631f86d1b45697962278e0a03600bf677a6acec`: 720 unit tests, TypeScript and
+a complete 54-file managed-operator bootstrap/Garage check passed on PostgreSQL 17. #75 also passed PostgreSQL 16/17 managed CI for the default source chain
+and six preparation tests. Earlier unmodified-source PostgreSQL SQL/concurrency
+evidence still applies to the unchanged migration/test files. Fresh combined
+GitHub CI is required on this refresh. Browser CI uses an unreachable
 placeholder backend and is not hosted acceptance.
 
 ## 1. Establish an isolated target
@@ -180,3 +187,26 @@ inspect advisors/runtime errors and verify grants/RLS/constraints. Stop on
 failed checks; close #40/#42/#43/#45/#46/#47/#66 only against their actual hosted
 acceptance evidence. Source merge, a green build or a successful inventory
 alone does not close those findings.
+
+## November 24 checkpoint and newly verified grant repair
+
+Hosted staging remains at 33/54 source files, through 0033; its private database
+connection is not bound. A read-only check found the baseline Garage routine
+still executable by anon after its original managed-operator revokes emitted
+warnings. Its identity/RLS checks remain in place; the grant alone is not proof
+of an anonymous data-write exploit. Production was not queried for this new
+finding and is not inferred to share it.
+
+The checked-in preparer reconciles that routine's authenticated-only EXECUTE
+contract while temporary owner privileges are active and asserts the resulting
+owner/grants. CI injects the stale grant deliberately. The updated 21-file
+operator handoff uses this preparer; a local PostgreSQL 17 rehearsal with a
+direct non-superuser login recreated the 33-file checkpoint/stale grant, applied
+all remaining files, and verified 54 history rows, anonymous EXECUTE denied,
+authenticated EXECUTE allowed, restrictive final role state and the Storage
+gate closed. Replay, a nonempty target and a different history were rejected.
+
+This local rehearsal did not apply anything to hosted staging. The resume SQL
+retains the old d79abe7 source-SQL snapshot as provenance; its 54 migration files
+are unchanged in this refreshed candidate. A private STAGING_DB_URL and the
+remaining hosted credential/OAuth/Edge/acceptance gates are still required.
