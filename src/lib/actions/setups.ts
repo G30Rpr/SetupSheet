@@ -12,6 +12,7 @@ import { logger } from "@/lib/logger";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { createDownloadCounterClient } from "@/lib/supabase/download-counter";
 import { createClient } from "@/lib/supabase/server";
+import { createStorageAdminClient } from "@/lib/supabase/storage-admin";
 import type { TablesUpdate } from "@/lib/supabase/database.types";
 import {
   ALLOWED_SETUP_FILE_EXTENSIONS,
@@ -137,9 +138,9 @@ function validateRating(value: unknown): boolean {
 }
 
 /**
- * Mints a signed, single-use Supabase Storage upload URL for a file the
- * browser sends directly to Storage. The per-user limit is enforced by the
- * database RPC so it is shared across Vercel function instances and survives
+ * Reserves storage and issues a one-use upload ticket for a file the
+ * browser sends through the authenticated Edge upload function. Per-user limits
+ * are enforced by database RPCs so it is shared across Vercel function instances and survives
  * cold starts. The Storage bucket's own 10 MiB cap remains the outer boundary.
  */
 export async function createUploadTarget(
@@ -192,25 +193,38 @@ export async function createUploadTarget(
     };
   }
 
-  const { data, error: signError } = await supabase.storage
-    .from(SETUP_FILES_BUCKET)
-    .createSignedUploadUrl(target.path);
-
-  if (signError || !data?.token) {
-    logger.error("createUploadTarget: failed to sign upload url", signError);
-    return { ...empty, error: "Couldn't start the upload. Please try again." };
+  const admin = createStorageAdminClient();
+  if (!admin)
+    return { ...empty, error: "Uploads are temporarily unavailable." };
+  const { data: reservation, error: reserveError } = await admin.rpc(
+    "reserve_storage_upload",
+    { p_owner: user.id, p_path: target.path, p_kind: kind },
+  );
+  if (reserveError || !reservation) {
+    logger.warn(
+      "createUploadTarget: storage reservation refused",
+      reserveError,
+    );
+    return {
+      ...empty,
+      error:
+        reserveError?.code === "55000"
+          ? "Uploads are temporarily unavailable."
+          : "Couldn't reserve storage. Your account may be at its upload limit.",
+    };
   }
-
+  // Preserve the response shape; token now means an owner-bound, one-use
+  // application ticket, never a bearer capability for the Storage service.
   return {
     path: target.path,
     fileName: target.fileName,
-    token: data.token,
+    token: reservation,
     error: null,
   };
 }
 
 /**
- * Post-upload confirmation. The browser has already PUT the bytes to Storage,
+ * Post-upload confirmation. The Edge handler has confirmed the Storage upload,
  * so this re-validates what actually landed before the path is ever attached
  * to a setup row: the object must exist, be non-empty, be within the size
  * limit for its kind, live in a path this user owns, and carry an allowed
@@ -263,8 +277,8 @@ export async function verifyUploadedFile(
   }
 
   // One validation pass, against the size Storage actually reports rather than
-  // the size the browser claimed. This is the same rule set the signed URL was
-  // minted under, so a caller that lied about the size, or PUT different bytes
+  // the size the browser claimed. This is the same rule set the ticket was
+  // reserved under, so a caller that lied about the size or sent different bytes
   // than it declared, is caught here before the path reaches a setup row.
   const size = typeof data.size === "number" ? data.size : 0;
   const { target, error } = describeUploadTarget(kind, fileName, size, user.id);
@@ -273,36 +287,13 @@ export async function verifyUploadedFile(
   return { path, fileName: target.fileName, error: null };
 }
 
-/**
- * Best-effort removal of Storage objects uploaded during a submit that then
- * failed (validation error, rate limit, dropped connection). Without this,
- * every abandoned upload stays in the public `setup-files` bucket forever --
- * nothing else ever deletes an object whose setup row never materialised.
- *
- * The caller can only ever name paths inside its own folder: `isOwnedStoragePath`
- * rejects anything else here, and the owner-scoped Storage delete policy (0004)
- * rejects it again in the database. Failures are logged and swallowed -- cleanup must
- * never turn a successful save into an error, and the sweeper in
- * 0028_setup_files_gc.sql is the durable backstop.
- */
+/** Compatibility action for abandoned browser submissions. Files are retained
+ * for claimed cleanup after the ticket and grace window expire.
+ * Never delete here: a concurrent save or history snapshot may reference them. */
 export async function discardUploadedFiles(
   paths: unknown,
 ): Promise<{ error: null }> {
-  const supabase = await createClient();
-  const user = await getCurrentUser(supabase);
-  if (!user || !Array.isArray(paths)) return { error: null };
-
-  const owned = paths
-    .filter((path): path is string => typeof path === "string")
-    .filter((path) => isOwnedStoragePath(path, user.id))
-    .slice(0, 4);
-  if (owned.length === 0) return { error: null };
-
-  const { error } = await supabase.storage
-    .from(SETUP_FILES_BUCKET)
-    .remove(owned);
-  if (error) logger.warn("discardUploadedFiles: cleanup failed", error);
-
+  void paths; // Keep the deployed browser action contract; never remove bytes here.
   return { error: null };
 }
 
@@ -505,37 +496,8 @@ export async function updateSetup(
     return { error: "Setup no longer exists or you don't own it." };
   }
 
-  // Database state is authoritative. Cleanup is deliberately after the
-  // update: an object left orphaned is recoverable, while deleting it before
-  // a failed update permanently breaks the still-published setup.
-  if (
-    input.filePath !== undefined &&
-    existing.file_path &&
-    existing.file_path !== input.filePath &&
-    isOwnedStoragePath(existing.file_path, user.id)
-  ) {
-    const { error: removeError } = await supabase.storage
-      .from(SETUP_FILES_BUCKET)
-      .remove([existing.file_path]);
-    if (removeError)
-      logger.warn("updateSetup: failed to remove old setup file", removeError);
-  }
-
-  if (
-    input.telemetryFilePath !== undefined &&
-    existing.telemetry_file_path &&
-    existing.telemetry_file_path !== input.telemetryFilePath &&
-    isOwnedStoragePath(existing.telemetry_file_path, user.id)
-  ) {
-    const { error: removeError } = await supabase.storage
-      .from(SETUP_FILES_BUCKET)
-      .remove([existing.telemetry_file_path]);
-    if (removeError)
-      logger.warn(
-        "updateSetup: failed to remove old telemetry file",
-        removeError,
-      );
-  }
+  // Keep old bytes: the update's version snapshot can still reference them.
+  // The claim-based worker is the only application path that removes objects.
 
   revalidateSetupContent();
   revalidatePath("/setups");
@@ -595,16 +557,8 @@ export async function deleteSetup(
     return { error: "Setup no longer exists or you don't own it." };
   }
 
-  const paths = [existing.file_path, existing.telemetry_file_path].filter(
-    (path): path is string => isOwnedStoragePath(path, user.id),
-  );
-  if (paths.length > 0) {
-    const { error: removeError } = await supabase.storage
-      .from(SETUP_FILES_BUCKET)
-      .remove(paths);
-    if (removeError)
-      logger.warn("deleteSetup: failed to remove attached files", removeError);
-  }
+  // Byte cleanup is deferred to the claimed worker, including any other
+  // current/history references and outstanding uploads.
 
   revalidateSetupContent();
   revalidatePath("/setups");

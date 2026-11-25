@@ -6,8 +6,13 @@ const sdk = vi.hoisted(() => {
     data: batch.map((name) => ({ name })),
     error: null,
   }));
-  const rpc = vi.fn(async () => ({
-    data: [{ object_name: path }],
+  const rpc = vi.fn(async (name) => ({
+    data:
+      name === "storage_cleanup_candidates"
+        ? [{ object_name: path }]
+        : name === "claim_storage_cleanup"
+          ? "71000000-0000-4000-8000-000000000001"
+          : true,
     error: null,
   }));
   return { path, remove, rpc };

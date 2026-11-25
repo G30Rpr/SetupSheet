@@ -51,6 +51,8 @@ create table if not exists storage.objects (
   bucket_id text,
   name text,
   owner uuid,
+  -- Provider-owned size metadata; zero-byte placeholder in metadata-only fixtures.
+  metadata jsonb default '{"size":0}'::jsonb,
   -- Supabase's real storage.objects has created_at/updated_at; 0028's retention
   -- helpers read created_at, so the stand-in has to carry it too.
   created_at timestamptz not null default now()

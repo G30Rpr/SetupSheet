@@ -63,8 +63,9 @@ src/
                             failure state with an action
     setups-browser.tsx  Client component: filter state + filtered grid
     upload-form.tsx      Upload form; drag a real ACC .json and it auto-fills the Car field.
-                         Files go browser -> Supabase Storage with a signed URL minted
-                         by createUploadTarget (see below), with live status text.
+                         Draft lifecycle: browser -> authenticated Supabase Edge upload
+                         gateway -> Storage, using a one-use ticket from createUploadTarget.
+                         See docs/storage-lifecycle.md before any coordinated release.
     file-dropzone.tsx    Drag-and-drop / tap-to-choose file input
     upload-proof-section.tsx Optional lap-proof and telemetry fields
     star-rating.tsx      Pace / Predictability star rating display
@@ -337,13 +338,16 @@ don't change per-row.
 
 ### 1. Apply the schema
 
-In the [Supabase dashboard](https://supabase.com/dashboard) → your project →
-**SQL Editor**, paste and run every file under
-`supabase/migrations/` **in numeric order**. Start with
-`0001_init_setups_schema.sql`; later migrations add ratings, storage, community
-features, lap-proof attachments, and the direct-API hardening constraints.
-(If you use the Supabase CLI locally instead, `supabase db push` picks up
-everything under `supabase/migrations/` in order.)
+For an existing hosted project, follow
+[the manual migration release controls](docs/migration-release-controls.md).
+Review the applied inventory and exact release SHA; do not paste all historical
+migrations into a live SQL editor or push the draft storage lifecycle by itself.
+The storage lifecycle requires a coordinated Edge/app/worker rollout and
+isolated integration evidence: see [the draft protocol](docs/storage-lifecycle.md).
+
+For disposable local SQL regression fixtures, `npm run test:db` applies migration
+files in numeric version order under the scratch-database guard. Historical
+schema notes below describe the migrations; they are not hosted release approval.
 
 `0001` creates:
 
